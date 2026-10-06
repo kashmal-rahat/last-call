@@ -1,0 +1,153 @@
+{
+  "$defs": {
+    "BuyerInfo": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "juice_shop",
+            "restaurant",
+            "bakery",
+            "charity",
+            "dairy_farm",
+            "other"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "phone": {
+          "title": "Phone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "phone"
+      ],
+      "title": "BuyerInfo",
+      "type": "object"
+    },
+    "MartInfo": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "location": {
+          "title": "Location",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "location"
+      ],
+      "title": "MartInfo",
+      "type": "object"
+    }
+  },
+  "description": "The view of DealBrief exposed to the negotiation agent.\n\nIntentionally excludes floor_price_per_unit and floor_price_unit to prevent\nleakage during prompt compilation or reasoning.",
+  "properties": {
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "mart_id": {
+      "title": "Mart Id",
+      "type": "string"
+    },
+    "batch_id": {
+      "title": "Batch Id",
+      "type": "string"
+    },
+    "call_id": {
+      "title": "Call Id",
+      "type": "string"
+    },
+    "item": {
+      "title": "Item",
+      "type": "string"
+    },
+    "condition": {
+      "title": "Condition",
+      "type": "string"
+    },
+    "quantity": {
+      "exclusiveMinimum": 0,
+      "title": "Quantity",
+      "type": "number"
+    },
+    "quantity_unit": {
+      "enum": [
+        "kg",
+        "dozen"
+      ],
+      "title": "Quantity Unit",
+      "type": "string"
+    },
+    "buyer": {
+      "$ref": "#/$defs/BuyerInfo"
+    },
+    "opening_price_per_unit": {
+      "exclusiveMinimum": 0,
+      "title": "Opening Price Per Unit",
+      "type": "number"
+    },
+    "opening_price_unit": {
+      "enum": [
+        "kg",
+        "dozen"
+      ],
+      "title": "Opening Price Unit",
+      "type": "string"
+    },
+    "pickup_window": {
+      "title": "Pickup Window",
+      "type": "string"
+    },
+    "pickup_deadline": {
+      "title": "Pickup Deadline",
+      "type": "string"
+    },
+    "mart": {
+      "$ref": "#/$defs/MartInfo"
+    },
+    "payment_terms": {
+      "title": "Payment Terms",
+      "type": "string"
+    },
+    "language": {
+      "default": "ur",
+      "title": "Language",
+      "type": "string"
+    },
+    "calling_hours": {
+      "title": "Calling Hours",
+      "type": "string"
+    }
+  },
+  "required": [
+    "mart_id",
+    "batch_id",
+    "call_id",
+    "item",
+    "condition",
+    "quantity",
+    "quantity_unit",
+    "buyer",
+    "opening_price_per_unit",
+    "opening_price_unit",
+    "pickup_window",
+    "pickup_deadline",
+    "mart",
+    "payment_terms",
+    "calling_hours"
+  ],
+  "title": "AgentDealBrief",
+  "type": "object"
+}

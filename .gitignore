@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+.terraform/
+*.tfstate*
+*.tfvars
+!*.tfvars.example
+.DS_Store
+dist/
+build/
+*.egg-info/

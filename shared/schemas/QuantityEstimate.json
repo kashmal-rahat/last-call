@@ -1,0 +1,29 @@
+{
+  "properties": {
+    "unit": {
+      "enum": [
+        "kg",
+        "dozen"
+      ],
+      "title": "Unit",
+      "type": "string"
+    },
+    "low": {
+      "minimum": 0,
+      "title": "Low",
+      "type": "number"
+    },
+    "high": {
+      "minimum": 0,
+      "title": "High",
+      "type": "number"
+    }
+  },
+  "required": [
+    "unit",
+    "low",
+    "high"
+  ],
+  "title": "QuantityEstimate",
+  "type": "object"
+}

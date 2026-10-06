@@ -1,0 +1,207 @@
+{
+  "$defs": {
+    "BoundingBox": {
+      "properties": {
+        "ymin": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Ymin",
+          "type": "number"
+        },
+        "xmin": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Xmin",
+          "type": "number"
+        },
+        "ymax": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Ymax",
+          "type": "number"
+        },
+        "xmax": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Xmax",
+          "type": "number"
+        }
+      },
+      "required": [
+        "ymin",
+        "xmin",
+        "ymax",
+        "xmax"
+      ],
+      "title": "BoundingBox",
+      "type": "object"
+    },
+    "ItemAssessment": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/BoundingBox"
+        },
+        "stage": {
+          "enum": [
+            "fresh",
+            "ripening",
+            "overripe",
+            "spoiled",
+            "unsafe"
+          ],
+          "title": "Stage",
+          "type": "string"
+        },
+        "score": {
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "title": "Score",
+          "type": "number"
+        },
+        "change_since_last": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Change Since Last"
+        },
+        "change_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Change Note"
+        },
+        "issues": {
+          "items": {
+            "enum": [
+              "bruising",
+              "browning",
+              "mould",
+              "rot",
+              "wilting",
+              "other"
+            ],
+            "type": "string"
+          },
+          "title": "Issues",
+          "type": "array"
+        },
+        "quantity": {
+          "$ref": "#/$defs/QuantityEstimate"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "needs_staff_check": {
+          "default": false,
+          "title": "Needs Staff Check",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "position",
+        "stage",
+        "score",
+        "quantity",
+        "confidence"
+      ],
+      "title": "ItemAssessment",
+      "type": "object"
+    },
+    "QuantityEstimate": {
+      "properties": {
+        "unit": {
+          "enum": [
+            "kg",
+            "dozen"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "low": {
+          "minimum": 0,
+          "title": "Low",
+          "type": "number"
+        },
+        "high": {
+          "minimum": 0,
+          "title": "High",
+          "type": "number"
+        }
+      },
+      "required": [
+        "unit",
+        "low",
+        "high"
+      ],
+      "title": "QuantityEstimate",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "mart_id": {
+      "title": "Mart Id",
+      "type": "string"
+    },
+    "batch_id": {
+      "title": "Batch Id",
+      "type": "string"
+    },
+    "photo_uri": {
+      "title": "Photo Uri",
+      "type": "string"
+    },
+    "taken_at": {
+      "format": "date-time",
+      "title": "Taken At",
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "$ref": "#/$defs/ItemAssessment"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "photo_issues": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Photo Issues",
+      "type": "array"
+    }
+  },
+  "required": [
+    "mart_id",
+    "batch_id",
+    "photo_uri",
+    "taken_at",
+    "items"
+  ],
+  "title": "FreshnessResult",
+  "type": "object"
+}

@@ -1,0 +1,165 @@
+{
+  "$defs": {
+    "TranscriptEntry": {
+      "properties": {
+        "speaker": {
+          "title": "Speaker",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "at": {
+          "title": "At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "speaker",
+        "text",
+        "at"
+      ],
+      "title": "TranscriptEntry",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "call_id": {
+      "title": "Call Id",
+      "type": "string"
+    },
+    "batch_id": {
+      "title": "Batch Id",
+      "type": "string"
+    },
+    "mart_id": {
+      "title": "Mart Id",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "in_progress",
+        "completed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "outcome": {
+      "enum": [
+        "deal",
+        "partial_deal",
+        "declined",
+        "call_back",
+        "wants_photo",
+        "wants_manager",
+        "do_not_call",
+        "no_answer"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "agreed_price_per_unit": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Agreed Price Per Unit"
+    },
+    "agreed_price_unit": {
+      "anyOf": [
+        {
+          "enum": [
+            "kg",
+            "dozen"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Agreed Price Unit"
+    },
+    "agreed_quantity": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Agreed Quantity"
+    },
+    "agreed_quantity_unit": {
+      "anyOf": [
+        {
+          "enum": [
+            "kg",
+            "dozen"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Agreed Quantity Unit"
+    },
+    "pickup_time": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pickup Time"
+    },
+    "transcript": {
+      "items": {
+        "$ref": "#/$defs/TranscriptEntry"
+      },
+      "title": "Transcript",
+      "type": "array"
+    },
+    "summary": {
+      "default": "",
+      "title": "Summary",
+      "type": "string"
+    },
+    "flags": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Flags",
+      "type": "array"
+    }
+  },
+  "required": [
+    "call_id",
+    "batch_id",
+    "mart_id",
+    "status",
+    "outcome"
+  ],
+  "title": "CallResult",
+  "type": "object"
+}

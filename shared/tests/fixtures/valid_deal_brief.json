@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "mart_id": "mart_khi_001",
+  "batch_id": "batch_2026_10_06_01",
+  "call_id": "call_2026_10_06_001",
+  "item": "Sindhri Mangoes",
+  "condition": "Ripening, slight bruising, ideal for fresh juice",
+  "quantity": 40.0,
+  "quantity_unit": "kg",
+  "buyer": {
+    "name": "Al-Madina Fresh Juice",
+    "type": "juice_shop",
+    "phone": "+923001234567"
+  },
+  "opening_price_per_unit": 220.0,
+  "opening_price_unit": "kg",
+  "floor_price_per_unit": 160.0,
+  "floor_price_unit": "kg",
+  "pickup_window": "15:00 - 18:00 PKT today",
+  "pickup_deadline": "2026-10-06T18:00:00+05:00",
+  "mart": {
+    "name": "Imtiaz Super Market Clifton",
+    "location": "Clifton Block 2, Karachi"
+  },
+  "payment_terms": "Cash on pickup or Raast instant transfer upon inspection",
+  "language": "ur",
+  "calling_hours": "10:00 - 21:00 PKT"
+}

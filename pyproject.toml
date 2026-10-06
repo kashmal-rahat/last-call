@@ -1,0 +1,17 @@
+[project]
+name = "last-call-workspace"
+version = "0.1.0"
+description = "Last Call root workspace"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv.workspace]
+members = [
+    "shared",
+    "services/api",
+    "services/voice",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["shared/tests"]
+pythonpath = ["shared"]

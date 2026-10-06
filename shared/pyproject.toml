@@ -1,0 +1,12 @@
+[project]
+name = "lastcall-shared"
+version = "0.1.0"
+description = "Shared schemas, types and utilities for Last Call"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.7.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

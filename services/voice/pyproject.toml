@@ -1,0 +1,15 @@
+[project]
+name = "lastcall-voice"
+version = "0.1.0"
+description = "Last Call Voice Agent service"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.29.0",
+    "google-adk>=2.11.0",
+    "lastcall-shared",
+]
+
+[tool.uv.sources]
+lastcall-shared = { workspace = true }
+

@@ -1,0 +1,28 @@
+{
+  "properties": {
+    "unit": {
+      "enum": [
+        "kg",
+        "dozen"
+      ],
+      "title": "Unit",
+      "type": "string"
+    },
+    "value": {
+      "minimum": 0,
+      "title": "Value",
+      "type": "number"
+    },
+    "confirmed_by_staff": {
+      "default": false,
+      "title": "Confirmed By Staff",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "unit",
+    "value"
+  ],
+  "title": "ConfirmedQuantity",
+  "type": "object"
+}

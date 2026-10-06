@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "mart_id": "mart_khi_001",
+  "batch_id": "batch_2026_10_06_01",
+  "photo_uri": "gs://kayrox-last-call-photos/mart_khi_001/batch_01.jpg",
+  "taken_at": "2026-10-06T10:00:00Z",
+  "items": [
+    {
+      "name": "Sindhri Mangoes",
+      "position": {
+        "ymin": 0.1,
+        "xmin": 0.15,
+        "ymax": 0.85,
+        "xmax": 0.9
+      },
+      "stage": "ripening",
+      "score": 75.0,
+      "change_since_last": -5.0,
+      "change_note": "Slight yellowing and softening over last 12h",
+      "issues": ["bruising"],
+      "quantity": {
+        "unit": "kg",
+        "low": 40.0,
+        "high": 50.0
+      },
+      "confidence": 0.92,
+      "needs_staff_check": false
+    }
+  ],
+  "photo_issues": []
+}

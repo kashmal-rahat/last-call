@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "call_id": "call_2026_10_06_001",
+  "batch_id": "batch_2026_10_06_01",
+  "mart_id": "mart_khi_001",
+  "status": "completed",
+  "outcome": "deal",
+  "agreed_price_per_unit": 180.0,
+  "agreed_price_unit": "kg",
+  "agreed_quantity": 40.0,
+  "agreed_quantity_unit": "kg",
+  "pickup_time": "Today at 17:00 PKT",
+  "transcript": [
+    {
+      "speaker": "agent",
+      "text": "السلام علیکم! کیا میں المدینہ جوس کے منیجر سے بات کر رہا ہوں؟",
+      "at": "2026-10-06T11:00:00Z"
+    },
+    {
+      "speaker": "buyer",
+      "text": "وعلیکم السلام، جی بولیں۔",
+      "at": "2026-10-06T11:00:05Z"
+    },
+    {
+      "speaker": "agent",
+      "text": "امتیاز کلفٹن سے 40 کلو سندھڑی آم ہیں، فریش جوس کے لیے بہترین۔ 220 روپے فی کلو مل سکتے ہیں۔",
+      "at": "2026-10-06T11:00:15Z"
+    },
+    {
+      "speaker": "buyer",
+      "text": "180 لگائیں تو میں شام پانچ بجے اٹھوا لیتا ہوں۔",
+      "at": "2026-10-06T11:00:30Z"
+    },
+    {
+      "speaker": "agent",
+      "text": "ڈیل پکی! 40 کلو آم 180 روپے فی کلو، شام پانچ بجے امتیاز کلفٹن سے پک اپ۔",
+      "at": "2026-10-06T11:00:45Z"
+    }
+  ],
+  "summary": "Agreed on 40kg Sindhri mangoes at 180 PKR/kg for pickup at 17:00 PKT today.",
+  "flags": []
+}
