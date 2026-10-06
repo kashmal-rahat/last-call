@@ -7,9 +7,10 @@ import sys
 from datetime import datetime, timezone
 from typing import Any
 
-# Pattern matching Pakistani and international phone numbers
+# Pattern matching Pakistani (+92 3xx or 03xx) and international (+...) phone numbers.
+# Avoid matching plain 8-15 digit integers (timestamps, IDs) by requiring + or leading 03.
 PHONE_PATTERN = re.compile(
-    r"(?:\+?92|0)?(?:3\d{2})[\s\-]?\d{3}[\s\-]?\d{4}|\+?[1-9]\d{1,14}"
+    r"(?:\+92|0)(?:3\d{2})[\s\-]?\d{3}[\s\-]?\d{4}|\+[1-9]\d{6,14}"
 )
 
 
@@ -28,12 +29,20 @@ def mask_pii_in_text(text: str) -> str:
     """Finds phone numbers in a string and masks them."""
     def _repl(match: re.Match[str]) -> str:
         matched = match.group(0)
-        # Skip purely numeric strings that are too short to be phone numbers
-        if len(matched.replace("-", "").replace(" ", "").replace("+", "")) < 8:
-            return matched
         return mask_phone(matched)
 
     return PHONE_PATTERN.sub(_repl, text)
+
+
+def mask_pii_data(data: Any) -> Any:
+    """Recursively masks PII in strings, dicts, and lists."""
+    if isinstance(data, str):
+        return mask_pii_in_text(data)
+    elif isinstance(data, dict):
+        return {k: mask_pii_data(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [mask_pii_data(item) for item in data]
+    return data
 
 
 class CloudLoggingJsonFormatter(logging.Formatter):
@@ -71,18 +80,16 @@ class CloudLoggingJsonFormatter(logging.Formatter):
             },
         }
 
-        # Include custom extra attributes if present
+        # Recursively mask custom extra attributes if present
         if hasattr(record, "extra_fields") and isinstance(record.extra_fields, dict):
             for k, v in record.extra_fields.items():
-                if isinstance(v, str):
-                    payload[k] = mask_pii_in_text(v)
-                else:
-                    payload[k] = v
+                payload[k] = mask_pii_data(v)
 
         if record.exc_info:
-            payload["exception"] = self.formatException(record.exc_info)
+            raw_exc = self.formatException(record.exc_info)
+            payload["exception"] = mask_pii_in_text(raw_exc)
 
-        return json.dumps(payload, ensure_ascii=False)
+        return json.dumps(payload, ensure_ascii=False, default=str)
 
 
 def setup_structured_logging(service_name: str = "last-call", level: int = logging.INFO) -> logging.Logger:

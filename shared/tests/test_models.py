@@ -84,9 +84,14 @@ def test_floor_price_isolation_in_agent_view():
     assert "floor_price_per_unit" not in dump_dict
     assert "floor_price_unit" not in dump_dict
 
+    # Verify buyer phone is omitted from agent_view (architecture §7 privacy)
+    assert not hasattr(agent_view.buyer, "phone")
+    assert "phone" not in dump_dict["buyer"]
+
     json_str = agent_view.model_dump_json()
     assert "floor_price" not in json_str
     assert str(brief.floor_price_per_unit) not in json_str
+    assert brief.buyer.phone not in json_str
 
 
 def test_price_unit_mismatch_rejected():
@@ -154,6 +159,67 @@ def test_call_result_declined_allows_no_terms():
     )
     assert call.outcome == "declined"
     assert call.agreed_price_per_unit is None
+
+
+def test_call_result_status_outcome_separation():
+    # 1. In-progress call without outcome is valid (D6)
+    in_prog = CallResult(
+        call_id="call_101",
+        batch_id="batch_01",
+        mart_id="mart_01",
+        status="in_progress",
+    )
+    assert in_prog.status == "in_progress"
+    assert in_prog.outcome is None
+
+    # 2. In-progress call with an outcome is rejected
+    with pytest.raises(ValidationError, match="cannot have an outcome yet"):
+        CallResult(
+            call_id="call_102",
+            batch_id="batch_01",
+            mart_id="mart_01",
+            status="in_progress",
+            outcome="declined",
+        )
+
+    # 3. Completed call without an outcome is rejected
+    with pytest.raises(ValidationError, match="completed call requires an outcome"):
+        CallResult(
+            call_id="call_103",
+            batch_id="batch_01",
+            mart_id="mart_01",
+            status="completed",
+            outcome=None,
+        )
+
+
+def test_deal_brief_staff_confirmation_and_agent_view_forbid():
+    with open(FIXTURES_DIR / "valid_deal_brief.json") as f:
+        data = json.load(f)
+
+    data["quantity_confirmed_by_staff"] = True
+    brief = DealBrief.model_validate(data)
+    assert brief.quantity_confirmed_by_staff is True
+
+    agent_view = brief.agent_view()
+    assert agent_view.quantity_confirmed_by_staff is True
+
+    # Extra attributes are forbidden on AgentDealBrief
+    agent_dict = agent_view.model_dump()
+    agent_dict["leaked_internal_metric"] = 123
+    from lastcall_shared.models import AgentDealBrief
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        AgentDealBrief.model_validate(agent_dict)
+
+
+def test_timezone_naive_datetime_rejected():
+    with open(FIXTURES_DIR / "valid_deal_brief.json") as f:
+        data = json.load(f)
+
+    # Naive timestamp without timezone offset
+    data["pickup_deadline"] = "2026-10-06T18:00:00"
+    with pytest.raises(ValidationError, match="Input should have timezone info"):
+        DealBrief.model_validate(data)
 
 
 def test_phone_masking():

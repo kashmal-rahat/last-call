@@ -99,68 +99,28 @@ resource "google_service_account_iam_member" "deployer_actas_voice" {
   member             = "serviceAccount:${google_service_account.deployer_sa.email}"
 }
 
-resource "google_project_iam_member" "deployer_storage_admin" {
-  project = var.project_id
-  role    = "roles/storage.admin"
-  member  = "serviceAccount:${google_service_account.deployer_sa.email}"
-}
-
 resource "google_project_iam_member" "deployer_log_writer" {
   project = var.project_id
   role    = "roles/logging.logWriter"
   member  = "serviceAccount:${google_service_account.deployer_sa.email}"
 }
 
-# Also grant Cloud Build default service account and Compute SA permissions for container builds
+# Scope deployer storage permission strictly to Cloud Build source bucket (protects tfstate)
+resource "google_storage_bucket_iam_member" "deployer_build_bucket" {
+  bucket = "${var.project_id}_cloudbuild"
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.deployer_sa.email}"
+}
+
 data "google_project" "project" {
   project_id = var.project_id
 }
 
-resource "google_project_iam_member" "compute_sa_storage" {
-  project = var.project_id
-  role    = "roles/storage.admin"
-  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
-  depends_on = [google_project_service.services]
-}
-
-resource "google_project_iam_member" "compute_sa_log_writer" {
-  project = var.project_id
-  role    = "roles/logging.logWriter"
-  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
-  depends_on = [google_project_service.services]
-}
-
-resource "google_project_iam_member" "compute_sa_ar_writer" {
-  project = var.project_id
-  role    = "roles/artifactregistry.writer"
-  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
-  depends_on = [google_project_service.services]
-}
-
-resource "google_project_iam_member" "cloudbuild_ar_writer" {
-  project = var.project_id
-  role    = "roles/artifactregistry.writer"
-  member  = "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
-  depends_on = [google_project_service.services]
-}
-
-resource "google_project_iam_member" "cloudbuild_run_admin" {
-  project = var.project_id
-  role    = "roles/run.admin"
-  member  = "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
-  depends_on = [google_project_service.services]
-}
-
-resource "google_service_account_iam_member" "cloudbuild_actas_api" {
-  service_account_id = google_service_account.api_sa.name
-  role               = "roles/iam.serviceAccountUser"
-  member             = "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
-}
-
-resource "google_service_account_iam_member" "cloudbuild_actas_voice" {
-  service_account_id = google_service_account.voice_sa.name
-  role               = "roles/iam.serviceAccountUser"
-  member             = "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
+# Allow Cloud Build service agent to use deployer-sa
+resource "google_service_account_iam_member" "cloudbuild_sa_token_creator" {
+  service_account_id = google_service_account.deployer_sa.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
 }
 
 # 5. Secret Manager (container only, no secret version in terraform state)

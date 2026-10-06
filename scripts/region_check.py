@@ -1,8 +1,8 @@
 """Region and model verification script for Last Call.
 
 Tests exclusively the latest Gemini 3.8 models:
-- gemini-3.8-flash (via global endpoint) for Vision & Structured Assessment
-- gemini-3.8-live (via us-central1 endpoint) for Bidirectional Native Audio in Urdu
+- gemini-3.8-flash (via eu multi-region endpoint) for Vision & Structured Assessment
+- gemini-3.8-live (via eu multi-region endpoint) for Bidirectional Native Audio in Urdu
 """
 
 import asyncio

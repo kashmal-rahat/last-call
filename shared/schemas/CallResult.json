@@ -11,6 +11,7 @@
           "type": "string"
         },
         "at": {
+          "format": "date-time",
           "title": "At",
           "type": "string"
         }
@@ -52,18 +53,26 @@
       "type": "string"
     },
     "outcome": {
-      "enum": [
-        "deal",
-        "partial_deal",
-        "declined",
-        "call_back",
-        "wants_photo",
-        "wants_manager",
-        "do_not_call",
-        "no_answer"
+      "anyOf": [
+        {
+          "enum": [
+            "deal",
+            "partial_deal",
+            "declined",
+            "call_back",
+            "wants_photo",
+            "wants_manager",
+            "do_not_call",
+            "no_answer"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
       ],
-      "title": "Outcome",
-      "type": "string"
+      "default": null,
+      "title": "Outcome"
     },
     "agreed_price_per_unit": {
       "anyOf": [
@@ -124,6 +133,7 @@
     "pickup_time": {
       "anyOf": [
         {
+          "format": "date-time",
           "type": "string"
         },
         {
@@ -157,8 +167,7 @@
     "call_id",
     "batch_id",
     "mart_id",
-    "status",
-    "outcome"
+    "status"
   ],
   "title": "CallResult",
   "type": "object"

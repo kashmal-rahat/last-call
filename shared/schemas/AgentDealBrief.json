@@ -1,6 +1,7 @@
 {
   "$defs": {
-    "BuyerInfo": {
+    "AgentBuyerInfo": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "title": "Name",
@@ -17,18 +18,13 @@
           ],
           "title": "Type",
           "type": "string"
-        },
-        "phone": {
-          "title": "Phone",
-          "type": "string"
         }
       },
       "required": [
         "name",
-        "type",
-        "phone"
+        "type"
       ],
-      "title": "BuyerInfo",
+      "title": "AgentBuyerInfo",
       "type": "object"
     },
     "MartInfo": {
@@ -50,7 +46,8 @@
       "type": "object"
     }
   },
-  "description": "The view of DealBrief exposed to the negotiation agent.\n\nIntentionally excludes floor_price_per_unit and floor_price_unit to prevent\nleakage during prompt compilation or reasoning.",
+  "additionalProperties": false,
+  "description": "The view of DealBrief exposed to the negotiation agent.\n\nIntentionally excludes floor_price_per_unit, floor_price_unit, and buyer.phone\nto prevent leakage during prompt compilation or reasoning. extra=\"forbid\" means\na new DealBrief field breaks agent_view() until someone decides whether the agent\nmay see it.",
   "properties": {
     "schema_version": {
       "default": "1.0.0",
@@ -90,8 +87,13 @@
       "title": "Quantity Unit",
       "type": "string"
     },
+    "quantity_confirmed_by_staff": {
+      "default": false,
+      "title": "Quantity Confirmed By Staff",
+      "type": "boolean"
+    },
     "buyer": {
-      "$ref": "#/$defs/BuyerInfo"
+      "$ref": "#/$defs/AgentBuyerInfo"
     },
     "opening_price_per_unit": {
       "exclusiveMinimum": 0,
@@ -111,6 +113,7 @@
       "type": "string"
     },
     "pickup_deadline": {
+      "format": "date-time",
       "title": "Pickup Deadline",
       "type": "string"
     },

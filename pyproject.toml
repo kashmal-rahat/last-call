@@ -5,6 +5,18 @@ description = "Last Call root workspace"
 requires-python = ">=3.12"
 dependencies = []
 
+# Local-only tools: tests and scripts in scripts/. Not installed in containers.
+[dependency-groups]
+dev = [
+    "lastcall-shared",
+    "pytest>=8.0",
+    "google-genai>=1.0",
+    "pillow>=10.0",
+]
+
+[tool.uv.sources]
+lastcall-shared = { workspace = true }
+
 [tool.uv.workspace]
 members = [
     "shared",

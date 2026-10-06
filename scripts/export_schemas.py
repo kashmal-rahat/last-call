@@ -8,6 +8,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "shared")))
 
 from lastcall_shared.models import (
+    AgentBuyerInfo,
     AgentDealBrief,
     CallResult,
     ConfirmedQuantity,
@@ -21,6 +22,7 @@ MODELS = {
     "FreshnessResult": FreshnessResult,
     "DealBrief": DealBrief,
     "AgentDealBrief": AgentDealBrief,
+    "AgentBuyerInfo": AgentBuyerInfo,
     "CallResult": CallResult,
     "ItemAssessment": ItemAssessment,
     "QuantityEstimate": QuantityEstimate,

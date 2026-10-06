@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "type": {
+      "enum": [
+        "juice_shop",
+        "restaurant",
+        "bakery",
+        "charity",
+        "dairy_farm",
+        "other"
+      ],
+      "title": "Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "type"
+  ],
+  "title": "AgentBuyerInfo",
+  "type": "object"
+}

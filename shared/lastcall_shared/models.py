@@ -1,8 +1,8 @@
-"""Pydantic v2 domain models for Last Call."""
+from typing import Annotated, Literal
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
-from datetime import datetime
-from typing import Annotated, Any, Literal
-from pydantic import BaseModel, Field, model_validator
+# All timestamps are timezone-aware (e.g. "2026-10-06T18:00:00+05:00") so that
+# deadlines and calling hours can be enforced in code without guessing the zone.
 
 
 # Common literals and types
@@ -85,9 +85,15 @@ class FreshnessResult(BaseModel):
     mart_id: str
     batch_id: str
     photo_uri: str
-    taken_at: datetime
+    taken_at: AwareDatetime
     items: list[ItemAssessment]
     photo_issues: list[str] = Field(default_factory=list)
+
+
+class AgentBuyerInfo(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    type: BuyerType
 
 
 class BuyerInfo(BaseModel):
@@ -104,9 +110,13 @@ class MartInfo(BaseModel):
 class AgentDealBrief(BaseModel):
     """The view of DealBrief exposed to the negotiation agent.
 
-    Intentionally excludes floor_price_per_unit and floor_price_unit to prevent
-    leakage during prompt compilation or reasoning.
+    Intentionally excludes floor_price_per_unit, floor_price_unit, and buyer.phone
+    to prevent leakage during prompt compilation or reasoning. extra="forbid" means
+    a new DealBrief field breaks agent_view() until someone decides whether the agent
+    may see it.
     """
+    model_config = ConfigDict(extra="forbid")
+
     schema_version: str = "1.0.0"
     mart_id: str
     batch_id: str
@@ -115,11 +125,12 @@ class AgentDealBrief(BaseModel):
     condition: str
     quantity: Annotated[float, Field(gt=0)]
     quantity_unit: Unit
-    buyer: BuyerInfo
+    quantity_confirmed_by_staff: bool = False
+    buyer: AgentBuyerInfo
     opening_price_per_unit: Annotated[float, Field(gt=0)]
     opening_price_unit: Unit
     pickup_window: str
-    pickup_deadline: str
+    pickup_deadline: AwareDatetime
     mart: MartInfo
     payment_terms: str
     language: str = "ur"
@@ -133,15 +144,17 @@ class DealBrief(BaseModel):
     call_id: str
     item: str
     condition: str
+    # Staff-confirmed amount, or the low end of the photo estimate when False.
     quantity: Annotated[float, Field(gt=0)]
     quantity_unit: Unit
+    quantity_confirmed_by_staff: bool = False
     buyer: BuyerInfo
     opening_price_per_unit: Annotated[float, Field(gt=0)]
     opening_price_unit: Unit
     floor_price_per_unit: Annotated[float, Field(gt=0)]
     floor_price_unit: Unit
     pickup_window: str
-    pickup_deadline: str
+    pickup_deadline: AwareDatetime
     mart: MartInfo
     payment_terms: str
     language: str = "ur"
@@ -169,31 +182,16 @@ class DealBrief(BaseModel):
         return self
 
     def agent_view(self) -> AgentDealBrief:
-        return AgentDealBrief(
-            schema_version=self.schema_version,
-            mart_id=self.mart_id,
-            batch_id=self.batch_id,
-            call_id=self.call_id,
-            item=self.item,
-            condition=self.condition,
-            quantity=self.quantity,
-            quantity_unit=self.quantity_unit,
-            buyer=self.buyer,
-            opening_price_per_unit=self.opening_price_per_unit,
-            opening_price_unit=self.opening_price_unit,
-            pickup_window=self.pickup_window,
-            pickup_deadline=self.pickup_deadline,
-            mart=self.mart,
-            payment_terms=self.payment_terms,
-            language=self.language,
-            calling_hours=self.calling_hours,
-        )
+        dump = self.model_dump(exclude={"floor_price_per_unit", "floor_price_unit"})
+        if "buyer" in dump and isinstance(dump["buyer"], dict):
+            dump["buyer"].pop("phone", None)
+        return AgentDealBrief.model_validate(dump)
 
 
 class TranscriptEntry(BaseModel):
     speaker: str
     text: str
-    at: str
+    at: AwareDatetime
 
 
 class CallResult(BaseModel):
@@ -202,18 +200,23 @@ class CallResult(BaseModel):
     batch_id: str
     mart_id: str
     status: CallStatus
-    outcome: CallOutcome
+    # Only set once the call is completed (D6).
+    outcome: CallOutcome | None = None
     agreed_price_per_unit: float | None = None
     agreed_price_unit: Unit | None = None
     agreed_quantity: float | None = None
     agreed_quantity_unit: Unit | None = None
-    pickup_time: str | None = None
+    pickup_time: AwareDatetime | None = None
     transcript: list[TranscriptEntry] = Field(default_factory=list)
     summary: str = ""
     flags: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_deal_outcome(self) -> "CallResult":
+        if self.status == "completed" and self.outcome is None:
+            raise ValueError("A completed call requires an outcome")
+        if self.status != "completed" and self.outcome is not None:
+            raise ValueError(f"A call with status '{self.status}' cannot have an outcome yet")
         if self.outcome in ("deal", "partial_deal"):
             if self.agreed_price_per_unit is None or self.agreed_price_per_unit <= 0:
                 raise ValueError(f"Outcome '{self.outcome}' requires agreed_price_per_unit > 0")
@@ -227,6 +230,6 @@ class CallResult(BaseModel):
                 raise ValueError(
                     f"Agreed price unit ({self.agreed_price_unit}) must match agreed quantity unit ({self.agreed_quantity_unit})"
                 )
-            if not self.pickup_time or not self.pickup_time.strip():
+            if self.pickup_time is None:
                 raise ValueError(f"Outcome '{self.outcome}' requires agreed pickup_time")
         return self

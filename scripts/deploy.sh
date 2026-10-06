@@ -28,11 +28,14 @@ steps:
     args: ['build', '-t', '${IMAGE}', '-f', 'services/${SERVICE}/Dockerfile', '.']
 images:
   - '${IMAGE}'
+options:
+  logging: 'CLOUD_LOGGING_ONLY'
 EOF
 
-echo "--> Submitting build to Google Cloud Build..."
+echo "--> Submitting build to Google Cloud Build using deployer-sa..."
 gcloud builds submit . \
   --project="${PROJECT_ID}" \
+  --service-account="projects/${PROJECT_ID}/serviceAccounts/deployer-sa@${PROJECT_ID}.iam.gserviceaccount.com" \
   --config="${TMP_CONFIG}"
 rm -f "${TMP_CONFIG}"
 
@@ -43,7 +46,7 @@ gcloud run deploy "${SERVICE}" \
   --project="${PROJECT_ID}" \
   --region="${REGION}" \
   --service-account="${SERVICE}-sa@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --set-env-vars="GIT_COMMIT=${COMMIT_SHA},ENVIRONMENT=production" \
+  --update-env-vars="GIT_COMMIT=${COMMIT_SHA},ENVIRONMENT=production" \
   --quiet
 
 SERVICE_URL=$(gcloud run services describe "${SERVICE}" --project="${PROJECT_ID}" --region="${REGION}" --format='value(status.url)')

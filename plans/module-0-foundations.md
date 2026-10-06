@@ -1,8 +1,8 @@
 # Module 0: Foundations (final, approved plan)
 
-> Read [plans/README.md](README.md) first: it has the working rules, project facts and decision log (D1–D10).
+> Read [plans/README.md](README.md) first: it has the working rules, project facts and decision log (D1–D13).
 
-**Done when:** we've confirmed `asia-southeast1` has the services we need, a basic app is running on Cloud Run with its infrastructure managed by Terraform, Gemini on Vertex AI is proven to work from the project, and the three shared formats are defined and tested.
+**Done when:** we've confirmed `europe-west1` has the services we need, a basic app is running on Cloud Run with its infrastructure managed by Terraform, Gemini on Vertex AI is proven to work from the project, and the three shared formats are defined and tested.
 
 ## Inputs
 
@@ -11,7 +11,7 @@
 | Account | kashmal@kayroxco.com |
 | Project ID | `kayrox-last-call` |
 | Billing account | `01C776-42EDFC-E7E33A` |
-| Region | `asia-southeast1` |
+| Region | `europe-west1` (regional services), `eu` (Vertex AI multi-region) |
 | Budget | Already created by the user in the console. **Don't create it in Terraform** |
 
 Starting state of this Mac (2026-10-06): Homebrew and Node are installed. `gcloud`, `terraform`, `uv` and Docker are missing, and Python is only 3.9.6. The git repo has a remote but no commits yet.

@@ -31,8 +31,8 @@ cd last-call
 brew install uv
 uv python install 3.12
 
-# Sync dependencies across the uv workspace
-uv sync
+# Sync dependencies across the uv workspace (including dev tools and service members)
+uv sync --all-packages
 
 # Run tests
 uv run pytest shared/tests

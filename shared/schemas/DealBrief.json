@@ -89,6 +89,11 @@
       "title": "Quantity Unit",
       "type": "string"
     },
+    "quantity_confirmed_by_staff": {
+      "default": false,
+      "title": "Quantity Confirmed By Staff",
+      "type": "boolean"
+    },
     "buyer": {
       "$ref": "#/$defs/BuyerInfo"
     },
@@ -123,6 +128,7 @@
       "type": "string"
     },
     "pickup_deadline": {
+      "format": "date-time",
       "title": "Pickup Deadline",
       "type": "string"
     },
