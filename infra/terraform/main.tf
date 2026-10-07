@@ -157,6 +157,30 @@ resource "google_cloud_run_v2_service" "api" {
     containers {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
       env {
+        name  = "GCP_PROJECT"
+        value = var.project_id
+      }
+      env {
+        name  = "ENVIRONMENT"
+        value = var.environment
+      }
+      env {
+        name  = "GEMINI_FLASH_MODEL"
+        value = var.gemini_flash_model
+      }
+      env {
+        name  = "GEMINI_FLASH_REGION"
+        value = var.gemini_flash_region
+      }
+      env {
+        name  = "GEMINI_LIVE_MODEL"
+        value = var.gemini_live_model
+      }
+      env {
+        name  = "GEMINI_LIVE_REGION"
+        value = var.gemini_live_region
+      }
+      env {
         name = "APP_SIGNING_KEY"
         value_source {
           secret_key_ref {
@@ -173,7 +197,6 @@ resource "google_cloud_run_v2_service" "api" {
       client,
       client_version,
       template[0].containers[0].image,
-      template[0].containers[0].env,
     ]
   }
 
@@ -207,6 +230,30 @@ resource "google_cloud_run_v2_service" "voice" {
     }
     containers {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
+      env {
+        name  = "GCP_PROJECT"
+        value = var.project_id
+      }
+      env {
+        name  = "ENVIRONMENT"
+        value = var.environment
+      }
+      env {
+        name  = "GEMINI_FLASH_MODEL"
+        value = var.gemini_flash_model
+      }
+      env {
+        name  = "GEMINI_FLASH_REGION"
+        value = var.gemini_flash_region
+      }
+      env {
+        name  = "GEMINI_LIVE_MODEL"
+        value = var.gemini_live_model
+      }
+      env {
+        name  = "GEMINI_LIVE_REGION"
+        value = var.gemini_live_region
+      }
     }
   }
 
@@ -215,7 +262,6 @@ resource "google_cloud_run_v2_service" "voice" {
       client,
       client_version,
       template[0].containers[0].image,
-      template[0].containers[0].env,
     ]
   }
 

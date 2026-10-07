@@ -7,10 +7,13 @@ import sys
 from datetime import datetime, timezone
 from typing import Any
 
-# Pattern matching Pakistani (+92 3xx or 03xx) and international (+...) phone numbers.
-# Avoid matching plain 8-15 digit integers (timestamps, IDs) by requiring + or leading 03.
+# Pattern matching Pakistani mobiles, Pakistani landlines (Karachi 021, Lahore 042, etc.),
+# un-prefixed 92 numbers, and international E.164 formats (+...).
+# Plain IDs (mart_khi_001) and ISO timestamps (2026-10-06T18:00:00Z) are not matched.
 PHONE_PATTERN = re.compile(
-    r"(?:\+92|0)(?:3\d{2})[\s\-]?\d{3}[\s\-]?\d{4}|\+[1-9]\d{6,14}"
+    r"(?:\+?92[\s\-]?|0)3\d{2}[\s\-]?\d{3}[\s\-]?\d{4}|"
+    r"(?:\+?92[\s\-]?|0)(?:21|42|51|41|52|61|71|81|91|[2-9]\d{2})[\s\-]?\d{3,4}[\s\-]?\d{4}|"
+    r"\+[1-9]\d{6,14}"
 )
 
 

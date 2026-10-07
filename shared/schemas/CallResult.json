@@ -52,6 +52,15 @@
       "title": "Status",
       "type": "string"
     },
+    "deal_type": {
+      "default": "sale",
+      "enum": [
+        "sale",
+        "donation"
+      ],
+      "title": "Deal Type",
+      "type": "string"
+    },
     "outcome": {
       "anyOf": [
         {

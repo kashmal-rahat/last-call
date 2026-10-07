@@ -25,7 +25,7 @@ TMP_CONFIG=$(mktemp)
 cat <<EOF > "${TMP_CONFIG}"
 steps:
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', '${IMAGE}', '-f', 'services/${SERVICE}/Dockerfile', '.']
+    args: ['build', '--build-arg', 'GIT_COMMIT=${COMMIT_SHA}', '-t', '${IMAGE}', '-f', 'services/${SERVICE}/Dockerfile', '.']
 images:
   - '${IMAGE}'
 options:
@@ -39,14 +39,13 @@ gcloud builds submit . \
   --config="${TMP_CONFIG}"
 rm -f "${TMP_CONFIG}"
 
-# 2. Deploy to Cloud Run
+# 2. Deploy to Cloud Run (environment variables managed entirely by Terraform)
 echo "--> Deploying image to Cloud Run service '${SERVICE}'..."
 gcloud run deploy "${SERVICE}" \
   --image="${IMAGE}" \
   --project="${PROJECT_ID}" \
   --region="${REGION}" \
   --service-account="${SERVICE}-sa@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --update-env-vars="GIT_COMMIT=${COMMIT_SHA},ENVIRONMENT=production" \
   --quiet
 
 SERVICE_URL=$(gcloud run services describe "${SERVICE}" --project="${PROJECT_ID}" --region="${REGION}" --format='value(status.url)')

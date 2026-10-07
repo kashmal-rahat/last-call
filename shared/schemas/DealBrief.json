@@ -68,6 +68,15 @@
       "title": "Call Id",
       "type": "string"
     },
+    "deal_type": {
+      "default": "sale",
+      "enum": [
+        "sale",
+        "donation"
+      ],
+      "title": "Deal Type",
+      "type": "string"
+    },
     "item": {
       "title": "Item",
       "type": "string"
@@ -98,7 +107,7 @@
       "$ref": "#/$defs/BuyerInfo"
     },
     "opening_price_per_unit": {
-      "exclusiveMinimum": 0,
+      "minimum": 0,
       "title": "Opening Price Per Unit",
       "type": "number"
     },
@@ -111,7 +120,7 @@
       "type": "string"
     },
     "floor_price_per_unit": {
-      "exclusiveMinimum": 0,
+      "minimum": 0,
       "title": "Floor Price Per Unit",
       "type": "number"
     },

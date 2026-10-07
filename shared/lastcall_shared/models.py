@@ -8,6 +8,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validato
 # Common literals and types
 Unit = Literal["kg", "dozen"]
 Currency = Literal["PKR"]
+DealType = Literal["sale", "donation"]
 
 ProduceStage = Literal["fresh", "ripening", "overripe", "spoiled", "unsafe"]
 ProduceIssue = Literal["bruising", "browning", "mould", "rot", "wilting", "other"]
@@ -121,13 +122,14 @@ class AgentDealBrief(BaseModel):
     mart_id: str
     batch_id: str
     call_id: str
+    deal_type: DealType = "sale"
     item: str
     condition: str
     quantity: Annotated[float, Field(gt=0)]
     quantity_unit: Unit
     quantity_confirmed_by_staff: bool = False
     buyer: AgentBuyerInfo
-    opening_price_per_unit: Annotated[float, Field(gt=0)]
+    opening_price_per_unit: Annotated[float, Field(ge=0)]
     opening_price_unit: Unit
     pickup_window: str
     pickup_deadline: AwareDatetime
@@ -142,6 +144,7 @@ class DealBrief(BaseModel):
     mart_id: str
     batch_id: str
     call_id: str
+    deal_type: DealType = "sale"
     item: str
     condition: str
     # Staff-confirmed amount, or the low end of the photo estimate when False.
@@ -149,9 +152,9 @@ class DealBrief(BaseModel):
     quantity_unit: Unit
     quantity_confirmed_by_staff: bool = False
     buyer: BuyerInfo
-    opening_price_per_unit: Annotated[float, Field(gt=0)]
+    opening_price_per_unit: Annotated[float, Field(ge=0)]
     opening_price_unit: Unit
-    floor_price_per_unit: Annotated[float, Field(gt=0)]
+    floor_price_per_unit: Annotated[float, Field(ge=0)]
     floor_price_unit: Unit
     pickup_window: str
     pickup_deadline: AwareDatetime
@@ -171,11 +174,21 @@ class DealBrief(BaseModel):
             raise ValueError(
                 f"Floor price unit ({self.floor_price_unit}) must match quantity unit ({self.quantity_unit})"
             )
-        # Opening price must be >= floor price
-        if self.opening_price_per_unit < self.floor_price_per_unit:
-            raise ValueError(
-                f"Opening price ({self.opening_price_per_unit}) cannot be lower than floor price ({self.floor_price_per_unit})"
-            )
+        # Pricing rules based on deal_type
+        if self.deal_type == "donation":
+            if self.opening_price_per_unit != 0:
+                raise ValueError("Opening price must be 0 for a donation")
+            if self.floor_price_per_unit != 0:
+                raise ValueError("Floor price must be 0 for a donation")
+        else:
+            if self.opening_price_per_unit <= 0:
+                raise ValueError("Opening price must be > 0 for a sale")
+            if self.floor_price_per_unit <= 0:
+                raise ValueError("Floor price must be > 0 for a sale")
+            if self.opening_price_per_unit < self.floor_price_per_unit:
+                raise ValueError(
+                    f"Opening price ({self.opening_price_per_unit}) cannot be lower than floor price ({self.floor_price_per_unit})"
+                )
         # Payment terms cannot be empty
         if not self.payment_terms or not self.payment_terms.strip():
             raise ValueError("Payment terms cannot be empty")
@@ -200,6 +213,7 @@ class CallResult(BaseModel):
     batch_id: str
     mart_id: str
     status: CallStatus
+    deal_type: DealType = "sale"
     # Only set once the call is completed (D6).
     outcome: CallOutcome | None = None
     agreed_price_per_unit: float | None = None
@@ -218,8 +232,12 @@ class CallResult(BaseModel):
         if self.status != "completed" and self.outcome is not None:
             raise ValueError(f"A call with status '{self.status}' cannot have an outcome yet")
         if self.outcome in ("deal", "partial_deal"):
-            if self.agreed_price_per_unit is None or self.agreed_price_per_unit <= 0:
-                raise ValueError(f"Outcome '{self.outcome}' requires agreed_price_per_unit > 0")
+            if self.deal_type == "donation":
+                if self.agreed_price_per_unit is not None and self.agreed_price_per_unit != 0:
+                    raise ValueError("Agreed price must be 0 (or omitted) for a donation deal")
+            else:
+                if self.agreed_price_per_unit is None or self.agreed_price_per_unit <= 0:
+                    raise ValueError(f"Outcome '{self.outcome}' requires agreed_price_per_unit > 0 for a sale")
             if self.agreed_price_unit is None:
                 raise ValueError(f"Outcome '{self.outcome}' requires agreed_price_unit")
             if self.agreed_quantity is None or self.agreed_quantity <= 0:

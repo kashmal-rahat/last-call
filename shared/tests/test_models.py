@@ -222,15 +222,81 @@ def test_timezone_naive_datetime_rejected():
         DealBrief.model_validate(data)
 
 
+def test_donation_deal_brief_and_call_result():
+    with open(FIXTURES_DIR / "valid_deal_brief.json") as f:
+        data = json.load(f)
+
+    # Valid donation brief: 0 PKR prices
+    data["deal_type"] = "donation"
+    data["opening_price_per_unit"] = 0.0
+    data["floor_price_per_unit"] = 0.0
+    donation_brief = DealBrief.model_validate(data)
+    assert donation_brief.deal_type == "donation"
+    assert donation_brief.opening_price_per_unit == 0.0
+
+    agent_brief = donation_brief.agent_view()
+    assert agent_brief.deal_type == "donation"
+    assert agent_brief.opening_price_per_unit == 0.0
+
+    # Invalid donation brief: price > 0
+    bad_donation = dict(data)
+    bad_donation["opening_price_per_unit"] = 50.0
+    with pytest.raises(ValidationError, match="Opening price must be 0 for a donation"):
+        DealBrief.model_validate(bad_donation)
+
+    # Valid donation call result
+    donation_call = CallResult(
+        call_id="call_don_001",
+        batch_id="batch_01",
+        mart_id="mart_01",
+        status="completed",
+        deal_type="donation",
+        outcome="deal",
+        agreed_price_per_unit=0.0,
+        agreed_price_unit="kg",
+        agreed_quantity=40.0,
+        agreed_quantity_unit="kg",
+        pickup_time="2026-10-06T19:00:00+05:00",
+        summary="Donated to Edhi Foundation.",
+    )
+    assert donation_call.deal_type == "donation"
+    assert donation_call.agreed_price_per_unit == 0.0
+
+    # Invalid donation call result: agreed price > 0
+    with pytest.raises(ValidationError, match="Agreed price must be 0"):
+        CallResult(
+            call_id="call_don_002",
+            batch_id="batch_01",
+            mart_id="mart_01",
+            status="completed",
+            deal_type="donation",
+            outcome="deal",
+            agreed_price_per_unit=15.0,
+            agreed_price_unit="kg",
+            agreed_quantity=40.0,
+            agreed_quantity_unit="kg",
+            pickup_time="2026-10-06T19:00:00+05:00",
+        )
+
+
 def test_phone_masking():
+    # Pakistani mobile formats
     assert mask_phone("+923001234567") == "+9230******67"
     assert mask_phone("03001234567") == "03001****67"
+    assert mask_phone("923001234567") == "92300*****67"
     assert mask_phone("123") == "***"
 
-    text = "Called buyer at +923001234567 to negotiate."
-    masked = mask_pii_in_text(text)
-    assert "+923001234567" not in masked
-    assert "+9230******67" in masked
+    # Pakistani landlines (Karachi 021, Lahore 042)
+    assert "021-34567890" not in mask_pii_in_text("Karachi shop: 021-34567890")
+    assert "042 35761234" not in mask_pii_in_text("Lahore bakery: 042 35761234")
+    assert "923001234567" not in mask_pii_in_text("Called 923001234567")
+
+    # Critical: plain IDs and timestamps must NOT be masked
+    id_text = "mart_khi_001 batch_2026_10_06_01"
+    assert mask_pii_in_text(id_text) == id_text
+
+    timestamp_text = "2026-10-06T18:00:00+05:00"
+    assert mask_pii_in_text(timestamp_text) == timestamp_text
 
 
 def test_cloud_logging_formatter():

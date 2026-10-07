@@ -3,10 +3,12 @@ FROM python:3.12-slim
 # Install uv for deterministic, lockfile-reproducible builds
 COPY --from=ghcr.io/astral-sh/uv:0.6.5 /uv /uvx /bin/
 
+ARG GIT_COMMIT=dev
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    GIT_COMMIT=${GIT_COMMIT}
 
 WORKDIR /app
 
@@ -30,4 +32,4 @@ EXPOSE 8080
 
 USER appuser
 
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT} --no-access-log"]
