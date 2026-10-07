@@ -67,6 +67,10 @@
     }
   },
   "properties": {
+    "item_key": {
+      "title": "Item Key",
+      "type": "string"
+    },
     "name": {
       "title": "Name",
       "type": "string"
@@ -146,6 +150,7 @@
     }
   },
   "required": [
+    "item_key",
     "name",
     "position",
     "stage",

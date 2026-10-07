@@ -2,7 +2,45 @@
 
 **Reviewed:** 2026-10-07, commit `04e4cb8`
 **Re-reviewed:** 2026-10-07, commit `9ade52a` (critical issues only, see below)
+**Third review:** 2026-10-07, commit `0f9265c` (design gaps and better options, R1–R5)
 **Scope:** documentation only. No code, Terraform or cloud resources were changed. Fixes need the user's approval, and Terraform changes need a reviewed `terraform plan`.
+
+---
+
+# Third review at `0f9265c`: design gaps and better options (RESOLVED: R1–R4)
+
+**Scope:** design and correctness. R1–R4 and model cleanups are now implemented and covered by 18/18 passing tests.
+
+### R1. Photo vs. Item vs. Batch Lifecycles: ✅ Resolved
+- `FreshnessResult`: Replaced photo-level `batch_id` with `inspection_id`, added `shelf_id` and `previous_inspection_id: str | None`.
+- `ItemAssessment`: Added `item_key` (stable slot/crate identifier on the shelf to match items across photo inspections).
+- `DealBrief` / `CallResult`: `batch_id` unambiguously represents the discrete off-shelf produce batch produced by the Decide step.
+
+### R2. Stable Buyer ID & Callback Scheduling: ✅ Resolved
+- `BuyerInfo`: Added `buyer_id: str` (for Places `place_id` or `test:<slug>`). Excluded from `AgentBuyerInfo` and `AgentDealBrief` to prevent agent leakage.
+- `CallResult`: Added `callback_at: AwareDatetime | None`. Enforced when `outcome == "call_back"`, rejected for any other outcome.
+
+### R3. Money Stored as Integer PKR (`int`): ✅ Resolved
+- Changed `opening_price_per_unit`, `floor_price_per_unit`, and `agreed_price_per_unit` to `int` PKR (`NonNegativeInt`).
+- Eliminates floating-point comparison hazards (`159.9999999 < 160`) for the zero-floor-breach rule. Quantities remain `float` for weight scaling.
+
+### R4. Uvicorn Error Log Masking: ✅ Resolved
+- Configured `uvicorn`, `uvicorn.error`, and `uvicorn.access` loggers in `setup_structured_logging()` to use `CloudLoggingJsonFormatter`.
+- Verified via unit test that unhandled exceptions and tracebacks containing phone numbers are masked and emitted as structured JSON.
+
+### R5. Hard Spending Limit (Plan for Module 2)
+- To be implemented when building the real-time audio pipeline in Module 2:
+  1. App-level call timeout (hard termination at 180s per call).
+  2. Max concurrent live sessions per container.
+  3. Daily session counter tracking in Firestore.
+  4. GCP Pub/Sub billing budget alerts.
+
+### Additional Improvements: ✅ Resolved
+- **`calling_hours`**: Structured as `CallingHours` (`start: time`, `end: time`, `timezone: "Asia/Karachi"`) with string parsing validator.
+- **Donation terms**: Allowed `payment_terms = "none"` for donations.
+- **`currency`**: Added `currency: Currency = "PKR"` to `DealBrief`, `AgentDealBrief`, and `CallResult`.
+- **`language`**: Constrained to `Language = Literal["ur", "en", "pa"]`.
+- **Schemas**: Regenerated all JSON schemas in `shared/schemas/`.
 
 ---
 

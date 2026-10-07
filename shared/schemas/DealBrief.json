@@ -2,6 +2,10 @@
   "$defs": {
     "BuyerInfo": {
       "properties": {
+        "buyer_id": {
+          "title": "Buyer Id",
+          "type": "string"
+        },
         "name": {
           "title": "Name",
           "type": "string"
@@ -24,11 +28,35 @@
         }
       },
       "required": [
+        "buyer_id",
         "name",
         "type",
         "phone"
       ],
       "title": "BuyerInfo",
+      "type": "object"
+    },
+    "CallingHours": {
+      "properties": {
+        "start": {
+          "default": "10:00:00",
+          "format": "time",
+          "title": "Start",
+          "type": "string"
+        },
+        "end": {
+          "default": "21:00:00",
+          "format": "time",
+          "title": "End",
+          "type": "string"
+        },
+        "timezone": {
+          "default": "Asia/Karachi",
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "title": "CallingHours",
       "type": "object"
     },
     "MartInfo": {
@@ -109,7 +137,7 @@
     "opening_price_per_unit": {
       "minimum": 0,
       "title": "Opening Price Per Unit",
-      "type": "number"
+      "type": "integer"
     },
     "opening_price_unit": {
       "enum": [
@@ -122,7 +150,7 @@
     "floor_price_per_unit": {
       "minimum": 0,
       "title": "Floor Price Per Unit",
-      "type": "number"
+      "type": "integer"
     },
     "floor_price_unit": {
       "enum": [
@@ -130,6 +158,12 @@
         "dozen"
       ],
       "title": "Floor Price Unit",
+      "type": "string"
+    },
+    "currency": {
+      "const": "PKR",
+      "default": "PKR",
+      "title": "Currency",
       "type": "string"
     },
     "pickup_window": {
@@ -150,12 +184,16 @@
     },
     "language": {
       "default": "ur",
+      "enum": [
+        "ur",
+        "en",
+        "pa"
+      ],
       "title": "Language",
       "type": "string"
     },
     "calling_hours": {
-      "title": "Calling Hours",
-      "type": "string"
+      "$ref": "#/$defs/CallingHours"
     }
   },
   "required": [
@@ -174,8 +212,7 @@
     "pickup_window",
     "pickup_deadline",
     "mart",
-    "payment_terms",
-    "calling_hours"
+    "payment_terms"
   ],
   "title": "DealBrief",
   "type": "object"

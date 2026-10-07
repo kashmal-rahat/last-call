@@ -8,14 +8,16 @@
   "quantity": 40.0,
   "quantity_unit": "kg",
   "buyer": {
+    "buyer_id": "test:al_madina_juice",
     "name": "Al-Madina Fresh Juice",
     "type": "juice_shop",
     "phone": "+923001234567"
   },
-  "opening_price_per_unit": 220.0,
+  "opening_price_per_unit": 220,
   "opening_price_unit": "kg",
-  "floor_price_per_unit": 160.0,
+  "floor_price_per_unit": 160,
   "floor_price_unit": "kg",
+  "currency": "PKR",
   "pickup_window": "15:00 - 18:00 PKT today",
   "pickup_deadline": "2026-10-06T18:00:00+05:00",
   "mart": {
@@ -24,5 +26,9 @@
   },
   "payment_terms": "Cash on pickup or Raast instant transfer upon inspection",
   "language": "ur",
-  "calling_hours": "10:00 - 21:00 PKT"
+  "calling_hours": {
+    "start": "10:00:00",
+    "end": "21:00:00",
+    "timezone": "Asia/Karachi"
+  }
 }

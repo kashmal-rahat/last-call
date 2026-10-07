@@ -1,12 +1,15 @@
 """Tests for shared domain models, constraints, and security isolation."""
 
+import io
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
 from lastcall_shared.models import (
+    AgentDealBrief,
     BoundingBox,
     BuyerInfo,
     CallResult,
@@ -17,8 +20,12 @@ from lastcall_shared.models import (
     MartInfo,
     QuantityEstimate,
 )
-from lastcall_shared.logging_utils import mask_phone, mask_pii_in_text, CloudLoggingJsonFormatter
-import logging
+from lastcall_shared.logging_utils import (
+    CloudLoggingJsonFormatter,
+    mask_phone,
+    mask_pii_in_text,
+    setup_structured_logging,
+)
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -28,7 +35,11 @@ def test_valid_freshness_from_fixture():
         data = json.load(f)
     result = FreshnessResult.model_validate(data)
     assert result.mart_id == "mart_khi_001"
+    assert result.inspection_id == "insp_20261006_01"
+    assert result.shelf_id == "shelf_produce_01"
+    assert result.previous_inspection_id is None
     assert len(result.items) == 1
+    assert result.items[0].item_key == "crate_mangoes_top"
     assert result.items[0].quantity.unit == "kg"
     assert result.items[0].issues == ["bruising"]
 
@@ -66,10 +77,14 @@ def test_deal_brief_from_fixture():
         data = json.load(f)
     brief = DealBrief.model_validate(data)
     assert brief.item == "Sindhri Mangoes"
+    assert brief.currency == "PKR"
+    assert brief.buyer.buyer_id == "test:al_madina_juice"
+    assert isinstance(brief.opening_price_per_unit, int)
+    assert isinstance(brief.floor_price_per_unit, int)
     assert brief.opening_price_per_unit >= brief.floor_price_per_unit
 
 
-def test_floor_price_isolation_in_agent_view():
+def test_floor_price_and_buyer_isolation_in_agent_view():
     with open(FIXTURES_DIR / "valid_deal_brief.json") as f:
         data = json.load(f)
     brief = DealBrief.model_validate(data)
@@ -84,9 +99,11 @@ def test_floor_price_isolation_in_agent_view():
     assert "floor_price_per_unit" not in dump_dict
     assert "floor_price_unit" not in dump_dict
 
-    # Verify buyer phone is omitted from agent_view (architecture §7 privacy)
+    # Verify buyer phone and buyer_id are omitted from agent_view (R2 & privacy)
     assert not hasattr(agent_view.buyer, "phone")
+    assert not hasattr(agent_view.buyer, "buyer_id")
     assert "phone" not in dump_dict["buyer"]
+    assert "buyer_id" not in dump_dict["buyer"]
 
     json_str = agent_view.model_dump_json()
     assert "floor_price" not in json_str
@@ -113,8 +130,8 @@ def test_opening_below_floor_rejected():
     with open(FIXTURES_DIR / "valid_deal_brief.json") as f:
         data = json.load(f)
 
-    data["opening_price_per_unit"] = 120.0
-    data["floor_price_per_unit"] = 150.0
+    data["opening_price_per_unit"] = 120
+    data["floor_price_per_unit"] = 150
     with pytest.raises(ValidationError, match="cannot be lower than floor price"):
         DealBrief.model_validate(data)
 
@@ -134,6 +151,7 @@ def test_call_result_deal_requires_terms():
         data = json.load(f)
     res = CallResult.model_validate(data)
     assert res.outcome == "deal"
+    assert isinstance(res.agreed_price_per_unit, int)
 
     # Incomplete deal: missing pickup time
     bad_data = dict(data)
@@ -159,6 +177,42 @@ def test_call_result_declined_allows_no_terms():
     )
     assert call.outcome == "declined"
     assert call.agreed_price_per_unit is None
+
+
+def test_call_result_callback_at_enforcement():
+    # 1. outcome == "call_back" requires callback_at
+    with pytest.raises(ValidationError, match="requires callback_at timestamp"):
+        CallResult(
+            call_id="call_cb_001",
+            batch_id="batch_01",
+            mart_id="mart_01",
+            status="completed",
+            outcome="call_back",
+            callback_at=None,
+        )
+
+    # 2. outcome == "call_back" with valid callback_at passes
+    cb_valid = CallResult(
+        call_id="call_cb_002",
+        batch_id="batch_01",
+        mart_id="mart_01",
+        status="completed",
+        outcome="call_back",
+        callback_at="2026-10-07T15:00:00+05:00",
+    )
+    assert cb_valid.outcome == "call_back"
+    assert cb_valid.callback_at is not None
+
+    # 3. outcome != "call_back" cannot have callback_at
+    with pytest.raises(ValidationError, match="cannot have callback_at timestamp"):
+        CallResult(
+            call_id="call_cb_003",
+            batch_id="batch_01",
+            mart_id="mart_01",
+            status="completed",
+            outcome="declined",
+            callback_at="2026-10-07T15:00:00+05:00",
+        )
 
 
 def test_call_result_status_outcome_separation():
@@ -207,7 +261,6 @@ def test_deal_brief_staff_confirmation_and_agent_view_forbid():
     # Extra attributes are forbidden on AgentDealBrief
     agent_dict = agent_view.model_dump()
     agent_dict["leaked_internal_metric"] = 123
-    from lastcall_shared.models import AgentDealBrief
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         AgentDealBrief.model_validate(agent_dict)
 
@@ -228,19 +281,20 @@ def test_donation_deal_brief_and_call_result():
 
     # Valid donation brief: 0 PKR prices
     data["deal_type"] = "donation"
-    data["opening_price_per_unit"] = 0.0
-    data["floor_price_per_unit"] = 0.0
+    data["opening_price_per_unit"] = 0
+    data["floor_price_per_unit"] = 0
+    data["payment_terms"] = "none"
     donation_brief = DealBrief.model_validate(data)
     assert donation_brief.deal_type == "donation"
-    assert donation_brief.opening_price_per_unit == 0.0
+    assert donation_brief.opening_price_per_unit == 0
 
     agent_brief = donation_brief.agent_view()
     assert agent_brief.deal_type == "donation"
-    assert agent_brief.opening_price_per_unit == 0.0
+    assert agent_brief.opening_price_per_unit == 0
 
     # Invalid donation brief: price > 0
     bad_donation = dict(data)
-    bad_donation["opening_price_per_unit"] = 50.0
+    bad_donation["opening_price_per_unit"] = 50
     with pytest.raises(ValidationError, match="Opening price must be 0 for a donation"):
         DealBrief.model_validate(bad_donation)
 
@@ -252,7 +306,7 @@ def test_donation_deal_brief_and_call_result():
         status="completed",
         deal_type="donation",
         outcome="deal",
-        agreed_price_per_unit=0.0,
+        agreed_price_per_unit=0,
         agreed_price_unit="kg",
         agreed_quantity=40.0,
         agreed_quantity_unit="kg",
@@ -260,7 +314,7 @@ def test_donation_deal_brief_and_call_result():
         summary="Donated to Edhi Foundation.",
     )
     assert donation_call.deal_type == "donation"
-    assert donation_call.agreed_price_per_unit == 0.0
+    assert donation_call.agreed_price_per_unit == 0
 
     # Invalid donation call result: agreed price > 0
     with pytest.raises(ValidationError, match="Agreed price must be 0"):
@@ -271,7 +325,7 @@ def test_donation_deal_brief_and_call_result():
             status="completed",
             deal_type="donation",
             outcome="deal",
-            agreed_price_per_unit=15.0,
+            agreed_price_per_unit=15,
             agreed_price_unit="kg",
             agreed_quantity=40.0,
             agreed_quantity_unit="kg",
@@ -317,3 +371,28 @@ def test_cloud_logging_formatter():
     assert "+923001234567" not in parsed["message"]
     assert "+9230******67" in parsed["message"]
 
+
+def test_uvicorn_error_masking(monkeypatch):
+    """Verifies that uvicorn.error logs format tracebacks as JSON and mask phone numbers (R4)."""
+    stream = io.StringIO()
+    formatter = CloudLoggingJsonFormatter(service_name="voice-test")
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(formatter)
+
+    # Setup loggers
+    setup_structured_logging(service_name="voice-test")
+    uv_err = logging.getLogger("uvicorn.error")
+    uv_err.handlers.clear()
+    uv_err.addHandler(handler)
+
+    try:
+        raise ValueError("Failed connecting to Twilio for buyer phone +923001234567")
+    except Exception:
+        uv_err.error("Exception in ASGI application", exc_info=True)
+
+    output = stream.getvalue()
+    assert output.strip() != ""
+    parsed = json.loads(output)
+    assert parsed["severity"] == "ERROR"
+    assert "+923001234567" not in parsed["exception"]
+    assert "+9230******67" in parsed["exception"]

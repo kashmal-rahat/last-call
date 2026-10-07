@@ -4,12 +4,15 @@
   "batch_id": "batch_2026_10_06_01",
   "mart_id": "mart_khi_001",
   "status": "completed",
+  "deal_type": "sale",
   "outcome": "deal",
-  "agreed_price_per_unit": 180.0,
+  "agreed_price_per_unit": 180,
   "agreed_price_unit": "kg",
+  "currency": "PKR",
   "agreed_quantity": 40.0,
   "agreed_quantity_unit": "kg",
   "pickup_time": "2026-10-06T17:00:00+05:00",
+  "callback_at": null,
   "transcript": [
     {
       "speaker": "agent",

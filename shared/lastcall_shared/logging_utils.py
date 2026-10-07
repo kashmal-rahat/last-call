@@ -96,15 +96,24 @@ class CloudLoggingJsonFormatter(logging.Formatter):
 
 
 def setup_structured_logging(service_name: str = "last-call", level: int = logging.INFO) -> logging.Logger:
-    """Configures the root logger to output structured JSON to stdout."""
-    logger = logging.getLogger()
-    logger.setLevel(level)
+    """Configures the root logger and uvicorn loggers to output structured JSON to stdout."""
+    formatter = CloudLoggingJsonFormatter(service_name=service_name)
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
 
     # Remove existing handlers to prevent duplicate output
-    for h in list(logger.handlers):
-        logger.removeHandler(h)
+    for h in list(root_logger.handlers):
+        root_logger.removeHandler(h)
+    root_logger.addHandler(handler)
 
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(CloudLoggingJsonFormatter(service_name=service_name))
-    logger.addHandler(handler)
-    return logger
+    # Configure uvicorn loggers so error tracebacks and messages are masked and structured JSON (R4)
+    for uv_name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        uv_logger = logging.getLogger(uv_name)
+        uv_logger.handlers.clear()
+        uv_logger.addHandler(handler)
+        uv_logger.propagate = False
+
+    return root_logger

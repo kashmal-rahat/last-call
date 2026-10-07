@@ -86,7 +86,8 @@
     "agreed_price_per_unit": {
       "anyOf": [
         {
-          "type": "number"
+          "minimum": 0,
+          "type": "integer"
         },
         {
           "type": "null"
@@ -110,6 +111,12 @@
       ],
       "default": null,
       "title": "Agreed Price Unit"
+    },
+    "currency": {
+      "const": "PKR",
+      "default": "PKR",
+      "title": "Currency",
+      "type": "string"
     },
     "agreed_quantity": {
       "anyOf": [
@@ -151,6 +158,19 @@
       ],
       "default": null,
       "title": "Pickup Time"
+    },
+    "callback_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Callback At"
     },
     "transcript": {
       "items": {

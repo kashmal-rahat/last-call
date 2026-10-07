@@ -38,6 +38,10 @@
     },
     "ItemAssessment": {
       "properties": {
+        "item_key": {
+          "title": "Item Key",
+          "type": "string"
+        },
         "name": {
           "title": "Name",
           "type": "string"
@@ -117,6 +121,7 @@
         }
       },
       "required": [
+        "item_key",
         "name",
         "position",
         "stage",
@@ -167,9 +172,25 @@
       "title": "Mart Id",
       "type": "string"
     },
-    "batch_id": {
-      "title": "Batch Id",
+    "inspection_id": {
+      "title": "Inspection Id",
       "type": "string"
+    },
+    "shelf_id": {
+      "title": "Shelf Id",
+      "type": "string"
+    },
+    "previous_inspection_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Previous Inspection Id"
     },
     "photo_uri": {
       "title": "Photo Uri",
@@ -197,7 +218,8 @@
   },
   "required": [
     "mart_id",
-    "batch_id",
+    "inspection_id",
+    "shelf_id",
     "photo_uri",
     "taken_at",
     "items"
