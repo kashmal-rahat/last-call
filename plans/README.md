@@ -51,6 +51,7 @@ If any of these conflict, **ask the user. Don't choose silently.**
 | D11 | 2026-10-06 | Terraform Google Provider pinned to `~> 8.0` (`v8.5.0`), `google-adk` (`v2.11.0`) used for agents, and `/health` supported alongside `/healthz` to prevent GFE reserved-path 404s | User's feedback & Cloud Run GFE path discovery |
 | D12 | 2026-10-06 | Standardize exclusively on `gemini-3.8-flash` and `gemini-3.8-live` | User's direction to use only the latest 3.8 models |
 | D13 | 2026-10-06 | Standardize single regional infrastructure on `europe-west1` (Cloud Run, Artifact Registry, Secrets, future Firestore) and multi-region `eu` for both `gemini-3.8-flash` and `gemini-3.8-live` | User preference for closest single EU region to PK/SG, cutting Live latency (849ms connect vs ~3,000ms in US) and confirming europe-west1 offers Firestore |
+| D14 | 2026-10-07 | An inspection is one photo (`inspection_id`, `shelf_id`). A batch is one off-shelf item from one inspection, created by Decide and holding `inspection_id` and `item_key`. | Separates photo inspection lifecycle from discrete item clearance lifecycles (mangoes vs spinach on same shelf), allowing independent pricing, locks, and temporal produce comparison across shelf photos |
 
 ## Module status
 

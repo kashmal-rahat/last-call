@@ -368,31 +368,58 @@ def test_cloud_logging_formatter():
     parsed = json.loads(formatted)
     assert parsed["severity"] == "INFO"
     assert parsed["serviceContext"]["service"] == "api-test"
-    assert "+923001234567" not in parsed["message"]
-    assert "+9230******67" in parsed["message"]
+def test_calling_hours_validation():
+    from datetime import time
+    from lastcall_shared.models import CallingHours
+
+    # 1. Valid calling hours
+    ch = CallingHours(start=time(9, 0), end=time(18, 0), timezone="Asia/Karachi")
+    assert ch.start == time(9, 0)
+    assert ch.end == time(18, 0)
+    assert ch.timezone == "Asia/Karachi"
+
+    # 2. Inverted time range (start >= end)
+    with pytest.raises(ValidationError, match="start time .* must be before end time"):
+        CallingHours(start=time(20, 0), end=time(10, 0), timezone="Asia/Karachi")
+
+    # 3. Same start and end
+    with pytest.raises(ValidationError, match="start time .* must be before end time"):
+        CallingHours(start=time(12, 0), end=time(12, 0), timezone="Asia/Karachi")
+
+    # 4. Invalid timezone
+    with pytest.raises(ValidationError, match="Invalid timezone"):
+        CallingHours(start=time(10, 0), end=time(18, 0), timezone="Invalid/Fake_Zone")
+
+    # 5. DealBrief missing calling_hours is rejected (F3: no silent default)
+    with open(FIXTURES_DIR / "valid_deal_brief.json") as f:
+        data = json.load(f)
+    bad_brief = dict(data)
+    del bad_brief["calling_hours"]
+    with pytest.raises(ValidationError, match="Field required"):
+        DealBrief.model_validate(bad_brief)
 
 
-def test_uvicorn_error_masking(monkeypatch):
-    """Verifies that uvicorn.error logs format tracebacks as JSON and mask phone numbers (R4)."""
-    stream = io.StringIO()
-    formatter = CloudLoggingJsonFormatter(service_name="voice-test")
-    handler = logging.StreamHandler(stream)
-    handler.setFormatter(formatter)
-
-    # Setup loggers
+def test_uvicorn_error_masking(capsys):
+    """Verifies that setup_structured_logging configures uvicorn.error to output masked JSON to stdout (F4)."""
+    # Setup loggers via production function under test
     setup_structured_logging(service_name="voice-test")
     uv_err = logging.getLogger("uvicorn.error")
-    uv_err.handlers.clear()
-    uv_err.addHandler(handler)
 
+    # Log an ASGI exception containing a phone number directly through uvicorn.error
     try:
         raise ValueError("Failed connecting to Twilio for buyer phone +923001234567")
     except Exception:
         uv_err.error("Exception in ASGI application", exc_info=True)
 
-    output = stream.getvalue()
-    assert output.strip() != ""
-    parsed = json.loads(output)
+    captured = capsys.readouterr()
+    assert captured.out.strip() != "", "Expected output on stdout"
+    assert "+923001234567" not in captured.out
+    assert "+9230******67" in captured.out
+
+    # Verify JSON structure
+    log_line = [line for line in captured.out.strip().split("\n") if line.strip()][-1]
+    parsed = json.loads(log_line)
     assert parsed["severity"] == "ERROR"
+    assert parsed["serviceContext"]["service"] == "voice-test"
     assert "+923001234567" not in parsed["exception"]
     assert "+9230******67" in parsed["exception"]

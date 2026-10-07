@@ -3,7 +3,35 @@
 **Reviewed:** 2026-10-07, commit `04e4cb8`
 **Re-reviewed:** 2026-10-07, commit `9ade52a` (critical issues only, see below)
 **Third review:** 2026-10-07, commit `0f9265c` (design gaps and better options, R1–R5)
+**Fourth review:** 2026-10-07, commit `197a7e5` (checking the R1–R5 fixes, F1–F5)
 **Scope:** documentation only. No code, Terraform or cloud resources were changed. Fixes need the user's approval, and Terraform changes need a reviewed `terraform plan`.
+
+---
+
+# Fourth review at `197a7e5`: follow-ups (RESOLVED: F1, F3, F4, F5; F2 planned for Module 2)
+
+### F1. Architecture & Decision Log Alignment: ✅ Resolved
+- Added **D14** to [plans/README.md](README.md) decision log.
+- Updated [docs/last-call-architecture.md](../docs/last-call-architecture.md) §4 (Orchestrator): `start-clearance` creates the inspection, and Decide creates one batch per off-shelf item.
+- Updated [docs/last-call-architecture.md](../docs/last-call-architecture.md) §6 (Data model): added `inspections` collection, and linked `batches` to `inspection_id` and `item_key`.
+
+### F2. Spending Hard Limit & Kill Switch: 📋 Specified for Module 2
+- Cloud Billing budget configured to publish to a Pub/Sub topic; a Cloud Function on that topic calls Cloud Billing API (`billingAccounts.projects.update`) to disable billing if spend passes the cap.
+- Call duration cap made an environment variable (`MAX_CALL_DURATION_SECONDS`, defaulting to 300s) to allow tuning after measuring real negotiation lengths with personas.
+
+### F3. CallingHours Validation & No Defaults: ✅ Resolved
+- Removed default values; `calling_hours` is strictly required on `DealBrief` and `AgentDealBrief`.
+- Removed string parser; accepts only structured `CallingHours(start, end, timezone)`.
+- Validates `timezone` using `zoneinfo.ZoneInfo`, and enforces `start < end`.
+- Unit tests verify rejections for missing value, invalid timezone, and inverted time ranges.
+
+### F4. Uvicorn Error Log Masking Verification: ✅ Resolved
+- Rewrote `test_uvicorn_error_masking` using `capsys` to directly assert against stdout produced by `setup_structured_logging()`, without modifying `uvicorn.error` handlers in test code.
+
+### F5. Schema Version & Donation Price Uniformity: ✅ Resolved
+- Bumped `schema_version` to `"2.0.0"` across all models and fixtures.
+- Uniformly required `agreed_price_per_unit = 0` with `agreed_price_unit` matching `agreed_quantity_unit` for donation deals.
+- Re-exported all JSON schemas to `shared/schemas/`.
 
 ---
 

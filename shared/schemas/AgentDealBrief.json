@@ -30,23 +30,25 @@
     "CallingHours": {
       "properties": {
         "start": {
-          "default": "10:00:00",
           "format": "time",
           "title": "Start",
           "type": "string"
         },
         "end": {
-          "default": "21:00:00",
           "format": "time",
           "title": "End",
           "type": "string"
         },
         "timezone": {
-          "default": "Asia/Karachi",
           "title": "Timezone",
           "type": "string"
         }
       },
+      "required": [
+        "start",
+        "end",
+        "timezone"
+      ],
       "title": "CallingHours",
       "type": "object"
     },
@@ -73,7 +75,7 @@
   "description": "The view of DealBrief exposed to the negotiation agent.\n\nIntentionally excludes floor_price_per_unit, floor_price_unit, buyer.phone,\nand buyer.buyer_id to prevent leakage during prompt compilation or reasoning.\nextra=\"forbid\" means a new DealBrief field breaks agent_view() until someone\ndecides whether the agent may see it.",
   "properties": {
     "schema_version": {
-      "default": "1.0.0",
+      "default": "2.0.0",
       "title": "Schema Version",
       "type": "string"
     },
@@ -190,7 +192,8 @@
     "pickup_window",
     "pickup_deadline",
     "mart",
-    "payment_terms"
+    "payment_terms",
+    "calling_hours"
   ],
   "title": "AgentDealBrief",
   "type": "object"

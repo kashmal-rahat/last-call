@@ -1,6 +1,7 @@
 from datetime import time
-from typing import Annotated, Any, Literal
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
+from typing import Annotated, Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 # All timestamps are timezone-aware (e.g. "2026-10-06T18:00:00+05:00") so that
 # deadlines and calling hours can be enforced in code without guessing the zone.
@@ -38,9 +39,19 @@ CallOutcome = Literal[
 
 
 class CallingHours(BaseModel):
-    start: time = time(10, 0)
-    end: time = time(21, 0)
-    timezone: str = "Asia/Karachi"
+    start: time
+    end: time
+    timezone: str
+
+    @model_validator(mode="after")
+    def validate_calling_hours(self) -> "CallingHours":
+        try:
+            ZoneInfo(self.timezone)
+        except (ZoneInfoNotFoundError, ValueError, Exception) as e:
+            raise ValueError(f"Invalid timezone: '{self.timezone}'") from e
+        if self.start >= self.end:
+            raise ValueError(f"start time ({self.start}) must be before end time ({self.end})")
+        return self
 
 
 class QuantityEstimate(BaseModel):
@@ -91,7 +102,7 @@ class ItemAssessment(BaseModel):
 
 
 class FreshnessResult(BaseModel):
-    schema_version: str = "1.0.0"
+    schema_version: str = "2.0.0"
     mart_id: str
     inspection_id: str  # Replaces batch_id for the photo inspection run (R1)
     shelf_id: str       # Identifies shelf being inspected (R1)
@@ -120,20 +131,6 @@ class MartInfo(BaseModel):
     location: str
 
 
-def _parse_calling_hours_helper(v: Any) -> Any:
-    if isinstance(v, str):
-        parts = v.split("-")
-        if len(parts) == 2:
-            s_str = parts[0].strip()
-            e_parts = parts[1].strip().split()
-            e_str = e_parts[0]
-            # Parse "HH:MM"
-            s_h, s_m = map(int, s_str.split(":")[:2])
-            e_h, e_m = map(int, e_str.split(":")[:2])
-            return {"start": time(s_h, s_m), "end": time(e_h, e_m), "timezone": "Asia/Karachi"}
-    return v
-
-
 class AgentDealBrief(BaseModel):
     """The view of DealBrief exposed to the negotiation agent.
 
@@ -144,7 +141,7 @@ class AgentDealBrief(BaseModel):
     """
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: str = "1.0.0"
+    schema_version: str = "2.0.0"
     mart_id: str
     batch_id: str
     call_id: str
@@ -163,16 +160,11 @@ class AgentDealBrief(BaseModel):
     mart: MartInfo
     payment_terms: str
     language: Language = "ur"
-    calling_hours: CallingHours = Field(default_factory=CallingHours)
-
-    @field_validator("calling_hours", mode="before")
-    @classmethod
-    def parse_calling_hours(cls, v: Any) -> Any:
-        return _parse_calling_hours_helper(v)
+    calling_hours: CallingHours
 
 
 class DealBrief(BaseModel):
-    schema_version: str = "1.0.0"
+    schema_version: str = "2.0.0"
     mart_id: str
     batch_id: str
     call_id: str
@@ -194,12 +186,7 @@ class DealBrief(BaseModel):
     mart: MartInfo
     payment_terms: str
     language: Language = "ur"
-    calling_hours: CallingHours = Field(default_factory=CallingHours)
-
-    @field_validator("calling_hours", mode="before")
-    @classmethod
-    def parse_calling_hours(cls, v: Any) -> Any:
-        return _parse_calling_hours_helper(v)
+    calling_hours: CallingHours
 
     @model_validator(mode="after")
     def validate_pricing_and_units(self) -> "DealBrief":
@@ -247,7 +234,7 @@ class TranscriptEntry(BaseModel):
 
 
 class CallResult(BaseModel):
-    schema_version: str = "1.0.0"
+    schema_version: str = "2.0.0"
     call_id: str
     batch_id: str
     mart_id: str
@@ -284,8 +271,8 @@ class CallResult(BaseModel):
         # Validate deal terms
         if self.outcome in ("deal", "partial_deal"):
             if self.deal_type == "donation":
-                if self.agreed_price_per_unit is not None and self.agreed_price_per_unit != 0:
-                    raise ValueError("Agreed price must be 0 (or omitted) for a donation deal")
+                if self.agreed_price_per_unit != 0:
+                    raise ValueError("Agreed price must be 0 for a donation deal")
             else:
                 if self.agreed_price_per_unit is None or self.agreed_price_per_unit <= 0:
                     raise ValueError(f"Outcome '{self.outcome}' requires agreed_price_per_unit > 0 for a sale")

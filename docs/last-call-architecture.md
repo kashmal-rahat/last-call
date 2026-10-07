@@ -78,16 +78,16 @@ Request-based CPU, scales to zero, many requests per instance, capped maximum in
 
 Every step is its own Cloud Task.
 
-**`start-clearance`:** creates the batch with status "inspecting," schedules the inspect task, and returns immediately.
+**`start-clearance`:** creates an inspection record (`inspection_id`, `shelf_id`) with status "inspecting," schedules the inspect task, and returns immediately.
 
-**Step tasks** (each one short, retried independently by Cloud Tasks, and skipped if already done for that batch):
+**Step tasks** (each one short, retried independently by Cloud Tasks, and skipped if already done):
 
-1. **Inspect:** runs the Freshness Inspector, saves the result, sets status "deciding," schedules the next task.
-2. **Decide:** runs the Ladder Agent (with the rules fallback), saves the decision.
-    - **Stays on the shelf:** applies the discount, creates the tag, marks the batch "on shelf." Done.
+1. **Inspect:** runs the Freshness Inspector on the shelf photo, saves the `FreshnessResult` in `inspections`, sets status "deciding," schedules the Decide task.
+2. **Decide:** runs the Ladder Agent (with the rules fallback) for each assessed produce item. Creates one batch per off-shelf item (holding `inspection_id` and `item_key`), and saves the decision:
+    - **Stays on the shelf:** applies the discount, creates the tag, marks the item "on shelf." Done.
     - **Compost:** sends it for manager approval.
-    - **Off the shelf:** sets status "finding buyers," schedules the next task.
-3. **Find buyers:** runs the Scout Agent, saves the ranked list. Then:
+    - **Off the shelf:** creates a clearance batch with status "finding buyers," schedules the next task.
+3. **Find buyers:** runs the Scout Agent, saves the ranked list for that batch. Then:
     - If the quantity estimate is unsure (low confidence, a wide range, or partly hidden produce), or "always confirm quantity" is on, waits as "awaiting quantity check" until staff confirm the amount.
     - If buyer list review is on, waits as "awaiting review"; the manager's approval schedules the next task.
     - If outside calling hours, waits as "scheduled," with a Cloud Task for when calling hours start.
@@ -154,8 +154,9 @@ Gemini Live takes **16 kHz** PCM in and returns **24 kHz** PCM out.
 Every record keyed by mart.
 
 - `marts`: settings, rules, floor prices, calling hours, calls per step, review setting, quantity check setting
-- `batches`: stores the ladder plan, current step, calls made in this step, remaining quantity, `locked_until`
-    - States: inspecting → deciding → on shelf / awaiting compost approval / finding buyers → awaiting quantity check / awaiting review / scheduled → in negotiation (locked) → sold / partly sold / next step, plus needs attention from any step
+- `inspections`: stores `inspection_id`, `shelf_id`, `previous_inspection_id`, `photo_uri`, `taken_at`, `items` (each with `item_key`), `photo_issues`
+- `batches`: discrete off-shelf produce batch, holding `inspection_id` and `item_key`. Stores ladder plan, current step, calls made in this step, remaining quantity, `locked_until`
+    - States: finding buyers → awaiting quantity check / awaiting review / scheduled → in negotiation (locked) → sold / partly sold / next step, plus needs attention from any step
 - `calls`: pending → in progress → deal / declined / no answer / call back, with transcript (automatically deleted after a set period)
 - `deals`: agreed terms, pickup deadline, collected or no-show, actual weight
 - `pricing_stats`: running totals by item and buyer type (calls, deals, total accepted price), updated on every call outcome
