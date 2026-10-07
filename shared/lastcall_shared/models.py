@@ -1,7 +1,15 @@
-from datetime import time
-from typing import Annotated, Literal
+import math
+from datetime import time, timedelta
+from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 # All timestamps are timezone-aware (e.g. "2026-10-06T18:00:00+05:00") so that
 # deadlines and calling hours can be enforced in code without guessing the zone.
@@ -47,7 +55,7 @@ class CallingHours(BaseModel):
     def validate_calling_hours(self) -> "CallingHours":
         try:
             ZoneInfo(self.timezone)
-        except (ZoneInfoNotFoundError, ValueError, Exception) as e:
+        except Exception as e:
             raise ValueError(f"Invalid timezone: '{self.timezone}'") from e
         if self.start >= self.end:
             raise ValueError(f"start time ({self.start}) must be before end time ({self.end})")
@@ -68,8 +76,8 @@ class QuantityEstimate(BaseModel):
 
 class ConfirmedQuantity(BaseModel):
     unit: Unit
-    value: Annotated[float, Field(ge=0)]
-    confirmed_by_staff: bool = False
+    amount: Annotated[float, Field(gt=0)]
+    confirmed_by_staff: bool
 
 
 class BoundingBox(BaseModel):
@@ -104,9 +112,9 @@ class ItemAssessment(BaseModel):
 class FreshnessResult(BaseModel):
     schema_version: str = "2.0.0"
     mart_id: str
-    inspection_id: str  # Replaces batch_id for the photo inspection run (R1)
-    shelf_id: str       # Identifies shelf being inspected (R1)
-    previous_inspection_id: str | None = None  # Enables temporal comparison across photos (R1)
+    shelf_id: str
+    inspection_id: str
+    previous_inspection_id: str | None = None
     photo_uri: str
     taken_at: AwareDatetime
     items: list[ItemAssessment]
@@ -154,6 +162,7 @@ class AgentDealBrief(BaseModel):
     buyer: AgentBuyerInfo
     opening_price_per_unit: Annotated[int, Field(ge=0)]
     opening_price_unit: Unit
+    market_rate_per_unit: Annotated[int, Field(ge=0)] | None = None
     currency: Currency = "PKR"
     pickup_window: str
     pickup_deadline: AwareDatetime
@@ -180,6 +189,7 @@ class DealBrief(BaseModel):
     opening_price_unit: Unit
     floor_price_per_unit: Annotated[int, Field(ge=0)]
     floor_price_unit: Unit
+    market_rate_per_unit: Annotated[int, Field(ge=0)] | None = None
     currency: Currency = "PKR"
     pickup_window: str
     pickup_deadline: AwareDatetime
@@ -288,4 +298,172 @@ class CallResult(BaseModel):
                 )
             if self.pickup_time is None:
                 raise ValueError(f"Outcome '{self.outcome}' requires agreed pickup_time")
+        return self
+
+
+# ==============================================================================
+# Module 2: Negotiator Domain Models, Policy and State
+# ==============================================================================
+
+class NegotiationPolicy(BaseModel):
+    concession_fractions: list[float] = Field(default_factory=lambda: [0.4, 0.3, 0.2, 0.1])
+    round_to: int = 5
+    max_call_seconds: int = 300
+    wrapup_warning_seconds: int = 30
+
+    @field_validator("concession_fractions")
+    @classmethod
+    def validate_fractions(cls, v: list[float]) -> list[float]:
+        if not v:
+            raise ValueError("concession_fractions cannot be empty")
+        for x in v:
+            if x <= 0:
+                raise ValueError(f"Each concession fraction must be > 0, got {x}")
+        for i in range(len(v) - 1):
+            if v[i] <= v[i + 1]:
+                raise ValueError(f"Concession fractions must be strictly decreasing: {v[i]} <= {v[i+1]}")
+        total = sum(v)
+        if abs(total - 1.0) > 1e-6:
+            raise ValueError(f"Concession fractions must sum to 1.0 ± 1e-6, got {total}")
+        return v
+
+
+class NegotiationState(BaseModel):
+    ladder: list[int]
+    rung: int = 0
+    approved_prices: list[int] = Field(default_factory=list)
+    last_buyer_offer: int | None = None
+    accepted_price: int | None = None
+
+
+def round_half_up(val: float) -> int:
+    """Rounds half up to nearest integer (e.g. 2.5 -> 3, 2.4 -> 2)."""
+    return math.floor(val + 0.5)
+
+
+def build_ladder(opening: int, floor: int, policy: NegotiationPolicy) -> list[int]:
+    """Builds a deterministic price ladder from opening down to floor price.
+
+    Let O = opening, F = floor, gap = O - F.
+    - If gap == 0: ladder is [O].
+    - Otherwise, for each fraction f, step = max(round_to, round_half_up(gap*f/round_to)*round_to).
+      prev = max(F, prev - step). Stop once prev == F.
+    - If fractions run out before reaching F, append F.
+    """
+    gap = opening - floor
+    if gap <= 0:
+        return [opening]
+
+    ladder = [opening]
+    prev = opening
+    for f in policy.concession_fractions:
+        step = max(policy.round_to, round_half_up((gap * f) / policy.round_to) * policy.round_to)
+        prev = max(floor, prev - step)
+        ladder.append(prev)
+        if prev == floor:
+            break
+
+    if ladder[-1] != floor:
+        ladder.append(floor)
+    return ladder
+
+
+def init_negotiation(brief: DealBrief, policy: NegotiationPolicy) -> NegotiationState:
+    """Initializes the negotiation state with the price ladder and starting approved price."""
+    if brief.deal_type == "donation":
+        ladder = [0]
+        approved = [0]
+    else:
+        ladder = build_ladder(brief.opening_price_per_unit, brief.floor_price_per_unit, policy)
+        approved = [ladder[0]]
+
+    return NegotiationState(
+        ladder=ladder,
+        rung=0,
+        approved_prices=approved,
+        last_buyer_offer=None,
+        accepted_price=None,
+    )
+
+
+class BatchRecord(BaseModel):
+    batch_id: str
+    mart_id: str
+    inspection_id: str
+    item_key: str
+    item: str
+    unit: Unit
+    total_quantity: Annotated[float, Field(gt=0)]
+    remaining_quantity: Annotated[float, Field(ge=0)]
+    status: Literal[
+        "finding_buyers",
+        "in_negotiation",
+        "partly_sold",
+        "sold",
+        "awaiting_compost_approval",
+        "composted",
+        "needs_attention",
+    ] = "finding_buyers"
+    locked_by_call: str | None = None
+    locked_until: AwareDatetime | None = None
+
+
+class DealRecord(BaseModel):
+    mart_id: str
+    call_id: str
+    batch_id: str
+    buyer_id: str
+    deal_type: DealType
+    price_per_unit: Annotated[int, Field(ge=0)]
+    unit: Unit
+    quantity: Annotated[float, Field(gt=0)]
+    pickup_time: AwareDatetime
+    pickup_deadline: AwareDatetime
+    payment_terms: str
+    status: str = "agreed"
+    created_at: AwareDatetime
+
+
+class OutboxMessage(BaseModel):
+    mart_id: str
+    kind: Literal["whatsapp_confirmation", "photo"]
+    call_id: str
+    to_buyer_id: str
+    payload: dict[str, Any]
+    status: str = "stub_not_sent"
+
+
+class StaffTask(BaseModel):
+    mart_id: str
+    kind: Literal["manager_callback"]
+    call_id: str
+    note: str
+    created_at: AwareDatetime
+
+
+class UsageRecord(BaseModel):
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
+class CallRecord(BaseModel):
+    call_id: str
+    mart_id: str
+    batch_id: str
+    brief: DealBrief
+    policy: NegotiationPolicy
+    negotiation: NegotiationState
+    status: CallStatus = "pending"
+    session_nonce: str | None = None
+    result: CallResult | None = None
+    transcript: list[TranscriptEntry] = Field(default_factory=list)
+    flags: list[str] = Field(default_factory=list)
+    created_at: AwareDatetime
+    expire_at: AwareDatetime | None = None
+    usage: UsageRecord = Field(default_factory=UsageRecord)
+
+    @model_validator(mode="after")
+    def set_default_expire_at(self) -> "CallRecord":
+        if self.expire_at is None:
+            self.expire_at = self.created_at + timedelta(days=30)
         return self

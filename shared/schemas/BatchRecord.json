@@ -1,0 +1,93 @@
+{
+  "properties": {
+    "batch_id": {
+      "title": "Batch Id",
+      "type": "string"
+    },
+    "mart_id": {
+      "title": "Mart Id",
+      "type": "string"
+    },
+    "inspection_id": {
+      "title": "Inspection Id",
+      "type": "string"
+    },
+    "item_key": {
+      "title": "Item Key",
+      "type": "string"
+    },
+    "item": {
+      "title": "Item",
+      "type": "string"
+    },
+    "unit": {
+      "enum": [
+        "kg",
+        "dozen"
+      ],
+      "title": "Unit",
+      "type": "string"
+    },
+    "total_quantity": {
+      "exclusiveMinimum": 0,
+      "title": "Total Quantity",
+      "type": "number"
+    },
+    "remaining_quantity": {
+      "minimum": 0,
+      "title": "Remaining Quantity",
+      "type": "number"
+    },
+    "status": {
+      "default": "finding_buyers",
+      "enum": [
+        "finding_buyers",
+        "in_negotiation",
+        "partly_sold",
+        "sold",
+        "awaiting_compost_approval",
+        "composted",
+        "needs_attention"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "locked_by_call": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Locked By Call"
+    },
+    "locked_until": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Locked Until"
+    }
+  },
+  "required": [
+    "batch_id",
+    "mart_id",
+    "inspection_id",
+    "item_key",
+    "item",
+    "unit",
+    "total_quantity",
+    "remaining_quantity"
+  ],
+  "title": "BatchRecord",
+  "type": "object"
+}

@@ -1,0 +1,35 @@
+{
+  "slug": "quality_sceptic",
+  "deal_type": "sale",
+  "item": "Kinnow Oranges",
+  "condition": "Blemished peel, juice sacs intact",
+  "unit": "dozen",
+  "quantity": 40.0,
+  "quantity_confirmed_by_staff": true,
+  "opening_price_per_unit": 140,
+  "floor_price_per_unit": 90,
+  "market_rate_per_unit": 180,
+  "payment_terms": "Cash on pickup",
+  "mart": {
+    "name": "Fresh Mart Clifton",
+    "location": "Clifton Block 2, Karachi"
+  },
+  "buyer": {
+    "name": "Karachi Bakers",
+    "type": "bakery",
+    "phone": "+923003334455"
+  },
+  "calling_hours": {
+    "start": "09:00:00",
+    "end": "21:00:00",
+    "timezone": "Asia/Karachi"
+  },
+  "pickup_window": ["+1h", "+5h"],
+  "pickup_deadline": "+5h",
+  "city_style": "- Karachi market style: reassure on freshness and pulp quality.",
+  "persona": {
+    "slug": "quality_sceptic",
+    "max_acceptable_price": 110,
+    "style": "Skeptical of fruit quality. Questions peel blemishes, asks for a WhatsApp photo, and agrees once reassured and offered around 110 PKR."
+  }
+}

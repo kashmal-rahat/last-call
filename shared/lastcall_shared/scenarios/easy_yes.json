@@ -1,0 +1,35 @@
+{
+  "slug": "easy_yes",
+  "deal_type": "sale",
+  "item": "Sindhri Mangoes",
+  "condition": "Ripe, slightly spotted skin, sweet and juicy inside",
+  "unit": "kg",
+  "quantity": 50.0,
+  "quantity_confirmed_by_staff": true,
+  "opening_price_per_unit": 180,
+  "floor_price_per_unit": 130,
+  "market_rate_per_unit": 220,
+  "payment_terms": "Cash on pickup",
+  "mart": {
+    "name": "Fresh Mart Clifton",
+    "location": "Clifton Block 2, Karachi"
+  },
+  "buyer": {
+    "name": "Rashid Juice Corner",
+    "type": "juice_shop",
+    "phone": "+923001112233"
+  },
+  "calling_hours": {
+    "start": "09:00:00",
+    "end": "21:00:00",
+    "timezone": "Asia/Karachi"
+  },
+  "pickup_window": ["+1h", "+4h"],
+  "pickup_deadline": "+4h",
+  "city_style": "- Karachi market style: polite, friendly, business-minded. Call the buyer 'Bhai'.",
+  "persona": {
+    "slug": "easy_yes",
+    "max_acceptable_price": 170,
+    "style": "Friendly buyer. After first opening quote, asks for a small concession (e.g. 165 or 170 PKR) and readily agrees once agent counters."
+  }
+}

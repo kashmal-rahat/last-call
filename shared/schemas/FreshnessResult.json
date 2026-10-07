@@ -172,12 +172,12 @@
       "title": "Mart Id",
       "type": "string"
     },
-    "inspection_id": {
-      "title": "Inspection Id",
-      "type": "string"
-    },
     "shelf_id": {
       "title": "Shelf Id",
+      "type": "string"
+    },
+    "inspection_id": {
+      "title": "Inspection Id",
       "type": "string"
     },
     "previous_inspection_id": {
@@ -218,8 +218,8 @@
   },
   "required": [
     "mart_id",
-    "inspection_id",
     "shelf_id",
+    "inspection_id",
     "photo_uri",
     "taken_at",
     "items"

@@ -1,0 +1,28 @@
+{
+  "properties": {
+    "concession_fractions": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Concession Fractions",
+      "type": "array"
+    },
+    "round_to": {
+      "default": 5,
+      "title": "Round To",
+      "type": "integer"
+    },
+    "max_call_seconds": {
+      "default": 300,
+      "title": "Max Call Seconds",
+      "type": "integer"
+    },
+    "wrapup_warning_seconds": {
+      "default": 30,
+      "title": "Wrapup Warning Seconds",
+      "type": "integer"
+    }
+  },
+  "title": "NegotiationPolicy",
+  "type": "object"
+}

@@ -1,0 +1,52 @@
+{
+  "properties": {
+    "ladder": {
+      "items": {
+        "type": "integer"
+      },
+      "title": "Ladder",
+      "type": "array"
+    },
+    "rung": {
+      "default": 0,
+      "title": "Rung",
+      "type": "integer"
+    },
+    "approved_prices": {
+      "items": {
+        "type": "integer"
+      },
+      "title": "Approved Prices",
+      "type": "array"
+    },
+    "last_buyer_offer": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Buyer Offer"
+    },
+    "accepted_price": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Accepted Price"
+    }
+  },
+  "required": [
+    "ladder"
+  ],
+  "title": "NegotiationState",
+  "type": "object"
+}

@@ -5,10 +5,17 @@ description = "Last Call REST API service"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.110.0",
-    "uvicorn>=0.29.0",
+    "uvicorn[standard]>=0.29.0",
+    "pydantic-settings>=2.0.0",
     "lastcall-shared",
 ]
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["lastcall_api"]
+
 [tool.uv.sources]
 lastcall-shared = { workspace = true }
-

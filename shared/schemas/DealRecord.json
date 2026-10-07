@@ -1,0 +1,86 @@
+{
+  "properties": {
+    "mart_id": {
+      "title": "Mart Id",
+      "type": "string"
+    },
+    "call_id": {
+      "title": "Call Id",
+      "type": "string"
+    },
+    "batch_id": {
+      "title": "Batch Id",
+      "type": "string"
+    },
+    "buyer_id": {
+      "title": "Buyer Id",
+      "type": "string"
+    },
+    "deal_type": {
+      "enum": [
+        "sale",
+        "donation"
+      ],
+      "title": "Deal Type",
+      "type": "string"
+    },
+    "price_per_unit": {
+      "minimum": 0,
+      "title": "Price Per Unit",
+      "type": "integer"
+    },
+    "unit": {
+      "enum": [
+        "kg",
+        "dozen"
+      ],
+      "title": "Unit",
+      "type": "string"
+    },
+    "quantity": {
+      "exclusiveMinimum": 0,
+      "title": "Quantity",
+      "type": "number"
+    },
+    "pickup_time": {
+      "format": "date-time",
+      "title": "Pickup Time",
+      "type": "string"
+    },
+    "pickup_deadline": {
+      "format": "date-time",
+      "title": "Pickup Deadline",
+      "type": "string"
+    },
+    "payment_terms": {
+      "title": "Payment Terms",
+      "type": "string"
+    },
+    "status": {
+      "default": "agreed",
+      "title": "Status",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "mart_id",
+    "call_id",
+    "batch_id",
+    "buyer_id",
+    "deal_type",
+    "price_per_unit",
+    "unit",
+    "quantity",
+    "pickup_time",
+    "pickup_deadline",
+    "payment_terms",
+    "created_at"
+  ],
+  "title": "DealRecord",
+  "type": "object"
+}

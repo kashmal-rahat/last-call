@@ -1,0 +1,36 @@
+{
+  "slug": "wants_half",
+  "deal_type": "sale",
+  "item": "Golden Delicious Apples",
+  "condition": "Minor surface bruising",
+  "unit": "kg",
+  "quantity": 80.0,
+  "quantity_confirmed_by_staff": true,
+  "opening_price_per_unit": 160,
+  "floor_price_per_unit": 110,
+  "market_rate_per_unit": 200,
+  "payment_terms": "Cash on pickup",
+  "mart": {
+    "name": "Fresh Mart Clifton",
+    "location": "Clifton Block 2, Karachi"
+  },
+  "buyer": {
+    "name": "Student Biryani Catering",
+    "type": "restaurant",
+    "phone": "+923004445566"
+  },
+  "calling_hours": {
+    "start": "09:00:00",
+    "end": "21:00:00",
+    "timezone": "Asia/Karachi"
+  },
+  "pickup_window": ["+1h", "+4h"],
+  "pickup_deadline": "+4h",
+  "city_style": "- Karachi market style: flexible on quantity.",
+  "persona": {
+    "slug": "wants_half",
+    "max_acceptable_price": 130,
+    "target_quantity": 40.0,
+    "style": "Does not need full 80 kg; requests half (40 kg). Once agent accepts split quantity, agrees around 130 PKR."
+  }
+}

@@ -10,12 +10,19 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from lastcall_shared.models import (
     AgentBuyerInfo,
     AgentDealBrief,
+    BatchRecord,
+    CallRecord,
     CallResult,
     ConfirmedQuantity,
     DealBrief,
+    DealRecord,
     FreshnessResult,
     ItemAssessment,
+    NegotiationPolicy,
+    NegotiationState,
+    OutboxMessage,
     QuantityEstimate,
+    StaffTask,
 )
 
 MODELS = {
@@ -27,6 +34,13 @@ MODELS = {
     "ItemAssessment": ItemAssessment,
     "QuantityEstimate": QuantityEstimate,
     "ConfirmedQuantity": ConfirmedQuantity,
+    "NegotiationPolicy": NegotiationPolicy,
+    "NegotiationState": NegotiationState,
+    "CallRecord": CallRecord,
+    "BatchRecord": BatchRecord,
+    "DealRecord": DealRecord,
+    "OutboxMessage": OutboxMessage,
+    "StaffTask": StaffTask,
 }
 
 

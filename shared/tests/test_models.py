@@ -368,6 +368,10 @@ def test_cloud_logging_formatter():
     parsed = json.loads(formatted)
     assert parsed["severity"] == "INFO"
     assert parsed["serviceContext"]["service"] == "api-test"
+    assert "+923001234567" not in parsed["message"]
+    assert "+9230******67" in parsed["message"]
+
+
 def test_calling_hours_validation():
     from datetime import time
     from lastcall_shared.models import CallingHours

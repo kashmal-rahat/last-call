@@ -1,0 +1,35 @@
+{
+  "properties": {
+    "mart_id": {
+      "title": "Mart Id",
+      "type": "string"
+    },
+    "kind": {
+      "const": "manager_callback",
+      "title": "Kind",
+      "type": "string"
+    },
+    "call_id": {
+      "title": "Call Id",
+      "type": "string"
+    },
+    "note": {
+      "title": "Note",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "mart_id",
+    "kind",
+    "call_id",
+    "note",
+    "created_at"
+  ],
+  "title": "StaffTask",
+  "type": "object"
+}

@@ -1,0 +1,34 @@
+{
+  "slug": "donation",
+  "deal_type": "donation",
+  "item": "Overripe Bananas",
+  "condition": "Overripe, sweet, ideal for cattle feed or animal shelter",
+  "unit": "dozen",
+  "quantity": 100.0,
+  "quantity_confirmed_by_staff": true,
+  "opening_price_per_unit": 0,
+  "floor_price_per_unit": 0,
+  "payment_terms": "none",
+  "mart": {
+    "name": "Fresh Mart Clifton",
+    "location": "Clifton Block 2, Karachi"
+  },
+  "buyer": {
+    "name": "Edhi Foundation Animal Shelter",
+    "type": "charity",
+    "phone": "+923005556677"
+  },
+  "calling_hours": {
+    "start": "09:00:00",
+    "end": "21:00:00",
+    "timezone": "Asia/Karachi"
+  },
+  "pickup_window": ["+1h", "+3h"],
+  "pickup_deadline": "+3h",
+  "city_style": "- Respectful, charitable tone. No mention of money.",
+  "persona": {
+    "slug": "donation",
+    "max_acceptable_price": 0,
+    "style": "Charity representative. Grateful for free food donation, confirms pickup window, does not talk about money."
+  }
+}

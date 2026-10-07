@@ -9,13 +9,19 @@ dependencies = []
 [dependency-groups]
 dev = [
     "lastcall-shared",
+    "lastcall-api",
+    "lastcall-voice",
     "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "hypothesis>=6.100",
     "google-genai>=1.0",
     "pillow>=10.0",
 ]
 
 [tool.uv.sources]
 lastcall-shared = { workspace = true }
+lastcall-api = { workspace = true }
+lastcall-voice = { workspace = true }
 
 [tool.uv.workspace]
 members = [
@@ -25,5 +31,5 @@ members = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["shared/tests"]
-pythonpath = ["shared"]
+testpaths = ["shared/tests", "services/api/tests", "services/voice/tests"]
+asyncio_mode = "auto"

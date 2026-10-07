@@ -162,6 +162,19 @@
       "title": "Floor Price Unit",
       "type": "string"
     },
+    "market_rate_per_unit": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Market Rate Per Unit"
+    },
     "currency": {
       "const": "PKR",
       "default": "PKR",

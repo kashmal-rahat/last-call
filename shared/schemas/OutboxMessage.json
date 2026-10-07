@@ -1,0 +1,43 @@
+{
+  "properties": {
+    "mart_id": {
+      "title": "Mart Id",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "whatsapp_confirmation",
+        "photo"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "call_id": {
+      "title": "Call Id",
+      "type": "string"
+    },
+    "to_buyer_id": {
+      "title": "To Buyer Id",
+      "type": "string"
+    },
+    "payload": {
+      "additionalProperties": true,
+      "title": "Payload",
+      "type": "object"
+    },
+    "status": {
+      "default": "stub_not_sent",
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "mart_id",
+    "kind",
+    "call_id",
+    "to_buyer_id",
+    "payload"
+  ],
+  "title": "OutboxMessage",
+  "type": "object"
+}
