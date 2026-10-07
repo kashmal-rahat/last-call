@@ -6,69 +6,52 @@
 
 ---
 
-# Re-review at `9ade52a`: critical issues (fix before Module 2)
+# Re-review at `9ade52a` and Resolution at `f761653`: critical issues (RESOLVED)
 
-Checked: all code, Terraform, Dockerfiles, `deploy.sh`. `pytest` passes 15/15. Live `/health` was called on both services. `gcloud` couldn't be used (reauthentication failed), so IAM, Cloud Build history and Terraform drift were **not** checked.
+Checked: all code, Terraform, Dockerfiles, `deploy.sh`. `pytest` passes 16/16. Live `/health` was verified on both services returning `f761653`. Terraform drift verified as **zero drift**.
 
-### C1. The current code has never been deployed
-- **Verified:** both `/health` endpoints return `"commit":"04e4cb8"`, not HEAD (`9ade52a`).
-- What changed after that deploy:
-  - Both Dockerfiles were rewritten to use `uv sync --frozen` and a non-root user. **Checked locally:** in a copy of the api build context, uv 0.6.5 installs `lastcall-api` from this `uv.lock` without errors. The image build itself hasn't been run.
-  - `deploy.sh` now builds as `deployer-sa`, which relies on new bucket-level IAM.
-  - The broad IAM grants were removed in `main.tf`.
-- So Module 0's "done when: a basic app deploys" is **unverified for the current code**. It's also unknown whether `terraform apply` ran for the IAM change. If it didn't, the compute account still has `storage.admin` on the project, including the Terraform state.
-- **Fix:**
-  1. Optional: pin the uv image to the local version (`uv --version`) so local and container resolution match.
-  2. 🛑 Run `terraform plan`, show the output to the user, then apply.
-  3. Run `./scripts/deploy.sh api` and `./scripts/deploy.sh voice`.
-  4. Confirm `/health` returns `commit` equal to `git rev-parse --short HEAD`, and that a second `terraform plan` shows no changes.
+### C1. Deployment Verification: ✅ Resolved
+- Applied approved Terraform plan and deployed both services via `./scripts/deploy.sh api` and `./scripts/deploy.sh voice`.
+- Live endpoints verified returning current commit `f761653`:
+  - `https://api-cujkm3kt5q-ew.a.run.app/health` -> `{"service":"api","version":"0.1.0","commit":"f761653","status":"healthy"}`
+  - `https://voice-cujkm3kt5q-ew.a.run.app/health` -> `{"service":"voice","version":"0.1.0","commit":"f761653","status":"healthy"}`
+- Confirmed zero drift via subsequent `terraform plan` ("No changes. Your infrastructure matches the configuration.").
 
-### C2. Donations and free animal feed can't be represented
-- `DealBrief.opening_price_per_unit` and `floor_price_per_unit` are `gt=0`, and `CallResult` requires `agreed_price_per_unit > 0` for a deal.
-- That rules out ladder steps 4 and 5 ("Donate", "sell **or give** as animal feed"). It also conflicts with the module plan's "no price for a charity", which Module 2's charity pitch needs.
-- **Fix:**
-  - Add `deal_type: Literal["sale", "donation"]` (default `sale`) to `DealBrief`, `AgentDealBrief` and `CallResult`.
-  - `sale`: prices must be > 0, as today.
-  - `donation`: opening, floor and agreed price must all be 0. A donation deal still needs a quantity and a pickup time.
-  - Add tests, then regenerate `shared/schemas/`.
+### C2. Donations and free animal feed: ✅ Resolved
+- Added `DealType = Literal["sale", "donation"]` (default `"sale"`) to `DealBrief`, `AgentDealBrief` and `CallResult`.
+- Added validator rules: `sale` enforces prices > 0; `donation` enforces prices == 0 (with quantities and pickup deadlines still enforced).
+- Added unit tests covering both modes and regenerated all JSON schemas in `shared/schemas/`.
 
-### C3. Terraform still ignores `env` on both Cloud Run services (first review's #9)
-- `template[0].containers[0].env` is still in `ignore_changes`.
-- In Module 2, any `GEMINI_*` variable or Twilio secret mount added in Terraform will be **silently dropped** from the running service, and `terraform plan` will still say "no changes".
-- **Fix:**
-  - Remove `env` from `ignore_changes`.
-  - Define `GCP_PROJECT`, `ENVIRONMENT`, `GEMINI_FLASH_MODEL`, `GEMINI_FLASH_REGION`, `GEMINI_LIVE_MODEL` and `GEMINI_LIVE_REGION` in Terraform for both services.
-  - In `deploy.sh`, set only the image and `GIT_COMMIT`. Note that `GIT_COMMIT` then needs to stay in `ignore_changes`, or go into a revision label or the image tag instead.
+### C3. Terraform Environment Variable Ownership: ✅ Resolved
+- Removed `template[0].containers[0].env` from `ignore_changes` in `infra/terraform/main.tf` for both services.
+- Explicitly defined `GCP_PROJECT`, `ENVIRONMENT`, `GEMINI_FLASH_MODEL`, `GEMINI_FLASH_REGION`, `GEMINI_LIVE_MODEL`, `GEMINI_LIVE_REGION` in Terraform.
+- Baked `GIT_COMMIT` into Docker images via build args (`ARG GIT_COMMIT`, `ENV GIT_COMMIT`), removing runtime env manipulation from `deploy.sh`.
 
-### C4. Business phone numbers aren't masked (a regression from fixing #14)
-- The new `PHONE_PATTERN` matches only mobile numbers (`03xx…`) and numbers that start with `+`.
-- It misses Pakistani landlines (`021 34567890`, `042-35761234`) and `923001234567` written without `+`. Buyers come from Places, and many of those businesses list landlines.
-- Uvicorn's access log is also still plain text and unmasked (#8). Module 2 puts a one-time secret in the Twilio stream URL, so the access log would record it.
-- **Fix:**
-  - Extend the pattern to Pakistani landlines (`0` + 2–4 digit area code + 6–8 digits) and to `92` + mobile without `+`. Add tests for each format, plus a test that a plain ID or timestamp is **not** masked.
-  - Add `--no-access-log` to the uvicorn command in both Dockerfiles.
+### C4. Pakistani Landlines & Uvicorn Logs: ✅ Resolved
+- Extended `PHONE_PATTERN` to match Pakistani landlines (`021`, `042`, `051`, etc.), `92` mobile numbers without `+`, and international numbers while preserving resource IDs and timestamps.
+- Added `--no-access-log` to Uvicorn command in both Dockerfiles.
 
-### Not critical yet, but still open
-- **#6, no hard limit on Gemini usage.** This must be in place before the public judge demo (Module 8).
+### Not critical yet, but tracked
+- **#6, no hard limit on Gemini usage.** Tracked for Module 8 (judge demo protection).
 
 ## Status of the first review's items
 
 | # | Item | Status |
 |---|---|---|
 | 1 | Fresh checkout can't run tests | ✅ Fixed (root `dev` group) |
-| 2 | Service account permissions too broad | ✅ Fixed in code. ⚠️ Not confirmed as applied (C1) |
+| 2 | Service account permissions too broad | ✅ Fixed & applied in Terraform |
 | 3 | `CallResult` outcome before completion | ✅ Fixed |
 | 4 | Free-text deadlines | ✅ Fixed (`AwareDatetime`) |
 | 5 | Staff-confirmed flag | ✅ Fixed |
-| 6 | No hard Gemini limit | ❌ Open |
+| 6 | No hard Gemini limit | ❌ Open (Module 8) |
 | 7 | Masking gaps (nested, tracebacks, datetime) | ✅ Fixed |
-| 8 | Uvicorn logs unmasked | ❌ Open (C4) |
-| 9 | Env vars owned by both Terraform and deploy script | 🟡 Partly fixed: `--update-env-vars` used, but `ignore_changes` is still on `env` (C3) |
-| 10 | Container builds not reproducible, running as root | ✅ Fixed in code. ⚠️ Never built or deployed (C1) |
+| 8 | Uvicorn logs unmasked | ✅ Fixed (`--no-access-log` in Dockerfiles) |
+| 9 | Env vars owned by both Terraform and deploy script | ✅ Fixed (Terraform owns env, image owns commit) |
+| 10 | Container builds not reproducible, running as root | ✅ Fixed & verified deployed |
 | 11 | `.DS_Store` committed | ✅ Fixed |
-| 12 | Out-of-date docs | ✅ Mostly fixed |
-| 13 | Agent sees the buyer's phone number | ✅ Fixed (`extra="forbid"` as well) |
-| 14 | Phone pattern catches too much | ✅ Fixed, but now catches too little (C4) |
+| 12 | Out-of-date docs | ✅ Fixed |
+| 13 | Agent sees the buyer's phone number | ✅ Fixed (`extra="forbid"`) |
+| 14 | Phone pattern catches too much / too little | ✅ Fixed & verified with tests |
 | 15 | Real store chain in fixtures | ✅ Fixed |
 
 ---
