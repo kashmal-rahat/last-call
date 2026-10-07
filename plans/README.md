@@ -52,10 +52,16 @@ If any of these conflict, **ask the user. Don't choose silently.**
 | D12 | 2026-10-06 | Standardize exclusively on `gemini-3.8-flash` and `gemini-3.8-live` | User's direction to use only the latest 3.8 models |
 | D13 | 2026-10-06 | Standardize single regional infrastructure on `europe-west1` (Cloud Run, Artifact Registry, Secrets, future Firestore) and multi-region `eu` for both `gemini-3.8-flash` and `gemini-3.8-live` | User preference for closest single EU region to PK/SG, cutting Live latency (849ms connect vs ~3,000ms in US) and confirming europe-west1 offers Firestore |
 | D14 | 2026-10-07 | An inspection is one photo (`inspection_id`, `shelf_id`). A batch is one off-shelf item from one inspection, created by Decide and holding `inspection_id` and `item_key`. | Separates photo inspection lifecycle from discrete item clearance lifecycles (mangoes vs spinach on same shelf), allowing independent pricing, locks, and temporal produce comparison across shelf photos |
+| D15 | 2026-10-07 | `voice` `min_instances` is a Terraform variable, default 0. Set to 1 only for judging windows | Avoid idle container billing during normal development |
+| D16 | 2026-10-07 | Build billing kill switch with `SIMULATE_DEACTIVATION=true`. Terraform owns topic, function and IAM. User links budget in console | Automated cost safety backstop without accidental disruption |
+| D17 | 2026-10-07 | Demo page protected by Secret Manager access code, global daily session cap, and 5-minute call cap | Spend guardrails for public demo |
+| D18 | 2026-10-07 | All Negotiator tools are BLOCKING. Model only ever sees `agent_view()`, and every price comes from `verify_offer` | Hard zero-floor-breach guarantee and zero price leakage |
+| D19 | 2026-10-07 | `api` serves demo page at `/demo`. Page talks to `voice` over WebSocket authenticated by short-lived HMAC token in first message | Secure voice session handoff without tokens in request URLs |
+| D20 | 2026-10-07 | WhatsApp and photo sends are stubs written to `outbox`. Do-not-call entries are written in Module 2 and enforced by Scout in Module 4 | Clear module boundaries |
 
 ## Module status
 
 | Module | Plan | Status |
 |---|---|---|
 | 0: Foundations | [module-0-foundations.md](module-0-foundations.md) | Completed |
-| 2: Negotiator | [module-2-negotiator.md](module-2-negotiator.md) | Planned, v3 final (2026-10-07). Implement milestone 2A first |
+| 2: Negotiator | [module-2-negotiator.md](module-2-negotiator.md) | Milestone 2A Complete (2026-10-07). Awaiting approval for 2B |

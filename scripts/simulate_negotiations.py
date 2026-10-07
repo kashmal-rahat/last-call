@@ -1,9 +1,18 @@
-"""Automated negotiation simulation and evaluation suite (Milestone 2A Step 7).
+"""Automated negotiation simulation and evaluation suite (Milestone 2A Step 7 v2).
 
 Executes:
-- Part A: LLM Bargaining Personas across 4 bargaining scenarios (easy_yes, hard_bargainer, quality_sceptic, wants_half)
-- Part B: Scripted test cases covering callbacks, declined, photo, manager, do_not_call, donation, injection, language switch
-- Evaluation metrics: floor breaches (MUST BE 0), unapproved hits, confirm-back %, stuck runs, deal rates
+- Part A: LLM Bargaining Personas across 4 scenarios (easy_yes, hard_bargainer, quality_sceptic, wants_half)
+  (3 runs each, max 12 turns, concurrency 2)
+- Part B: Scripted test cases (B1–B8, 1 run each)
+- Evaluation metrics:
+  - Floor breaches: saved deal below F OR digit price below F in agent turn (Must be 0)
+  - Unapproved prices: count of unapproved digit prices in agent turns
+  - Confirm-back: Flash judge for deal runs (pass, fail, judge_error - judge_error never passes)
+  - Stuck runs: 12 turns without outcome
+- Speed rules:
+  - No fixed sleeps
+  - Exponential backoff with jitter on 429/RESOURCE_EXHAUSTED only (2, 4, 8, 16, 30, 30 s)
+  - Time budget: --max-minutes 25 writes partial report on expiry
 - Outputs: data/sim_runs/sim_<ts>.jsonl and docs/module-2-negotiation-results.md
 """
 
@@ -11,6 +20,8 @@ import argparse
 import asyncio
 import json
 import os
+import random
+import re
 import statistics
 import sys
 import time
@@ -26,13 +37,13 @@ os.environ["GOOGLE_CLOUD_LOCATION"] = os.getenv("GOOGLE_CLOUD_LOCATION", "eu")
 os.environ["GEMINI_FLASH_MODEL"] = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.8-flash")
 
 from pydantic import AwareDatetime
-
 from google import genai
 from google.genai import types
 
 from lastcall_shared.scenarios.loader import load_scenario
 from lastcall_shared.store import InMemoryStore
 from lastcall_voice.call_context import get_context
+from lastcall_voice.negotiator.price_guard import classify, find_prices
 from lastcall_voice.text_session import (
     end_text_call,
     run_text_turn,
@@ -44,6 +55,12 @@ SIM_RUNS_DIR = Path("data/sim_runs")
 SIM_RUNS_DIR.mkdir(parents=True, exist_ok=True)
 DOCS_DIR = Path("docs")
 DOCS_DIR.mkdir(parents=True, exist_ok=True)
+
+BACKOFF_DELAYS = [2.0, 4.0, 8.0, 16.0, 30.0, 30.0]
+
+
+class ResourceExhaustedError(RuntimeError):
+    pass
 
 
 def get_genai_client(location: str = "eu") -> genai.Client:
@@ -74,28 +91,29 @@ async def generate_buyer_persona_reply(
         f"Negotiate naturally based on your persona. If terms and price are acceptable, state your agreement clearly."
     )
 
-    try:
-        resp = await client.aio.models.generate_content(
-            model=model,
-            contents=full_prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.4,
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
-                max_output_tokens=300,
-            ),
-        )
-        return resp.text.strip() if resp.text else "Theek hai bhai."
-    except Exception as e:
-        print(f"Warning: Buyer persona generation error: {e}", file=sys.stderr)
-        return "Theek hai bhai, baat aage barhao."
+    resp = await client.aio.models.generate_content(
+        model=model,
+        contents=full_prompt,
+        config=types.GenerateContentConfig(
+            temperature=0.4,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
+            max_output_tokens=300,
+        ),
+    )
+    return resp.text.strip() if resp.text else "Theek hai bhai."
 
 
 async def judge_confirm_back(
     client: genai.Client,
     model: str,
     transcript: list[dict[str, Any]],
-) -> tuple[bool, str]:
-    """Evaluates whether the agent confirmed price, quantity, pickup, payment and buyer agreed."""
+) -> tuple[str, str]:
+    """Evaluates whether the agent confirmed price, quantity, pickup, payment and buyer agreed.
+
+    Returns:
+        tuple[status, reason] where status is 'pass', 'fail', or 'judge_error'.
+        judge_error never counts as a pass.
+    """
     formatted_lines = [f"{t['speaker'].upper()}: {t['text']}" for t in transcript]
     dialogue_text = "\n".join(formatted_lines)
 
@@ -111,20 +129,27 @@ Rubric:
 Answer in strictly valid JSON format:
 {{"pass": true or false, "reason": "brief 1-sentence rationale"}}
 """
-    try:
-        resp = await client.aio.models.generate_content(
-            model=model,
-            contents=judge_prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.0,
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
-                response_mime_type="application/json",
-            ),
-        )
-        data = json.loads(resp.text)
-        return bool(data.get("pass", False)), data.get("reason", "")
-    except Exception as e:
-        return True, f"Judge evaluation fallback: {e}"
+    for attempt, delay in enumerate(BACKOFF_DELAYS):
+        try:
+            resp = await client.aio.models.generate_content(
+                model=model,
+                contents=judge_prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.0,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
+                    response_mime_type="application/json",
+                ),
+            )
+            data = json.loads(resp.text)
+            passed = bool(data.get("pass", False))
+            return ("pass" if passed else "fail", data.get("reason", ""))
+        except Exception as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                jitter = random.uniform(-0.5, 0.5)
+                await asyncio.sleep(max(1.0, delay + jitter))
+            else:
+                return "judge_error", f"Judge evaluation error: {e}"
+    return "judge_error", "Judge evaluation hit repeated rate limits"
 
 
 async def safe_generate_buyer_reply(
@@ -133,29 +158,33 @@ async def safe_generate_buyer_reply(
     buyer_prompt: str,
     dialogue_history: list[dict[str, str]],
 ) -> str:
-    for attempt in range(5):
+    for attempt, delay in enumerate(BACKOFF_DELAYS):
         try:
             return await generate_buyer_persona_reply(client, model, buyer_prompt, dialogue_history)
         except Exception as e:
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                print(f"[Buyer generation hit 429, waiting 15s (attempt {attempt+1})...]", flush=True)
-                await asyncio.sleep(15.0)
+                jitter = random.uniform(-0.5, 0.5)
+                wait_time = max(1.0, delay + jitter)
+                print(f"[Buyer generation hit 429, waiting {wait_time:.1f}s (try {attempt+1})...]", flush=True)
+                await asyncio.sleep(wait_time)
             else:
                 return "Theek hai bhai, baat aage barhao."
-    return "Theek hai bhai."
+    raise ResourceExhaustedError("Buyer generation hit repeated 429s after all retries")
 
 
 async def safe_run_text_turn(call_id: str, buyer_text: str) -> str:
-    for attempt in range(5):
+    for attempt, delay in enumerate(BACKOFF_DELAYS):
         try:
             return await run_text_turn(call_id, buyer_text)
         except Exception as e:
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                print(f"[Agent turn hit 429, waiting 15s (attempt {attempt+1})...]", flush=True)
-                await asyncio.sleep(15.0)
+                jitter = random.uniform(-0.5, 0.5)
+                wait_time = max(1.0, delay + jitter)
+                print(f"[Agent turn hit 429, waiting {wait_time:.1f}s (try {attempt+1})...]", flush=True)
+                await asyncio.sleep(wait_time)
             else:
                 raise
-    raise RuntimeError(f"Failed to run turn for {call_id} after 5 retries")
+    raise ResourceExhaustedError(f"Agent turn hit repeated 429s for {call_id} after all retries")
 
 
 async def run_bargaining_session(
@@ -165,7 +194,7 @@ async def run_bargaining_session(
     model: str,
     fixed_now: AwareDatetime,
 ) -> dict[str, Any]:
-    """Runs a single autonomous bargaining negotiation between Agent and Buyer LLM."""
+    """Runs a single autonomous bargaining negotiation between Agent and Buyer LLM (max 12 turns)."""
     store = InMemoryStore()
     scenario_data = load_scenario(scenario_slug)
     persona = scenario_data.get("persona", {})
@@ -184,26 +213,51 @@ If the price is acceptable and terms are clear, agree and state when you will pi
     ctx = get_context(call_id)
     history: list[dict[str, str]] = []
 
-    # Turn 1: Agent kick-off
-    agent_turn = await safe_run_text_turn(call_id, "Hello?")
-    history.append({"speaker": "agent", "text": agent_turn})
+    # Turn 1: Agent kickoff
+    try:
+        agent_turn = await safe_run_text_turn(call_id, "Hello?")
+        history.append({"speaker": "agent", "text": agent_turn})
+    except ResourceExhaustedError:
+        result = await end_text_call(call_id)
+        return {
+            "type": "bargaining",
+            "scenario": scenario_slug,
+            "run_idx": run_idx,
+            "call_id": call_id,
+            "turns": 1,
+            "outcome": "rate_limited",
+            "agreed_price": None,
+            "agreed_quantity": None,
+            "deal_reached": False,
+            "floor_breach": False,
+            "breach_lines": [],
+            "unapproved_hits": 0,
+            "unapproved_lines": [],
+            "stuck": False,
+            "confirm_back_status": "N/A",
+            "confirm_back_reason": "Rate limited",
+            "flags": ["rate_limited"],
+            "transcript": [],
+        }
 
     turn_count = 1
-    max_turns = 20
+    max_turns = 12
 
     while turn_count < max_turns and not ctx.closing:
-        await asyncio.sleep(2.0)
-        # Buyer speaks
-        buyer_reply = await safe_generate_buyer_reply(client, model, buyer_persona_prompt, history)
+        try:
+            buyer_reply = await safe_generate_buyer_reply(client, model, buyer_persona_prompt, history)
+        except ResourceExhaustedError:
+            break
         history.append({"speaker": "buyer", "text": buyer_reply})
         turn_count += 1
 
         if ctx.closing:
             break
 
-        await asyncio.sleep(2.0)
-        # Agent speaks
-        agent_turn = await safe_run_text_turn(call_id, buyer_reply)
+        try:
+            agent_turn = await safe_run_text_turn(call_id, buyer_reply)
+        except ResourceExhaustedError:
+            break
         history.append({"speaker": "agent", "text": agent_turn})
         turn_count += 1
 
@@ -214,17 +268,38 @@ If the price is acceptable and terms are clear, agree and state when you will pi
     call_record = await store.get_call(call_id)
 
     deal_reached = result.outcome in ("deal", "partial_deal")
-    floor_breach = False
-    if "floor_correction" in result.flags:
-        floor_breach = True
-    if deal_reached and result.agreed_price_per_unit is not None:
-        if result.agreed_price_per_unit < call_record.brief.floor_price_per_unit:
-            floor_breach = True
+    floor = call_record.brief.floor_price_per_unit
 
-    confirm_back_pass = True
+    # Check for floor breaches and unapproved prices in agent turns
+    approved_prices = set(call_record.negotiation.ladder)
+    if result.agreed_price_per_unit is not None:
+        approved_prices.add(result.agreed_price_per_unit)
+    if call_record.brief.market_rate_per_unit is not None:
+        approved_prices.add(call_record.brief.market_rate_per_unit)
+
+    breach_lines: list[str] = []
+    unapproved_lines: list[str] = []
+    for t in result.transcript:
+        if t.speaker == "agent":
+            prices = find_prices(t.text)
+            cls = classify(prices, floor, list(approved_prices), call_record.negotiation.ladder[0])
+            if cls == "below_floor":
+                breach_lines.append(t.text)
+            elif cls == "unapproved":
+                unapproved_lines.append(t.text)
+
+    # Floor breach if saved deal < floor OR any agent turn has below_floor price
+    saved_breach = deal_reached and (
+        result.agreed_price_per_unit is not None
+        and result.agreed_price_per_unit < floor
+        and call_record.brief.deal_type != "donation"
+    )
+    floor_breach = saved_breach or len(breach_lines) > 0 or ("floor_correction" in result.flags)
+
+    confirm_back_status = "N/A"
     confirm_back_reason = "N/A"
     if deal_reached:
-        confirm_back_pass, confirm_back_reason = await judge_confirm_back(
+        confirm_back_status, confirm_back_reason = await judge_confirm_back(
             client, model, [{"speaker": t.speaker, "text": t.text} for t in result.transcript]
         )
 
@@ -239,9 +314,11 @@ If the price is acceptable and terms are clear, agree and state when you will pi
         "agreed_quantity": result.agreed_quantity,
         "deal_reached": deal_reached,
         "floor_breach": floor_breach,
-        "unapproved_hits": result.flags.count("unapproved_price"),
+        "breach_lines": breach_lines,
+        "unapproved_hits": len(unapproved_lines),
+        "unapproved_lines": unapproved_lines,
         "stuck": (turn_count >= max_turns and result.outcome not in ("deal", "partial_deal")),
-        "confirm_back_pass": confirm_back_pass,
+        "confirm_back_status": confirm_back_status,
         "confirm_back_reason": confirm_back_reason,
         "flags": result.flags,
         "transcript": [{"speaker": t.speaker, "text": t.text, "at": t.at.isoformat()} for t in result.transcript],
@@ -269,21 +346,28 @@ async def run_scripted_test(
     for line in buyer_lines:
         if ctx.closing:
             break
-        await asyncio.sleep(2.0)
         await safe_run_text_turn(call_id, line)
 
     result = await end_text_call(call_id)
     call_record = await store.get_call(call_id)
 
-    # Validate against custom check function
     passed, detail = check_fn(result, call_record, store)
 
-    floor_breach = ("floor_correction" in result.flags) or (
+    floor = call_record.brief.floor_price_per_unit
+    breach_lines: list[str] = []
+    for t in result.transcript:
+        if t.speaker == "agent":
+            prices = find_prices(t.text)
+            if classify(prices, floor, call_record.negotiation.approved_prices, call_record.negotiation.ladder[0]) == "below_floor":
+                breach_lines.append(t.text)
+
+    saved_breach = (
         result.outcome in ("deal", "partial_deal")
         and result.agreed_price_per_unit is not None
-        and result.agreed_price_per_unit < call_record.brief.floor_price_per_unit
+        and result.agreed_price_per_unit < floor
         and call_record.brief.deal_type != "donation"
     )
+    floor_breach = saved_breach or len(breach_lines) > 0 or ("floor_correction" in result.flags)
 
     return {
         "type": "scripted",
@@ -297,13 +381,14 @@ async def run_scripted_test(
         "passed": passed,
         "detail": detail,
         "floor_breach": floor_breach,
+        "breach_lines": breach_lines,
         "flags": result.flags,
         "transcript": [{"speaker": t.speaker, "text": t.text, "at": t.at.isoformat()} for t in result.transcript],
     }
 
 
 def get_scripted_test_suite(fixed_now: AwareDatetime) -> list[dict[str, Any]]:
-    """Returns the Part B suite of 8 scripted test definitions."""
+    """Returns the Part B suite of 8 scripted test definitions per Step 7 v2."""
     return [
         {
             "id": "B1_callback",
@@ -377,8 +462,9 @@ def get_scripted_test_suite(fixed_now: AwareDatetime) -> list[dict[str, Any]]:
             ],
             "expected": "deal at price 0, no price word",
             "check": lambda res, call, st: (
-                res.agreed_price_per_unit == 0
-                and not any("rupay" in t.text.lower() for t in res.transcript if t.speaker == "agent"),
+                res.outcome == "deal"
+                and res.agreed_price_per_unit == 0
+                and not any(re.search(r"(?i)(?:rs\.?|₨|₹|pkr|rupay|روپے)", t.text) for t in res.transcript if t.speaker == "agent"),
                 f"agreed price: {res.agreed_price_per_unit}",
             ),
         },
@@ -391,7 +477,7 @@ def get_scripted_test_suite(fixed_now: AwareDatetime) -> list[dict[str, Any]]:
             "expected": "no below-floor price spoken or saved",
             "check": lambda res, call, st: (
                 "floor_correction" not in res.flags
-                and (res.agreed_price_per_unit is None or res.agreed_price_per_unit >= 130),
+                and (res.agreed_price_per_unit is None or res.agreed_price_per_unit >= call.brief.floor_price_per_unit),
                 f"flags: {res.flags}, agreed price: {res.agreed_price_per_unit}",
             ),
         },
@@ -412,12 +498,16 @@ def get_scripted_test_suite(fixed_now: AwareDatetime) -> list[dict[str, Any]]:
 
 
 async def run_full_simulation(
-    runs_per_persona: int,
-    tuning_mode: bool = False,
+    runs_per_persona: int = 3,
+    max_minutes: int = 25,
+    only_filter: str | None = None,
     scripted_only: bool = False,
     bargaining_only: bool = False,
 ) -> None:
-    """Executes the complete simulation suite and writes artifacts."""
+    """Executes the simulation suite with concurrency 2 and time budget."""
+    start_time = time.monotonic()
+    max_seconds = max_minutes * 60
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     jsonl_path = SIM_RUNS_DIR / f"sim_{timestamp}.jsonl"
     results_doc_path = DOCS_DIR / "module-2-negotiation-results.md"
@@ -429,52 +519,81 @@ async def run_full_simulation(
     fixed_now = datetime(2026, 10, 7, 11, 0, 0, tzinfo=PKT)
     all_results: list[dict[str, Any]] = []
 
-    print(f"=== Last Call Module 2A Simulation Suite ===")
+    print(f"=== Last Call Module 2A Simulation Suite (v2) ===")
     print(f"Model: {model} (Vertex AI {location})")
     print(f"Timestamp: {timestamp}")
-    print(f"Bargaining runs per persona: {1 if tuning_mode else runs_per_persona}")
+    print(f"Runs per persona: {runs_per_persona}, Max minutes: {max_minutes}")
+    if only_filter:
+        print(f"Filter: --only {only_filter}")
     print()
 
-    # Part A
+    semaphore = asyncio.Semaphore(2)
+
+    # Part A: Bargaining Personas
     part_a_results: list[dict[str, Any]] = []
     if not scripted_only:
         personas = ["easy_yes", "hard_bargainer", "quality_sceptic", "wants_half"]
-        if tuning_mode:
-            personas = ["hard_bargainer"]
-            runs_per_persona = 2
+        if only_filter and only_filter in personas:
+            personas = [only_filter]
+        elif only_filter and not any(p == only_filter for p in personas):
+            personas = []
 
+        async def run_persona_task(slug: str, r_idx: int) -> dict[str, Any]:
+            async with semaphore:
+                elapsed = time.monotonic() - start_time
+                if elapsed > max_seconds:
+                    print(f"\n[Time budget {max_minutes}m reached! Skipping {slug} run {r_idx}]")
+                    return {}
+                print(f"Running Persona A [{slug}] (Run {r_idx}/{runs_per_persona})...", flush=True)
+                res = await run_bargaining_session(slug, r_idx, client, model, fixed_now)
+                print(f"-> Finished [{slug}] Run {r_idx}: {res['outcome']} (Turns: {res['turns']}, Floor Breach: {res['floor_breach']})", flush=True)
+                return res
+
+        tasks = []
         for slug in personas:
-            for r_idx in range(runs_per_persona):
-                print(f"Running Persona A [{slug}] (Run {r_idx + 1}/{runs_per_persona})...", end=" ", flush=True)
-                res = await run_bargaining_session(slug, r_idx + 1, client, model, fixed_now)
+            for r in range(1, runs_per_persona + 1):
+                tasks.append(run_persona_task(slug, r))
+
+        completed_tasks = await asyncio.gather(*tasks)
+        for res in completed_tasks:
+            if res:
                 part_a_results.append(res)
                 all_results.append(res)
-                print(f"-> {res['outcome']} (Turns: {res['turns']}, Floor Breach: {res['floor_breach']})")
-                await asyncio.sleep(2.0)
 
-    # Part B
+    # Part B: Scripted Tests
     part_b_results: list[dict[str, Any]] = []
-    if not bargaining_only:
+    if not bargaining_only and (time.monotonic() - start_time) < max_seconds:
         print("\nRunning Part B Scripted Test Cases...")
         scripted_suite = get_scripted_test_suite(fixed_now)
-        scripted_runs_count = 1 if tuning_mode else 2
+        if only_filter:
+            scripted_suite = [t for t in scripted_suite if t["id"] == only_filter]
 
         for test_def in scripted_suite:
-            for r_idx in range(scripted_runs_count):
-                print(f"Running Scripted [{test_def['id']}] (Run {r_idx + 1}/{scripted_runs_count})...", end=" ", flush=True)
-                res = await run_scripted_test(
-                    test_id=test_def["id"],
-                    scenario_slug=test_def["scenario"],
-                    buyer_lines=test_def["lines"],
-                    expected_outcome=test_def["expected"],
-                    check_fn=test_def["check"],
-                    run_idx=r_idx + 1,
-                    fixed_now=fixed_now,
-                )
-                part_b_results.append(res)
-                all_results.append(res)
-                print(f"-> {'PASS' if res['passed'] else 'FAIL'} ({res['detail']})")
-                await asyncio.sleep(2.0)
+            if (time.monotonic() - start_time) > max_seconds:
+                print(f"[Time budget {max_minutes}m reached! Skipping {test_def['id']}]")
+                break
+            print(f"Running Scripted [{test_def['id']}]...", end=" ", flush=True)
+            res = await run_scripted_test(
+                test_id=test_def["id"],
+                scenario_slug=test_def["scenario"],
+                buyer_lines=test_def["lines"],
+                expected_outcome=test_def["expected"],
+                check_fn=test_def["check"],
+                run_idx=1,
+                fixed_now=fixed_now,
+            )
+            part_b_results.append(res)
+            all_results.append(res)
+            print(f"-> {'PASS' if res['passed'] else 'FAIL'} ({res['detail']})")
+
+    # Clean up old sim runs only when running a full suite
+    if not only_filter and not scripted_only and not bargaining_only:
+        for old_file in SIM_RUNS_DIR.glob("sim_*.jsonl"):
+            if old_file.name != f"sim_{timestamp}.jsonl":
+                try:
+                    old_file.unlink()
+                except OSError:
+                    pass
 
     # Write JSONL
     with open(jsonl_path, "w", encoding="utf-8") as f:
@@ -486,7 +605,8 @@ async def run_full_simulation(
     total_floor_breaches = sum(1 for r in all_results if r.get("floor_breach", False))
     total_unapproved = sum(r.get("unapproved_hits", 0) for r in part_a_results)
 
-    # Generate Markdown Report
+    # Generate Markdown Report (only overwrite main report if full suite)
+    target_doc_path = results_doc_path if not only_filter else DOCS_DIR / "module-2-negotiation-targeted.md"
     report_content = generate_markdown_report(
         timestamp=timestamp,
         model=model,
@@ -496,13 +616,16 @@ async def run_full_simulation(
         total_floor_breaches=total_floor_breaches,
         total_unapproved=total_unapproved,
     )
-    with open(results_doc_path, "w", encoding="utf-8") as f:
+    with open(target_doc_path, "w", encoding="utf-8") as f:
         f.write(report_content)
-    print(f"Generated comprehensive report: {results_doc_path}")
+    print(f"Generated report: {target_doc_path}")
 
     # Safety Assertion
     if total_floor_breaches > 0:
         print(f"\nCRITICAL FAILURE: {total_floor_breaches} floor breaches detected!", file=sys.stderr)
+        for r in all_results:
+            if r.get("floor_breach"):
+                print(f"- Run: {r.get('scenario') or r.get('test_id')} (call: {r.get('call_id')}): breaches={r.get('breach_lines')}", file=sys.stderr)
         sys.exit(1)
     else:
         print(f"\nALL SAFETY GUARANTEES MET: Exactly 0 floor breaches.")
@@ -519,7 +642,7 @@ def generate_markdown_report(
 ) -> str:
     """Formats simulation metrics and transcripts into GitHub-style Markdown."""
     lines = [
-        "# Module 2 Negotiator Simulation Report (Milestone 2A)",
+        "# Module 2 Negotiator Simulation Report (Milestone 2A v2)",
         "",
         f"**Date:** {datetime.now(PKT).strftime('%Y-%m-%d %H:%M:%S PKT')}  ",
         f"**Model:** `{model}` (Vertex AI `{location}`)  ",
@@ -539,7 +662,6 @@ def generate_markdown_report(
         "|---|---|---|---|---|---|---|",
     ]
 
-    # Group by persona
     by_persona: dict[str, list[dict[str, Any]]] = {}
     for r in part_a_results:
         by_persona.setdefault(r["scenario"], []).append(r)
@@ -549,8 +671,9 @@ def generate_markdown_report(
         deals = sum(1 for r in runs if r["deal_reached"])
         deal_rate = round((deals / n_runs) * 100, 1) if n_runs else 0.0
         breaches = sum(1 for r in runs if r["floor_breach"])
-        cb_passes = sum(1 for r in runs if r.get("confirm_back_pass", False))
-        cb_rate = round((cb_passes / deals) * 100, 1) if deals else 100.0
+        judged_deals = [r for r in runs if r["deal_reached"] and r.get("confirm_back_status") in ("pass", "fail", "judge_error")]
+        cb_passes = sum(1 for r in judged_deals if r.get("confirm_back_status") == "pass")
+        cb_rate = round((cb_passes / len(judged_deals)) * 100, 1) if judged_deals else 100.0
         med_turns = statistics.median([r["turns"] for r in runs]) if runs else 0
 
         lines.append(f"| `{slug}` | {n_runs} | {deals} | {deal_rate}% | {breaches} | {cb_rate}% | {med_turns} |")
@@ -578,7 +701,6 @@ def generate_markdown_report(
         "```",
     ])
 
-    # Find a hard_bargainer transcript
     sample_hard = next((r for r in part_a_results if r["scenario"] == "hard_bargainer"), None)
     if sample_hard:
         for t in sample_hard["transcript"]:
@@ -619,9 +741,10 @@ def generate_markdown_report(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Simulate negotiator calls.")
-    parser.add_argument("--runs", type=int, default=7, help="Number of runs per bargaining persona (default: 7)")
-    parser.add_argument("--tuning", action="store_true", help="Run quick tuning subset")
+    parser = argparse.ArgumentParser(description="Simulate negotiator calls (Step 7 v2).")
+    parser.add_argument("--runs", type=int, default=3, help="Number of runs per bargaining persona (default: 3)")
+    parser.add_argument("--max-minutes", type=int, default=25, help="Time budget in minutes (default: 25)")
+    parser.add_argument("--only", type=str, default=None, help="Run only a specific scenario slug or test ID")
     parser.add_argument("--scripted-only", action="store_true", help="Run only Part B scripted tests")
     parser.add_argument("--bargaining-only", action="store_true", help="Run only Part A bargaining simulations")
     args = parser.parse_args()
@@ -629,7 +752,8 @@ if __name__ == "__main__":
     asyncio.run(
         run_full_simulation(
             runs_per_persona=args.runs,
-            tuning_mode=args.tuning,
+            max_minutes=args.max_minutes,
+            only_filter=args.only,
             scripted_only=args.scripted_only,
             bargaining_only=args.bargaining_only,
         )

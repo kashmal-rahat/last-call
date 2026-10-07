@@ -18,7 +18,13 @@ from lastcall_shared.models import (
 )
 from lastcall_voice.negotiator.pricing import OfferDecision, verify_offer
 from lastcall_voice.negotiator.deals import validate_deal_terms
-from lastcall_voice.negotiator.price_guard import classify, find_spoken_prices
+from lastcall_voice.negotiator.price_guard import (
+    classify,
+    fallback_extract_prices,
+    find_prices,
+    find_spoken_prices,
+    has_spoken_price_cue,
+)
 
 PKT = timezone(timedelta(hours=5))
 NOW = datetime(2026, 10, 7, 12, 0, 0, tzinfo=PKT)
@@ -224,48 +230,33 @@ def test_validate_deal_terms_scenarios():
 
 
 # ==============================================================================
-# Price Guard: 30+ Spoken Price Cases & Classification
+# Price Guard: v2 Digits-only Test Cases & Fallback
 # ==============================================================================
 
-TEST_SPOKEN_PRICE_CASES = [
-    # Roman Urdu plain numbers with price context
-    ("aik sau bees rupay darjan", [120]),
-    ("rate dedh sau rupay hai", [150]),
-    ("paune do sau rupay per kilo", [175]),
-    ("sawa sau rupay rate hai", [125]),
-    ("dhai sau rupay mein le lo", [250]),
-    ("paune teen sau rupaye", [275]),
-    ("sau rupay ka rate", [100]),
-    ("hazaar rupay per crate", [1000]),
-    ("tees rupay kilo", [30]),
-    ("chalis rupaye kilo", [40]),
-    ("pachaas rupay daam hai", [50]),
-    ("athasi rupay per darjan", [88]),
-    ("pachaanve rupay ka rate", [95]),
-    ("chhiyasi rupay rupaye", [86]),
-    ("nabbe rupay daam", [90]),
-    ("satattar rupaye", [77]),
-    ("ikkees rupay ka darjan", [21]),
-    ("chhappan rupaye", [56]),
-    ("do sau pachaas rupay", [250]),
-    ("aik sau athasi rupay", [188]),
-    # Western digits with context
-    ("120 rupay", [120]),
-    ("rate 150 rs hai", [150]),
+TEST_DIGIT_PRICE_CASES = [
+    # Required regression cases
+    ("Toh 60 kilo, Rs 140 per kilo, cash on pickup", [140]),
+    ("40 darjan Rs 110 per darjan", [110]),
+    ("145 rupay kilo", [145]),
+    ("Rs 1,200", [1200]),
+    ("۱۴۵ روپے", [145]),
+    ("60 kilo aam, 3 baje", []),
+    # Additional prefix currency cases
+    ("Rs 145", [145]),
+    ("Rs. 145", [145]),
+    ("₨ 145", [145]),
+    ("₹110", [110]),
+    ("PKR 145", [145]),
     ("Rs. 180 per kilo", [180]),
+    ("aap ne Rs 100 kaha", [100]),
+    # Suffix rupee words immediately after number
     ("daam 95 rupaye", [95]),
-    # Urdu script with context
-    ("ایک سو بیس روپے درجن", [120]),
-    ("ڈیڑھ سو روپے ریٹ", [150]),
-    ("پونے دو سو روپے", [175]),
-    ("سوا سو روپے", [125]),
-    ("ڈھائی سو روپے دام", [250]),
-    ("پچانوے روپے فی کلو", [95]),
-    ("اٹھاسی روپے ریٹ", [88]),
-    # Urdu digits with context
+    ("120 rupay", [120]),
     ("۱۲۰ روپے", [120]),
-    ("۱۵۰ روپے کلو", [150]),
-    # Irrelevant numbers without price context (MUST NOT match)
+    # Irrelevant numbers without currency markers (MUST NOT match)
+    ("60 kilo aam", []),
+    ("3:00 baje", []),
+    ("20 darjan", []),
     ("call me at 11 am tomorrow", []),
     ("mere paas 5 cartons hain", []),
     ("address street 4 hai", []),
@@ -273,10 +264,49 @@ TEST_SPOKEN_PRICE_CASES = [
 ]
 
 
-@pytest.mark.parametrize("text,expected", TEST_SPOKEN_PRICE_CASES)
-def test_price_guard_find_spoken_prices(text: str, expected: list[int]):
-    extracted = find_spoken_prices(text)
+@pytest.mark.parametrize("text,expected", TEST_DIGIT_PRICE_CASES)
+def test_price_guard_find_prices(text: str, expected: list[int]):
+    extracted = find_prices(text)
     assert extracted == expected, f"Failed for text '{text}': got {extracted}, expected {expected}"
+    # Verify backward compatible alias
+    assert find_spoken_prices(text) == expected
+
+
+def test_price_guard_cues_and_fallback():
+    # Spoken cues detection
+    assert has_spoken_price_cue("aik sau bees rupay darjan") is True
+    assert has_spoken_price_cue("hazaar rupay per crate") is True
+    assert has_spoken_price_cue("60 kilo aam 3 baje") is False
+
+    # Faked fallback client success
+    class FakeGenaiResponse:
+        text = '{"agent_offered_prices": [145]}'
+
+    class FakeModels:
+        async def generate_content(self, *args, **kwargs):
+            return FakeGenaiResponse()
+
+    class FakeClient:
+        class aio:
+            models = FakeModels()
+
+    import asyncio
+    prices, unchecked = asyncio.run(fallback_extract_prices("aik sau pantalees rupay", FakeClient()))
+    assert prices == [145]
+    assert unchecked is False
+
+    # Faked fallback client error/timeout
+    class BrokenModels:
+        async def generate_content(self, *args, **kwargs):
+            raise RuntimeError("API timeout")
+
+    class BrokenClient:
+        class aio:
+            models = BrokenModels()
+
+    prices_err, unchecked_err = asyncio.run(fallback_extract_prices("some text", BrokenClient()))
+    assert prices_err == []
+    assert unchecked_err is True
 
 
 def test_price_guard_classify():
@@ -298,3 +328,50 @@ def test_price_guard_classify():
     # Price above current is ok
     assert classify([140], floor, approved, current) == "ok"
     assert classify([160], floor, approved, current) == "ok"
+
+
+def test_prompt_template_v1_4_and_gender_consistency():
+    from lastcall_voice.negotiator.prompt import PROMPT_VERSION, render_instruction
+
+    assert PROMPT_VERSION == "1.4"
+    brief = make_test_brief()
+    view = brief.agent_view()
+
+    expected_rule = "Never call a price 'aakhri', 'last' or 'final' unless verify_offer returned decision = final."
+
+    # Male rendering in text mode
+    male_text = render_instruction(
+        view,
+        mode="text",
+        agent_gender="male",
+        city_style="- Karachi market style",
+        now=NOW,
+    )
+    assert 'main bol raha hoon' in male_text
+    assert 'kar deta hoon' in male_text
+    assert 'keh raha tha' in male_text
+    assert 'bol rahi' not in male_text
+    assert 'kar deti' not in male_text
+    assert 'keh rahi thi' not in male_text
+    assert 'Text testing mode' in male_text
+    assert 'Rs 145 per kilo' in male_text
+    assert expected_rule in male_text
+
+    # Female rendering in voice mode
+    female_voice = render_instruction(
+        view,
+        mode="voice",
+        agent_gender="female",
+        city_style="- Karachi market style",
+        now=NOW,
+    )
+    assert 'main bol rahi hoon' in female_voice
+    assert 'kar deti hoon' in female_voice
+    assert 'keh rahi thi' in female_voice
+    assert 'bol raha' not in female_voice
+    assert 'kar deta' not in female_voice
+    assert 'keh raha tha' not in female_voice
+    assert 'Text testing mode' not in female_voice
+    assert 'plainly in words' in female_voice
+    assert expected_rule in female_voice
+

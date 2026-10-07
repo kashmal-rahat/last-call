@@ -7,7 +7,7 @@ from pydantic import AwareDatetime
 
 from lastcall_shared.models import AgentDealBrief
 
-PROMPT_VERSION = "1.2"
+PROMPT_VERSION = "1.4"
 TEMPLATE_DIR = Path(__file__).parent
 
 _GENDER_TABLE = {
@@ -15,12 +15,14 @@ _GENDER_TABLE = {
         "deta": "deta",
         "raha": "raha",
         "tha": "tha",
+        "bol_raha": "bol raha",
         "assistant": "AI assistant",
     },
     "female": {
         "deta": "deti",
         "raha": "rahi",
         "tha": "thi",
+        "bol_raha": "bol rahi",
         "assistant": "AI assistant",
     },
 }

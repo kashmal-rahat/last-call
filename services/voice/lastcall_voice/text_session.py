@@ -29,7 +29,7 @@ from lastcall_voice.call_context import (
 from lastcall_voice.negotiator.agent import build_negotiator
 from lastcall_voice.negotiator.price_guard import (
     classify as classify_price,
-    find_spoken_prices,
+    find_prices,
 )
 
 PKT = ZoneInfo("Asia/Karachi")
@@ -164,7 +164,7 @@ async def run_text_turn(
     agent_text = agent_text.strip()
 
     # Price guard classification
-    prices = find_spoken_prices(agent_text)
+    prices = find_prices(agent_text)
     current_price = call.negotiation.ladder[call.negotiation.rung]
     classification = classify_price(
         prices=prices,
