@@ -58,4 +58,4 @@ If any of these conflict, **ask the user. Don't choose silently.**
 | Module | Plan | Status |
 |---|---|---|
 | 0: Foundations | [module-0-foundations.md](module-0-foundations.md) | Completed |
-| 2: Negotiator | — | Not planned yet. Wait for the user |
+| 2: Negotiator | [module-2-negotiator.md](module-2-negotiator.md) | Planned, v3 final (2026-10-07). Implement milestone 2A first |
