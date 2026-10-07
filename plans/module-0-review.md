@@ -4,7 +4,37 @@
 **Re-reviewed:** 2026-10-07, commit `9ade52a` (critical issues only, see below)
 **Third review:** 2026-10-07, commit `0f9265c` (design gaps and better options, R1–R5)
 **Fourth review:** 2026-10-07, commit `197a7e5` (checking the R1–R5 fixes, F1–F5)
+**Fifth review:** 2026-10-07, commit `34f7fa0` (checking the F1–F5 fixes, G1–G3)
 **Scope:** documentation only. No code, Terraform or cloud resources were changed. Fixes need the user's approval, and Terraform changes need a reviewed `terraform plan`.
+
+---
+
+# Fifth review at `34f7fa0`: final follow-ups
+
+The F1–F5 fixes are correct: D14 is in the decision log, the architecture describes inspections and batches, `CallingHours` is strict, the R4 test now exercises the real handler, the schema version is `2.0.0`, and a donation's agreed price must be 0. 19/19 tests pass. Three small items remain:
+
+### G1 🟠 A phone-masking test lost its checks (regression)
+- In `shared/tests/test_models.py`, `test_cloud_logging_formatter` used to assert that `+923001234567` is masked in `message`. Inserting `test_calling_hours_validation` deleted those two lines.
+- The test now checks only `severity` and `service`, so masking of normal log messages has no test.
+- **Fix:** restore the two assertions at the end of `test_cloud_logging_formatter`, plus the blank lines between the functions.
+
+### G2 🟠 Compost and decision states have no home in the D14 data model
+- `batches` states now begin at "finding buyers". Inspections have no states listed in §6, although §4 sets "inspecting" and then "deciding".
+- **Compost** creates no batch in Decide, yet it needs manager approval. A batch can also reach compost later through the ladder (`call-finished`: "Compost reached: sends it for manager approval").
+- So "awaiting compost approval" and "composted" aren't in any state list, and "on shelf" items have no record to show the next photo that they were already discounted.
+- **Fix** (in architecture §4 and §6):
+  - Inspection states: `inspecting → deciding → decided | needs attention`.
+  - Each inspection item gets a `decision` (`on_shelf` with discount, `batch_id`, or `compost`).
+  - Decide creates a batch for **every** off-shelf item, compost included, so approval always has a record.
+  - Batch states: add `awaiting compost approval → composted`.
+  - Remove the duplicate "creates a clearance batch" line in §4 step 2.
+
+### G3 🟢 Make sure the containers include timezone data
+- `CallingHours` now calls `ZoneInfo(...)`. If the container image lacks system tzdata, every `DealBrief` is rejected with "Invalid timezone".
+- **Fix:** add `tzdata` to `shared/pyproject.toml` (the PyPI package, which `zoneinfo` falls back to). It's cheap insurance whatever the base image ships.
+- Also tidy `except (ZoneInfoNotFoundError, ValueError, Exception)` to `except Exception`.
+
+After G1–G3, Module 0 has no open design issues. Next is R5/F2 (the hard spending limit), part of the Module 2 plan.
 
 ---
 
