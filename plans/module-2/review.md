@@ -87,7 +87,7 @@ The quantity check in `validate_deal_terms` is correct. But `tools.confirm_deal`
   - Report the median and p90 over a real call.
 
 ### H2. The Urdu test isn't done yet, but the doc says "PASS"
-- `docs/module-2-voice-results.md` shows **one** call (hard bargainer) as "Native Speaker Test Results: PASS".
+- `results/voice.md` shows **one** call (hard bargainer) as "Native Speaker Test Results: PASS".
 - Step 13 needs 4 bargaining scenarios plus 3 situations, tested by 2 native speakers, with 1–5 ratings.
 - The user is doing this test. The doc must label that section **"Pending: user's native-speaker test"** and keep the one call as a smoke check.
 

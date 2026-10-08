@@ -7,13 +7,14 @@ One plan per module. The agent writes a plan, the user approves it, and only the
 1. `docs/last-call-idea.md`
 2. `docs/last-call-architecture.md`
 3. `docs/last-call-module-plan.md`
-4. The approved plan in this folder for the current module
+4. The approved plan in `plans/module-N/plan.md` for the current module
 5. The decision log below
 
 If any of these conflict, **ask the user. Don't choose silently.**
 
 ## Working rules (from the user)
 
+- Each module keeps its plan, review and results in `plans/module-N/`.
 - Work on **one module at a time**: plan, wait for approval, then implement.
 - After implementing, report **what works, what doesn't, and what couldn't be verified**.
 - **Never plan or build the next module** until the user names it. Where a later module is needed, use a simple stand-in.
@@ -58,10 +59,11 @@ If any of these conflict, **ask the user. Don't choose silently.**
 | D18 | 2026-10-07 | All Negotiator tools are BLOCKING. Model only ever sees `agent_view()`, and every price comes from `verify_offer` | Hard zero-floor-breach guarantee and zero price leakage |
 | D19 | 2026-10-07 | `api` serves demo page at `/demo`. Page talks to `voice` over WebSocket authenticated by short-lived HMAC token in first message | Secure voice session handoff without tokens in request URLs |
 | D20 | 2026-10-07 | WhatsApp and photo sends are stubs written to `outbox`. Do-not-call entries are written in Module 2 and enforced by Scout in Module 4 | Clear module boundaries |
+| D21 | 2026-10-09 | Kill switch armed: SIMULATE_DEACTIVATION=false, KILL_RATIO=1.0 (fires at the $50 budget). Testing limits: daily cap 50, IP 20/h, to be lowered after testing. | Production safety hardening per user review |
 
 ## Module status
 
 | Module | Plan | Status |
 |---|---|---|
-| 0: Foundations | [module-0-foundations.md](module-0-foundations.md) | Completed |
-| 2: Negotiator | [module-2-negotiator.md](module-2-negotiator.md) | Milestone 2A Complete (2026-10-07). Awaiting approval for 2B |
+| 0: Foundations | [module-0/plan.md](module-0/plan.md) | Completed |
+| 2: Negotiator | [module-2/plan.md](module-2/plan.md) | Implemented and deployed (2B). Pending: user's native-speaker test, then lower the demo limits |

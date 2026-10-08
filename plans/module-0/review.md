@@ -229,9 +229,9 @@ Architecture §7 asks for least privilege, and for AI-written code to be checked
 
 11. **`.DS_Store` is committed** even though `.gitignore` excludes it. It needs `git rm --cached .DS_Store`.
 12. **Some docs are out of date:**
-    - The header of [module-0-foundations.md](module-0-foundations.md) still says `asia-southeast1` and "D1–D10".
+    - The header of [plan.md](plan.md) still says `asia-southeast1` and "D1–D10".
     - The docstring in `scripts/region_check.py` still says "global endpoint" and "us-central1".
-    - [region-check.md](../docs/region-check.md) has lost the `asia-southeast1` Live **failure** that led to D13. It also doesn't confirm that Firestore and Cloud Tasks are available in `europe-west1`, which Module 2 and later modules need.
+    - [region-check.md](results/region-check.md) has lost the `asia-southeast1` Live **failure** that led to D13. It also doesn't confirm that Firestore and Cloud Tasks are available in `europe-west1`, which Module 2 and later modules need.
     - The Terraform state bucket is in `asia-southeast1` while everything else is in `europe-west1`. That's harmless, but it should be written down.
 13. **The agent sees the buyer's phone number.** `agent_view()` includes `buyer.phone`, which the Negotiator never needs. The architecture's §7 personal-data rules suggest not sending it to the model.
 14. **The phone pattern catches too much.** It matches any number of 8 to 15 digits (IDs, timestamps). That's safe, because more gets masked rather than less, but it makes logs noisy.

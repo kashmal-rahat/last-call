@@ -167,10 +167,10 @@ async def main():
     live_res = await verify_live(PROJECT_ID, LOCATION, LIVE_MODEL)
 
     report = generate_report(flash_res, live_res)
-    os.makedirs("docs", exist_ok=True)
-    with open("docs/region-check.md", "w", encoding="utf-8") as f:
+    os.makedirs("plans/module-0/results", exist_ok=True)
+    with open("plans/module-0/results/region-check.md", "w", encoding="utf-8") as f:
         f.write(report)
-    print("Done! Standardized report saved to docs/region-check.md")
+    print("Done! Standardized report saved to plans/module-0/results/region-check.md")
 
 
 if __name__ == "__main__":

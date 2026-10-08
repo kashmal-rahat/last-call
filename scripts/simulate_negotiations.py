@@ -13,7 +13,7 @@ Executes:
   - No fixed sleeps
   - Exponential backoff with jitter on 429/RESOURCE_EXHAUSTED only (2, 4, 8, 16, 30, 30 s)
   - Time budget: --max-minutes 25 writes partial report on expiry
-- Outputs: data/sim_runs/sim_<ts>.jsonl and docs/module-2-negotiation-results.md
+- Outputs: data/sim_runs/sim_<ts>.jsonl and plans/module-2/results/simulation.md
 """
 
 import argparse
@@ -30,8 +30,7 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from lastcall_shared.config import get_settings
-
+os.environ.setdefault("APP_SIGNING_KEY", "default-app-signing-key-for-offline-scripts-32chars")
 settings = get_settings()
 # Set Vertex AI environment variables before importing ADK / GenAI
 os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
@@ -54,10 +53,11 @@ from lastcall_voice.text_session import (
 )
 
 PKT = ZoneInfo("Asia/Karachi")
-SIM_RUNS_DIR = Path("data/sim_runs")
+REPO_DIR = Path(__file__).resolve().parent.parent
+SIM_RUNS_DIR = REPO_DIR / "data/sim_runs"
 SIM_RUNS_DIR.mkdir(parents=True, exist_ok=True)
-DOCS_DIR = Path("docs")
-DOCS_DIR.mkdir(parents=True, exist_ok=True)
+RESULTS_DIR = REPO_DIR / "plans/module-2/results"
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 BACKOFF_DELAYS = [2.0, 4.0, 8.0, 16.0, 30.0, 30.0]
 
@@ -544,7 +544,7 @@ async def run_full_simulation(
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     jsonl_path = SIM_RUNS_DIR / f"sim_{timestamp}.jsonl"
-    results_doc_path = DOCS_DIR / "module-2-negotiation-results.md"
+    results_doc_path = RESULTS_DIR / "simulation.md"
 
     settings = get_settings()
     model = settings.GEMINI_FLASH_MODEL
@@ -643,20 +643,33 @@ async def run_full_simulation(
     total_floor_breaches = sum(1 for r in all_results if r.get("floor_breach", False))
     total_unapproved = sum(r.get("unapproved_hits", 0) for r in part_a_results)
 
-    # Generate Markdown Report (only overwrite main report if full suite)
-    target_doc_path = results_doc_path if not only_filter else DOCS_DIR / "module-2-negotiation-targeted.md"
-    report_content = generate_markdown_report(
-        timestamp=timestamp,
-        model=model,
-        location=location,
-        part_a_results=part_a_results,
-        part_b_results=part_b_results,
-        total_floor_breaches=total_floor_breaches,
-        total_unapproved=total_unapproved,
-    )
-    with open(target_doc_path, "w", encoding="utf-8") as f:
-        f.write(report_content)
-    print(f"Generated report: {target_doc_path}")
+    # Generate Markdown Report (only when not running with --only)
+    if not only_filter:
+        report_content = generate_markdown_report(
+            timestamp=timestamp,
+            model=model,
+            location=location,
+            part_a_results=part_a_results,
+            part_b_results=part_b_results,
+            total_floor_breaches=total_floor_breaches,
+            total_unapproved=total_unapproved,
+        )
+        targeted_checks = ""
+        if results_doc_path.exists():
+            existing_text = results_doc_path.read_text(encoding="utf-8")
+            if "## Targeted checks" in existing_text:
+                targeted_checks = "\n\n" + existing_text[existing_text.index("## Targeted checks"):].strip()
+            elif "Targeted checks" in existing_text:
+                idx = existing_text.index("Targeted checks")
+                line_start = existing_text.rfind("\n", 0, idx)
+                targeted_checks = "\n\n" + existing_text[line_start if line_start != -1 else 0:].strip()
+
+        if targeted_checks:
+            report_content = report_content.rstrip() + targeted_checks + "\n"
+
+        with open(results_doc_path, "w", encoding="utf-8") as f:
+            f.write(report_content)
+        print(f"Generated report: {results_doc_path}")
 
     # Safety Assertion
     if total_floor_breaches > 0:

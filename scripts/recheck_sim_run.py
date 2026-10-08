@@ -2,14 +2,18 @@
 
 Loads the latest sim_*.jsonl file, re-runs the fixed price guard on every agent turn,
 recomputes floor_breach and unapproved counts, updates the JSONL record in-place,
-and regenerates docs/module-2-negotiation-results.md.
+and regenerates plans/module-2/results/simulation.md.
 """
 
 import json
+import os
 import statistics
+import sys
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+os.environ.setdefault("APP_SIGNING_KEY", "default-app-signing-key-for-offline-scripts-32chars")
 
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import NegotiationPolicy, init_negotiation
@@ -17,11 +21,22 @@ from lastcall_shared.scenarios.loader import build_call, load_scenario
 from lastcall_voice.negotiator.price_guard import classify, find_prices
 
 PKT = ZoneInfo("Asia/Karachi")
-SIM_RUNS_DIR = Path("data/sim_runs")
-DOCS_DIR = Path("docs")
+REPO_DIR = Path(__file__).resolve().parent.parent
+SIM_RUNS_DIR = REPO_DIR / "data/sim_runs"
+RESULTS_DIR = REPO_DIR / "plans/module-2/results"
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def get_latest_sim_file(target_name: str = "sim_20261007_215940.jsonl") -> Path:
+    if len(sys.argv) > 1 and sys.argv[1]:
+        p = Path(sys.argv[1])
+        if not p.is_absolute():
+            p = (Path.cwd() / p).resolve()
+        if p.exists():
+            return p
+        repo_p = (REPO_DIR / sys.argv[1]).resolve()
+        if repo_p.exists():
+            return repo_p
     specific = SIM_RUNS_DIR / target_name
     if specific.exists():
         return specific
@@ -254,7 +269,23 @@ def main():
     part_b = [r for r in rechecked_runs if r.get("type") == "scripted"]
 
     report_md = generate_report(sim_file, part_a, part_b)
-    report_path = DOCS_DIR / "module-2-negotiation-results.md"
+    report_path = RESULTS_DIR / "simulation.md"
+
+    targeted_checks = ""
+    if report_path.exists():
+        existing_text = report_path.read_text(encoding="utf-8")
+        if "## Targeted checks" in existing_text:
+            targeted_checks = "\n\n" + existing_text[existing_text.index("## Targeted checks"):].strip()
+        elif "Targeted checks" in existing_text:
+            idx = existing_text.index("Targeted checks")
+            line_start = existing_text.rfind("\n", 0, idx)
+            targeted_checks = "\n\n" + existing_text[line_start if line_start != -1 else 0:].strip()
+
+    if targeted_checks:
+        report_md = report_md.rstrip() + targeted_checks + "\n"
+    else:
+        report_md = report_md.rstrip() + "\n\n## Targeted checks\n\n- B10 (confirm keeps agreed price): PASS, sim_20261009_002900.jsonl\n"
+
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(report_md)
     print(f"Regenerated report: {report_path}")

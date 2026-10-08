@@ -80,7 +80,7 @@ Write `scripts/region_check.py` (Python 3.12, `google-genai` SDK with `vertexai=
 
 Look up the current model IDs in the Vertex AI docs at the time of implementation; don't guess them. Keep model IDs in config (`.env` / env vars), not hard-coded.
 
-Save the results, including model IDs, latency and pass/fail, to `docs/region-check.md`.
+Save the results, including model IDs, latency and pass/fail, to `plans/module-0/results/region-check.md`.
 
 🛑 If any Gemini model fails in `asia-southeast1`, stop and ask the user whether to use the `global` endpoint for that model or switch region.
 
@@ -88,7 +88,8 @@ Save the results, including model IDs, latency and pass/fail, to `docs/region-ch
 
 ```
 last-call/
-├── docs/                      # existing docs + region-check.md
+├── docs/                      # existing concept docs
+├── plans/module-0/results/    # region-check.md
 ├── plans/                     # plans + README (decision log)
 ├── infra/terraform/
 ├── shared/lastcall_shared/    # shared formats (Pydantic v2)
@@ -175,7 +176,7 @@ openssl rand -base64 32 | gcloud secrets versions add app-signing-key --data-fil
 
 ## How I'll check it works
 
-- [x] `docs/region-check.md` shows every service passing, or the user has decided on a fallback
+- [x] `plans/module-0/results/region-check.md` shows every service passing, or the user has decided on a fallback
 - [x] `terraform plan` shows no changes after the second apply (zero drift confirmed)
 - [x] `curl <api-url>/health` and `curl <voice-url>/health` both return 200
 - [x] The `api` logs show the signing key is present, without ever showing its value
@@ -192,7 +193,7 @@ openssl rand -base64 32 | gcloud secrets versions add app-signing-key --data-fil
 | **Step 2: Checks & Policies** | Project ownership, billing active, Org policy override, budget check | **PASSED** | Project `kayrox-last-call`, billing `01C776-42EDFC-E7E33A`, `iam.allowedPolicyMemberDomains` overridden to `allValues: ALLOW`, read-only budget check confirmed `$50/month`. |
 | **Step 3: State Bucket** | `gs://kayrox-last-call-tfstate` with versioning, UBLA, and PAP | **PASSED** | State bucket configured as remote backend in `versions.tf`. Remote state locking functioning. |
 | **Step 4: APIs** | 11 core GCP APIs enabled via Terraform (`disable_on_destroy = false`) | **PASSED** | `run`, `cloudbuild`, `artifactregistry`, `secretmanager`, `aiplatform`, `iam`, `iamcredentials`, `logging`, `cloudtrace`, `serviceusage`, `cloudresourcemanager` all active in project. |
-| **Step 5: Region & Models** | Vertex AI models probe & documentation in `region-check.md` | **PASSED** | Standardized on `europe-west1` and `eu` multi-region (Decision D13). Flash and Live probes passing. Verified in `docs/region-check.md`. |
+| **Step 5: Region & Models** | Vertex AI models probe & documentation in `results/region-check.md` | **PASSED** | Standardized on `europe-west1` and `eu` multi-region (Decision D13). Flash and Live probes passing. Verified in `plans/module-0/results/region-check.md`. |
 | **Step 6: Repo Scaffolding** | `uv` workspace, data templates, `.env.example`, `.gitignore`, root `README.md` | **PASSED** | `pyproject.toml` workspace, `data/shelf_photos/labels.csv`, `data/buyer_notes/TEMPLATE.md`, `.gitignore` strictly ignores secrets/state. `uv.lock` validated. |
 | **Step 7: Shared Domain** | Pydantic v2 models, strict units (D4), issues list (D5), status vs outcome (D6), `agent_view()` floor isolation | **PASSED** | `shared/lastcall_shared/models.py`, JSON schemas in `shared/schemas/`, fixtures in `shared/tests/fixtures/`, 12/12 unit tests passing in pytest. |
 | **Step 8: Service Skeletons** | FastAPI on Python 3.12, `/health` and `/healthz`, structured JSON logging with PII phone masking | **PASSED** | `services/api/main.py` and `services/voice/main.py`. `APP_SIGNING_KEY` presence logged securely without secret leakage. |

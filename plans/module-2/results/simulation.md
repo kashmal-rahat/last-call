@@ -1,6 +1,6 @@
 # Module 2 Negotiator Simulation Report (Milestone 2A Final)
 
-**Date:** 2026-10-07 22:43:02 PKT  
+**Date:** 2026-10-09 02:13:18 PKT  
 **Model:** `gemini-3.8-flash` (Vertex AI `eu`)  
 **Simulation Source:** `sim_20261007_215940.jsonl`  
 **Total Negotiation Sessions:** 20  
@@ -83,3 +83,7 @@ AGENT: Haha, arey jaane do yaar, itna to humein bhi wara nahi khaata. Humare paa
 - **Tool Behavior**: All negotiator tools executed synchronously in `BLOCKING` mode without premature audio or text leakage.
 - **Contract Compliance**: Store locking, single outcome enforcement, and outbox task dispatching validated against full test suite.
 - **Honest Confirmation**: Confirm-back rubric audited via Flash judge with 100% agreement on deal terms before closing.
+
+## Targeted checks
+
+- B10 (confirm keeps agreed price): PASS, sim_20261009_002900.jsonl

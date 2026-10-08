@@ -1,11 +1,22 @@
 # Module 2: Negotiator prompt (change log from the user v1 draft)
 
-This is the reference for `services/voice/lastcall_voice/negotiator/prompt.py` (step 6 of [module-2-negotiator.md](module-2-negotiator.md)). It's based on the user's v1 draft, with the slang kept.
+This is the reference for `services/voice/lastcall_voice/negotiator/prompt.py` (step 6 of [plan.md](plan.md)). It's based on the user's v1 draft, with the slang kept.
 - `{placeholders}` are filled by `render_instruction()` from `agent_view()` only.
 - Blocks marked `[if …]` are included or left out in code.
 - **The floor price and the price ladder never appear here.** They live in `verify_offer` (D18).
 
-## What changed from the user's v1, and why
+## Prompt version history (v1 -> v1.6)
+
+| Version | What changed | Why |
+|---|---|---|
+| **v1.1** | Floor removed; tools named (`verify_offer`, `confirm_deal`, etc.) | Architecture §5 and D18: secret floor must never leak to LLM. Code enforces tools and ladder. |
+| **v1.2** | Jinja2 template (`prompt_template.j2`) + gender word table (`g`) | Replaced unrenderable `{deta/deti}` and inline `[if]` with strict Jinja2 templating. |
+| **v1.3** | Present tense ("main bol raha hoon", never "raha tha") + digit prices in text mode | Grammatical consistency for male shopkeeper; strict digit format ("Rs 145") for evaluation parsing in text simulations. |
+| **v1.4** | No "aakhri" unless `verify_offer` returns `final` | Calling opening or intermediate counter "aakhri" damages credibility and violates negotiation rules. |
+| **v1.5** | Quantity cap (never agree to > available stock); no "sauda pakka" unless `confirm_deal` returns `ok=true`; H5 fixes | Stops verbal over-commitment (e.g. agreeing to 60 kg when only 50 kg available); ensures code verifies deal before closing. |
+| **v1.6** | Repeat vs `buyer_asks_lower` ("To repeat a price, call verify_offer with no arguments. Only set buyer_asks_lower=true when the buyer asks for a lower price without naming a number.") | Prevents price drop on repeats and deal confirmation; advances ladder only on explicit request to lower. |
+
+## Changes from user v1 to v1.1
 
 | # | v1 | v1.1 | Why |
 |---|---|---|---|
@@ -24,7 +35,7 @@ This is the reference for `services/voice/lastcall_voice/negotiator/prompt.py` (
 
 ## Template
 
-The **authoritative template** is now Appendix A of [module-2-negotiator.md](module-2-negotiator.md) (Jinja2, v1.2). Implement `negotiator/prompt_template.j2` from there. The earlier v1.1 text was removed so the two copies can't drift apart.
+The **authoritative template** lives in code: `services/voice/lastcall_voice/negotiator/prompt_template.j2` (version controlled via `PROMPT_VERSION = "1.6"` in `prompt.py`).
 
 ## Tests to add (step 11)
 - The rendered prompt for any scenario contains no floor value and none of the ladder rungs below the opening price.

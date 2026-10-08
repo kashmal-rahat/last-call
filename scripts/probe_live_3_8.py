@@ -38,8 +38,9 @@ LIVE_MODEL = settings.GEMINI_LIVE_MODEL
 
 PROBE_DIR = Path("data/probe")
 PROBE_DIR.mkdir(parents=True, exist_ok=True)
-DOCS_DIR = Path("docs")
-DOCS_DIR.mkdir(parents=True, exist_ok=True)
+REPO_DIR = Path(__file__).resolve().parent.parent
+RESULTS_DIR = REPO_DIR / "plans/module-2/results"
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 CHOSEN_VOICE = "Puck"
 CHOSEN_GENDER = "male"
@@ -439,7 +440,7 @@ def write_probe_doc(
     input_res: dict[str, Any],
     cost_res: dict[str, Any],
 ):
-    doc_path = DOCS_DIR / "module-2-probe.md"
+    doc_path = RESULTS_DIR / "probe.md"
     content = f"""# Module 2: Gemini 3.8 Live Capability Probe Results
 
 **Target Environment:** Vertex AI (`{LOCATION}` multi-region endpoint), project `{PROJECT_ID}`  
