@@ -1,8 +1,10 @@
-"""Contract tests for InMemoryStore and scenario loader."""
+"""Contract tests for CallStore implementations (InMemoryStore & FirestoreStore) and scenario loader."""
 
-import pytest
+import os
+import uuid
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
+import pytest
 
 from lastcall_shared.models import (
     CallResult,
@@ -13,20 +15,34 @@ from lastcall_shared.models import (
 )
 from lastcall_shared.scenarios.loader import build_call, list_scenarios, load_scenario
 from lastcall_shared.store import InMemoryStore
+from lastcall_shared.firestore_store import FirestoreStore
 
 PKT = ZoneInfo("Asia/Karachi")
 NOW = datetime(2026, 10, 7, 14, 0, 0, tzinfo=PKT)
 
 
-@pytest.mark.asyncio
-async def test_scenario_loader_and_store_lifecycle():
-    store = InMemoryStore()
+@pytest.fixture(params=["in_memory", "firestore"])
+async def store(request):
+    """Parametrized fixture running contract tests on InMemoryStore and FirestoreStore."""
+    if request.param == "in_memory":
+        yield InMemoryStore()
+    elif request.param == "firestore":
+        if os.getenv("RUN_FIRESTORE_TESTS") != "1":
+            pytest.skip("RUN_FIRESTORE_TESTS!=1: Firestore tests skipped")
+        test_prefix = f"test_{uuid.uuid4().hex[:8]}_"
+        fs = FirestoreStore(collection_prefix=test_prefix)
+        try:
+            yield fs
+        finally:
+            await fs.clean_prefix()
+
+
+def test_scenario_loader():
     scenarios = list_scenarios()
     assert len(scenarios) == 5
     assert "easy_yes" in scenarios
     assert "donation" in scenarios
 
-    # Build call from scenario
     call, batch = build_call("easy_yes", now=NOW)
     assert call.call_id.startswith("call_easy_yes_")
     assert batch.batch_id.startswith("batch_easy_yes_")
@@ -34,6 +50,11 @@ async def test_scenario_loader_and_store_lifecycle():
     assert call.brief.floor_price_per_unit == 130
     assert call.negotiation.ladder[0] == 180
     assert call.negotiation.ladder[-1] == 130
+
+
+@pytest.mark.asyncio
+async def test_call_lifecycle_and_deal_tx(store):
+    call, batch = build_call("easy_yes", now=NOW)
 
     # 1. Create call in store
     await store.create_call(call, batch)
@@ -97,7 +118,6 @@ async def test_scenario_loader_and_store_lifecycle():
 
     # 6. Complete remaining stock
     deal_2 = deal.model_copy(update={"call_id": "call_2", "quantity": 20.0})
-    # Release batch from call.call_id, then lock by call_2
     await store.release_batch(batch.batch_id, call.call_id)
     assert await store.lock_batch(batch.batch_id, "call_2", lock_until) is True
     ok3, _ = await store.save_deal_tx("call_2", deal_2, 20.0)
@@ -107,15 +127,13 @@ async def test_scenario_loader_and_store_lifecycle():
 
 
 @pytest.mark.asyncio
-async def test_lazy_expiry_lock():
-    store = InMemoryStore()
+async def test_lazy_expiry_lock(store):
     call, batch = build_call("hard_bargainer", now=NOW)
     await store.create_call(call, batch)
 
     # Lock batch in the past (expired)
     past_time = datetime.now(timezone.utc) - timedelta(seconds=10)
-    batch.locked_by_call = "old_call"
-    batch.locked_until = past_time
+    assert await store.lock_batch(batch.batch_id, "old_call", past_time) is True
 
     # New call takes over expired lock
     future_time = datetime.now(timezone.utc) + timedelta(minutes=5)
@@ -124,8 +142,24 @@ async def test_lazy_expiry_lock():
 
 
 @pytest.mark.asyncio
-async def test_outbox_tasks_and_do_not_call():
-    store = InMemoryStore()
+async def test_release_batch_isolation(store):
+    call, batch = build_call("hard_bargainer", now=NOW)
+    await store.create_call(call, batch)
+
+    future_time = datetime.now(timezone.utc) + timedelta(minutes=5)
+    assert await store.lock_batch(batch.batch_id, "call_a", future_time) is True
+
+    # Another call attempts to release it -> must NOT release call_a's lock
+    await store.release_batch(batch.batch_id, "call_b")
+    assert (await store.get_batch(batch.batch_id)).locked_by_call == "call_a"
+
+    # Owning call releases -> lock is cleared
+    await store.release_batch(batch.batch_id, "call_a")
+    assert (await store.get_batch(batch.batch_id)).locked_by_call is None
+
+
+@pytest.mark.asyncio
+async def test_outbox_tasks_and_do_not_call(store):
     # Do-not-call
     assert await store.is_do_not_call("mart_1", "buyer_1") is False
     await store.add_do_not_call("mart_1", "buyer_1")
@@ -140,7 +174,9 @@ async def test_outbox_tasks_and_do_not_call():
         payload={"deal_id": "d1"},
     )
     await store.add_outbox(msg)
-    assert len(store.outbox) == 1
+    outbox = await store.get_outbox(call_id="call_1")
+    assert len(outbox) == 1
+    assert outbox[0].to_buyer_id == "buyer_1"
 
     # Staff task
     task = StaffTask(
@@ -151,9 +187,13 @@ async def test_outbox_tasks_and_do_not_call():
         created_at=NOW,
     )
     await store.add_staff_task(task)
-    assert len(store.staff_tasks) == 1
+    tasks = await store.get_staff_tasks(call_id="call_1")
+    assert len(tasks) == 1
+    assert tasks[0].note == "Call back buyer"
 
-    # Daily cap increment
+
+@pytest.mark.asyncio
+async def test_daily_sessions_cap(store):
     date_str = "2026-10-07"
     assert await store.incr_daily_sessions(date_str, 2) is True
     assert await store.incr_daily_sessions(date_str, 2) is True

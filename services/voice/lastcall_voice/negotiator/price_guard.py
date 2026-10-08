@@ -11,6 +11,8 @@ import json
 import re
 from typing import Any, Literal
 
+from lastcall_shared.config import get_settings
+
 URDU_DIGITS = {
     "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
     "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
@@ -104,13 +106,14 @@ def has_spoken_price_cue(text: str) -> bool:
 async def fallback_extract_prices(
     text: str,
     client: Any,
-    model: str = "gemini-3.8-flash",
+    model: str | None = None,
     timeout: float = 3.0,
 ) -> tuple[list[int], bool]:
     """Voice mode fallback: calls Flash when no digit price is found but cues exist.
 
     Returns (prices, unchecked). If timeout or error occurs, unchecked=True.
     """
+    model_name = model or get_settings().GEMINI_FLASH_MODEL
     prompt = (
         "You are auditing an Urdu sales call utterance.\n"
         "List the per-unit prices the speaker offers or agrees to, not prices the other person mentioned.\n"
@@ -121,7 +124,7 @@ async def fallback_extract_prices(
         from google.genai import types
 
         coro = client.aio.models.generate_content(
-            model=model,
+            model=model_name,
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.0,

@@ -10,11 +10,13 @@ from pydantic import BaseModel
 from google import genai
 from google.genai import types
 
-PROJECT_ID = os.getenv("GCP_PROJECT", "kayrox-last-call")
-FLASH_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.8-flash")
-FLASH_LOCATION = os.getenv("GEMINI_FLASH_REGION", "eu")
-LIVE_MODEL = os.getenv("GEMINI_LIVE_MODEL", "gemini-3.8-live")
-LIVE_LOCATION = os.getenv("GEMINI_LIVE_REGION", "eu")
+from lastcall_shared.config import get_settings
+
+settings = get_settings()
+PROJECT_ID = settings.GOOGLE_CLOUD_PROJECT
+FLASH_MODEL = settings.GEMINI_FLASH_MODEL
+LIVE_MODEL = settings.GEMINI_LIVE_MODEL
+LOCATION = settings.GOOGLE_CLOUD_LOCATION
 
 
 class SmokeAssessment(BaseModel):
@@ -23,8 +25,8 @@ class SmokeAssessment(BaseModel):
 
 
 async def smoke_flash() -> bool:
-    print(f"\n[1/2] Testing Gemini Flash ({FLASH_MODEL}) in {FLASH_LOCATION}...")
-    client = genai.Client(vertexai=True, project=PROJECT_ID, location=FLASH_LOCATION)
+    print(f"\n[1/2] Testing Gemini Flash ({FLASH_MODEL}) in {LOCATION}...")
+    client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
 
     # 1. Text
     t0 = time.time()
@@ -60,8 +62,8 @@ async def smoke_flash() -> bool:
 
 
 async def smoke_live() -> bool:
-    print(f"\n[2/2] Testing Gemini Live ({LIVE_MODEL}) in {LIVE_LOCATION}...")
-    client = genai.Client(vertexai=True, project=PROJECT_ID, location=LIVE_LOCATION)
+    print(f"\n[2/2] Testing Gemini Live ({LIVE_MODEL}) in {LOCATION}...")
+    client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
     config = types.LiveConnectConfig(response_modalities=[types.Modality.AUDIO])
     t0 = time.time()
     async with client.aio.live.connect(model=LIVE_MODEL, config=config) as session:

@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from lastcall_shared.config import get_settings
 from lastcall_shared.models import NegotiationPolicy, init_negotiation
 from lastcall_shared.scenarios.loader import build_call, load_scenario
 from lastcall_voice.negotiator.price_guard import classify, find_prices
@@ -115,11 +116,12 @@ def generate_report(
 
     total_stuck = sum(1 for r in part_a_results if r.get("stuck", False))
 
+    settings = get_settings()
     lines = [
         "# Module 2 Negotiator Simulation Report (Milestone 2A Final)",
         "",
         f"**Date:** {datetime.now(PKT).strftime('%Y-%m-%d %H:%M:%S PKT')}  ",
-        f"**Model:** `gemini-3.8-flash` (Vertex AI `eu`)  ",
+        f"**Model:** `{settings.GEMINI_FLASH_MODEL}` (Vertex AI `{settings.GOOGLE_CLOUD_LOCATION}`)  ",
         f"**Simulation Source:** `{sim_file.name}`  ",
         f"**Total Negotiation Sessions:** {len(part_a_results) + len(part_b_results)}  ",
         f"**Total Floor Breaches:** `{total_floor_breaches}` (Saved deals below floor: `{total_saved_breaches}`, Spoken quotes below floor: `{total_spoken_breaches}`)  ",

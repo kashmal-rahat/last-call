@@ -30,11 +30,14 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from lastcall_shared.config import get_settings
+
+settings = get_settings()
 # Set Vertex AI environment variables before importing ADK / GenAI
 os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
-os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("GOOGLE_CLOUD_PROJECT", "kayrox-last-call")
-os.environ["GOOGLE_CLOUD_LOCATION"] = os.getenv("GOOGLE_CLOUD_LOCATION", "eu")
-os.environ["GEMINI_FLASH_MODEL"] = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.8-flash")
+os.environ["GOOGLE_CLOUD_PROJECT"] = settings.GOOGLE_CLOUD_PROJECT
+os.environ["GOOGLE_CLOUD_LOCATION"] = settings.GOOGLE_CLOUD_LOCATION
+os.environ["GEMINI_FLASH_MODEL"] = settings.GEMINI_FLASH_MODEL
 
 from pydantic import AwareDatetime
 from google import genai
@@ -512,8 +515,9 @@ async def run_full_simulation(
     jsonl_path = SIM_RUNS_DIR / f"sim_{timestamp}.jsonl"
     results_doc_path = DOCS_DIR / "module-2-negotiation-results.md"
 
-    model = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.8-flash")
-    location = os.getenv("GEMINI_FLASH_LOCATION", os.getenv("GOOGLE_CLOUD_LOCATION", "eu"))
+    settings = get_settings()
+    model = settings.GEMINI_FLASH_MODEL
+    location = settings.GOOGLE_CLOUD_LOCATION
     client = get_genai_client(location=location)
 
     fixed_now = datetime(2026, 10, 7, 11, 0, 0, tzinfo=PKT)

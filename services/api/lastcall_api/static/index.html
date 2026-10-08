@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Last Call — Autonomous Urdu Produce Negotiator (Gemini 3.8 Live Demo)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Nastaliq+Urdu:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(18, 26, 43, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --accent-amber: #f59e0b;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --bubble-agent: #1e293b;
+      --bubble-buyer: #064e3b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.08) 0px, transparent 50%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #10b981, #047857);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: white;
+      font-size: 1.1rem;
+    }
+
+    .brand h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand span {
+      font-size: 0.8rem;
+      color: var(--primary);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .status-badge {
+      padding: 0.4rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6b7280;
+    }
+
+    .status-badge.live .status-dot {
+      background: var(--primary);
+      box-shadow: 0 0 10px var(--primary);
+      animation: pulse 1.5s infinite;
+    }
+
+    .status-badge.busy .status-dot {
+      background: var(--accent-amber);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    main {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .banner-headphones {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 0.85rem 1rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      color: #fbbf24;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    input, select {
+      background: rgba(10, 15, 28, 0.8);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary);
+    }
+
+    .scenario-info {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 1rem;
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .info-label {
+      color: var(--text-muted);
+    }
+
+    .info-val {
+      font-weight: 600;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: auto;
+    }
+
+    button {
+      flex: 1;
+      padding: 0.85rem 1.25rem;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-start {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+
+    .btn-start:hover:not(:disabled) {
+      background: linear-gradient(135deg, #059669, #047857);
+      transform: translateY(-1px);
+    }
+
+    .btn-hangup {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .btn-hangup:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.3);
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    /* Right pane: Live Dialogue */
+    .dialogue-pane {
+      display: flex;
+      flex-direction: column;
+      height: 650px;
+    }
+
+    .transcript-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .msg {
+      max-width: 80%;
+      padding: 0.85rem 1.1rem;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      line-height: 1.45;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .msg-agent {
+      align-self: flex-start;
+      background: var(--bubble-agent);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-family: 'Noto Nastaliq Urdu', 'Inter', serif;
+      direction: rtl;
+      text-align: right;
+    }
+
+    .msg-buyer {
+      align-self: flex-end;
+      background: var(--bubble-buyer);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .msg-speaker {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .tool-notice {
+      align-self: center;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      color: #fbbf24;
+      font-size: 0.78rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      font-weight: 500;
+    }
+
+    .result-card {
+      margin-top: 1rem;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 10px;
+      padding: 1rem;
+      display: none;
+    }
+
+    .result-card.visible {
+      display: block;
+    }
+
+    .result-title {
+      font-weight: 700;
+      color: #34d399;
+      font-size: 0.95rem;
+      margin-bottom: 0.4rem;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+      .dialogue-pane {
+        height: 500px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">LC</div>
+      <div>
+        <h1>Last Call <span>Voice Negotiator</span></h1>
+      </div>
+    </div>
+    <div id="statusBadge" class="status-badge">
+      <div class="status-dot"></div>
+      <span id="statusText">Ready</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left Configuration & Controls -->
+    <div class="card">
+      <h2>Session Config</h2>
+
+      <div class="banner-headphones">
+        <span>🎧</span>
+        <div><strong>Please use headphones</strong> to prevent microphone echo during real-time Urdu conversation.</div>
+      </div>
+
+      <div class="field">
+        <label for="accessCode">Demo Access Code</label>
+        <input type="password" id="accessCode" placeholder="Enter judge code" value="">
+      </div>
+
+      <div class="field">
+        <label for="scenarioSelect">Bargaining Scenario</label>
+        <select id="scenarioSelect">
+          <option value="easy_yes">Easy Yes (Mangoes — quick agreement)</option>
+          <option value="hard_bargainer">Hard Bargainer (Apples — multiple counters)</option>
+          <option value="quality_sceptic">Quality Sceptic (Oranges — wants photo)</option>
+          <option value="wants_half">Wants Half (Bananas — split quantity)</option>
+          <option value="donation">Donation (Bread — zero rupee salvage)</option>
+        </select>
+      </div>
+
+      <div class="scenario-info" id="scenarioInfo">
+        <div class="info-row"><span class="info-label">Item:</span><span class="info-val" id="infoItem">Sindhri Mangoes</span></div>
+        <div class="info-row"><span class="info-label">Available:</span><span class="info-val" id="infoQty">50 kg</span></div>
+        <div class="info-row"><span class="info-label">Opening Quote:</span><span class="info-val" id="infoOpening">Rs 180 / kg</span></div>
+        <div class="info-row"><span class="info-label">Floor Price (Hidden):</span><span class="info-val" id="infoFloor">Rs 130 / kg</span></div>
+      </div>
+
+      <div class="actions">
+        <button id="btnStart" class="btn-start">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" /></svg>
+          Start Call
+        </button>
+        <button id="btnHangup" class="btn-hangup" disabled>
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.684A1 1 0 008.279 3H5z" /></svg>
+          Hang Up
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Live Audio & Transcript Stream -->
+    <div class="card dialogue-pane">
+      <h2>Live Conversation (Gemini 3.8 Live Voice)</h2>
+      <div class="transcript-container" id="transcript">
+        <div class="tool-notice">Waiting to start call...</div>
+      </div>
+
+      <div class="result-card" id="resultCard">
+        <div class="result-title">Call Outcome</div>
+        <div id="resultContent" style="font-size: 0.88rem; color: #d1fae5;"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let ws = null;
+    let audioCtx = null;
+    let micStream = null;
+    let captureNode = null;
+    let playbackNode = null;
+    let retryCount = 0;
+
+    const accessCodeEl = document.getElementById('accessCode');
+    const scenarioSelect = document.getElementById('scenarioSelect');
+    const btnStart = document.getElementById('btnStart');
+    const btnHangup = document.getElementById('btnHangup');
+    const statusBadge = document.getElementById('statusBadge');
+    const statusText = document.getElementById('statusText');
+    const transcript = document.getElementById('transcript');
+    const resultCard = document.getElementById('resultCard');
+    const resultContent = document.getElementById('resultContent');
+
+    // Restore saved code from localStorage if present
+    if (localStorage.getItem('lc_code')) {
+      accessCodeEl.value = localStorage.getItem('lc_code');
+    }
+
+    function setStatus(text, type = '') {
+      statusText.textContent = text;
+      statusBadge.className = 'status-badge ' + type;
+    }
+
+    function appendMessage(speaker, text) {
+      const msg = document.createElement('div');
+      msg.className = 'msg msg-' + speaker;
+      msg.innerHTML = `<span class="msg-speaker">${speaker === 'agent' ? 'AI Assistant (Mart)' : 'You (Buyer)'}</span><span>${text}</span>`;
+      transcript.appendChild(msg);
+      transcript.scrollTop = transcript.scrollHeight;
+    }
+
+    function appendNotice(text) {
+      const notice = document.createElement('div');
+      notice.className = 'tool-notice';
+      notice.textContent = text;
+      transcript.appendChild(notice);
+      transcript.scrollTop = transcript.scrollHeight;
+    }
+
+    async function startCall() {
+      const code = accessCodeEl.value.trim();
+      if (!code) {
+        alert('Please enter the Demo Access Code.');
+        accessCodeEl.focus();
+        return;
+      }
+      localStorage.setItem('lc_code', code);
+
+      btnStart.disabled = true;
+      btnHangup.disabled = false;
+      setStatus('Starting session...', 'busy');
+      transcript.innerHTML = '';
+      resultCard.classList.remove('visible');
+
+      try {
+        // 1. POST /demo/sessions
+        const scenarioId = scenarioSelect.value;
+        const res = await fetch('/demo/sessions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Demo-Access-Code': code
+          },
+          body: JSON.stringify({ scenario_id: scenarioId })
+        });
+
+        if (res.status === 401) {
+          throw new Error('Invalid access code.');
+        } else if (res.status === 429) {
+          throw new Error('Rate limit or daily demo cap reached.');
+        } else if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Failed to initialize session');
+        }
+
+        const session = await res.json();
+        const { ws_url, token } = session;
+
+        // 2. Setup AudioContexts on user gesture
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+        await audioCtx.audioWorklet.addModule('/static/capture-worklet.js');
+        await audioCtx.audioWorklet.addModule('/static/playback-worklet.js');
+
+        // Playback node
+        playbackNode = new AudioWorkletNode(audioCtx, 'playback-worklet');
+        playbackNode.connect(audioCtx.destination);
+
+        // Capture mic
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
+        const micSource = audioCtx.createMediaStreamSource(micStream);
+        captureNode = new AudioWorkletNode(audioCtx, 'capture-worklet');
+        micSource.connect(captureNode);
+
+        // 3. Connect WebSocket
+        setStatus('Connecting audio...', 'busy');
+        connectWebSocket(ws_url, token);
+
+      } catch (err) {
+        alert(err.message);
+        setStatus('Ready');
+        btnStart.disabled = false;
+        btnHangup.disabled = true;
+      }
+    }
+
+    function connectWebSocket(wsUrl, token) {
+      ws = new WebSocket(wsUrl);
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen = () => {
+        setStatus('Authenticating...', 'busy');
+        // Send initial auth message
+        ws.send(JSON.stringify({ type: 'auth', token: token }));
+
+        // Start streaming mic audio from capture worklet
+        captureNode.port.onmessage = (event) => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(event.data);
+          }
+        };
+      };
+
+      ws.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+          // Live 24 kHz PCM audio chunk
+          playbackNode.port.postMessage(event.data, [event.data]);
+        } else {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'transcript') {
+              if (data.speaker === 'agent') {
+                setStatus('Live Call', 'live');
+              }
+              appendMessage(data.speaker, data.text);
+            } else if (data.type === 'interrupted') {
+              playbackNode.port.postMessage({ type: 'clear' });
+              appendNotice('⚡ Interrupted');
+            } else if (data.type === 'tool') {
+              appendNotice(`🛠️ Tool: ${data.name} (${data.decision || 'executing'})`);
+            } else if (data.type === 'busy') {
+              appendNotice('Server capacity reached. Retrying...');
+              handleBusyRetry(wsUrl, token);
+            }
+          } catch (e) {}
+        }
+      };
+
+      ws.onclose = (event) => {
+        cleanupAudio();
+        btnStart.disabled = false;
+        btnHangup.disabled = true;
+
+        if (event.code === 4401) {
+          setStatus('Auth Failed');
+          alert('WebSocket Auth failed (Code 4401)');
+        } else if (event.code === 4409) {
+          setStatus('Token Expired / Reused');
+          alert('Session token already used or expired (Code 4409)');
+        } else if (event.code === 1013) {
+          setStatus('Server Busy');
+        } else {
+          setStatus('Call Ended');
+          appendNotice(`Call closed (Code: ${event.code})`);
+        }
+      };
+
+      ws.onerror = () => {
+        cleanupAudio();
+        setStatus('Connection Error');
+      };
+    }
+
+    function handleBusyRetry(wsUrl, token) {
+      if (retryCount < 3) {
+        retryCount++;
+        setTimeout(() => {
+          connectWebSocket(wsUrl, token);
+        }, 3000);
+      } else {
+        alert('Server is currently at maximum concurrency. Please try again later.');
+        cleanupAudio();
+      }
+    }
+
+    function hangup() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'hangup' }));
+        ws.close();
+      }
+      cleanupAudio();
+      setStatus('Call Ended');
+      btnStart.disabled = false;
+      btnHangup.disabled = true;
+    }
+
+    function cleanupAudio() {
+      if (micStream) {
+        micStream.getTracks().forEach(t => t.stop());
+        micStream = null;
+      }
+      if (audioCtx) {
+        audioCtx.close();
+        audioCtx = null;
+      }
+    }
+
+    btnStart.addEventListener('click', startCall);
+    btnHangup.addEventListener('click', hangup);
+  </script>
+</body>
+</html>

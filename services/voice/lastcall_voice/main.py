@@ -34,6 +34,15 @@ async def healthz():
     }
 
 
+from starlette.websockets import WebSocket
+from lastcall_voice.live_session import handle_live_call_websocket
+
+
+@app.websocket("/ws/call")
+async def ws_call_endpoint(websocket: WebSocket):
+    await handle_live_call_websocket(websocket)
+
+
 if __name__ == "__main__":
     import uvicorn
 

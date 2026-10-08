@@ -22,20 +22,41 @@ variable "gemini_flash_model" {
   default     = "gemini-3.8-flash"
 }
 
-variable "gemini_flash_region" {
-  description = "Vertex AI location for Gemini Flash"
-  type        = string
-  default     = "eu"
-}
-
 variable "gemini_live_model" {
   description = "Gemini Live model name"
   type        = string
   default     = "gemini-3.8-live"
 }
 
-variable "gemini_live_region" {
-  description = "Vertex AI location for Gemini Live"
+variable "google_cloud_location" {
+  description = "Vertex AI location endpoint for Gemini models"
   type        = string
   default     = "eu"
 }
+
+variable "voice_min_instances" {
+  description = "Minimum instances for voice service (0 for dev, 1 for judging window)"
+  type        = number
+  default     = 0
+}
+
+variable "api_public_url" {
+  description = "Public domain / host for api service"
+  type        = string
+  default     = "api-cujkm3kt5q-ew.a.run.app"
+}
+
+variable "voice_public_url" {
+  description = "Public domain / host for voice service"
+  type        = string
+  default     = "voice-cujkm3kt5q-ew.a.run.app"
+}
+
+variable "allowed_origins" {
+  description = "Allowed CORS and WebSocket origins"
+  type        = string
+  default     = "https://api-cujkm3kt5q-ew.a.run.app,https://voice-cujkm3kt5q-ew.a.run.app,http://localhost:8080,http://localhost:8000"
+}
+
+
+

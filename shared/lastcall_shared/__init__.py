@@ -20,6 +20,7 @@ from lastcall_shared.models import (
     TranscriptEntry,
     Unit,
 )
+from lastcall_shared.config import Settings, get_settings
 from lastcall_shared.logging_utils import (
     CloudLoggingJsonFormatter,
     mask_phone,
@@ -50,4 +51,6 @@ __all__ = [
     "mask_phone",
     "mask_pii_in_text",
     "setup_structured_logging",
+    "Settings",
+    "get_settings",
 ]

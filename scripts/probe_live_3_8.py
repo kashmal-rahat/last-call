@@ -29,9 +29,12 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.tools import FunctionTool
 from google.genai import types
 
-PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "kayrox-last-call")
-LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "eu")
-LIVE_MODEL = os.getenv("GEMINI_LIVE_MODEL", "gemini-3.8-live")
+from lastcall_shared.config import get_settings
+
+settings = get_settings()
+PROJECT_ID = settings.GOOGLE_CLOUD_PROJECT
+LOCATION = settings.GOOGLE_CLOUD_LOCATION
+LIVE_MODEL = settings.GEMINI_LIVE_MODEL
 
 PROBE_DIR = Path("data/probe")
 PROBE_DIR.mkdir(parents=True, exist_ok=True)

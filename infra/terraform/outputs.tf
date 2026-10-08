@@ -27,3 +27,19 @@ output "voice_url" {
   description = "Cloud Run Voice URL"
   value       = google_cloud_run_v2_service.voice.uri
 }
+
+output "firestore_database_name" {
+  description = "Firestore Database Name"
+  value       = google_firestore_database.default.name
+}
+
+output "budget_alerts_topic" {
+  description = "Pub/Sub topic for budget alerts"
+  value       = google_pubsub_topic.budget_alerts.id
+}
+
+output "demo_access_code_secret_id" {
+  description = "Secret Manager secret ID for demo access code"
+  value       = google_secret_manager_secret.demo_access_code.secret_id
+}
+

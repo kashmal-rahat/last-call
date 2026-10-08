@@ -34,7 +34,9 @@ class CallStore(Protocol):
     async def add_do_not_call(self, mart_id: str, buyer_id: str) -> None: ...
     async def is_do_not_call(self, mart_id: str, buyer_id: str) -> bool: ...
     async def add_outbox(self, msg: OutboxMessage) -> None: ...
+    async def get_outbox(self, call_id: str | None = None) -> list[OutboxMessage]: ...
     async def add_staff_task(self, task: StaffTask) -> None: ...
+    async def get_staff_tasks(self, call_id: str | None = None) -> list[StaffTask]: ...
     async def finish_call(self, call_id: str, result: CallResult) -> None: ...
     async def incr_daily_sessions(self, date: str, cap: int) -> bool: ...
 
@@ -187,9 +189,21 @@ class InMemoryStore:
         async with self._lock:
             self.outbox.append(msg)
 
+    async def get_outbox(self, call_id: str | None = None) -> list[OutboxMessage]:
+        async with self._lock:
+            if call_id:
+                return [m for m in self.outbox if m.call_id == call_id]
+            return list(self.outbox)
+
     async def add_staff_task(self, task: StaffTask) -> None:
         async with self._lock:
             self.staff_tasks.append(task)
+
+    async def get_staff_tasks(self, call_id: str | None = None) -> list[StaffTask]:
+        async with self._lock:
+            if call_id:
+                return [t for t in self.staff_tasks if t.call_id == call_id]
+            return list(self.staff_tasks)
 
     async def finish_call(self, call_id: str, result: CallResult) -> None:
         async with self._lock:

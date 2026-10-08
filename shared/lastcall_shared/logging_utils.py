@@ -84,6 +84,16 @@ class CloudLoggingJsonFormatter(logging.Formatter):
         }
 
         # Recursively mask custom extra attributes if present
+        standard_attrs = {
+            "name", "msg", "args", "levelno", "levelname", "pathname", "filename",
+            "module", "exc_info", "exc_text", "stack_info", "lineno", "funcName",
+            "created", "msecs", "relativeCreated", "thread", "threadName",
+            "processName", "process", "message", "extra_fields", "taskName",
+        }
+        for k, v in record.__dict__.items():
+            if k not in standard_attrs and not k.startswith("_"):
+                payload[k] = mask_pii_data(v)
+
         if hasattr(record, "extra_fields") and isinstance(record.extra_fields, dict):
             for k, v in record.extra_fields.items():
                 payload[k] = mask_pii_data(v)

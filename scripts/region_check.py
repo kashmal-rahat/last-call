@@ -16,11 +16,13 @@ from pydantic import BaseModel
 from google import genai
 from google.genai import types
 
-PROJECT_ID = os.getenv("GCP_PROJECT", "kayrox-last-call")
-FLASH_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.8-flash")
-FLASH_LOCATION = os.getenv("GEMINI_FLASH_REGION", "eu")
-LIVE_MODEL = os.getenv("GEMINI_LIVE_MODEL", "gemini-3.8-live")
-LIVE_LOCATION = os.getenv("GEMINI_LIVE_REGION", "eu")
+from lastcall_shared.config import get_settings
+
+settings = get_settings()
+PROJECT_ID = settings.GOOGLE_CLOUD_PROJECT
+FLASH_MODEL = settings.GEMINI_FLASH_MODEL
+LIVE_MODEL = settings.GEMINI_LIVE_MODEL
+LOCATION = settings.GOOGLE_CLOUD_LOCATION
 
 
 class ProduceAssessment(BaseModel):
@@ -132,17 +134,17 @@ def generate_report(flash_res: dict[str, Any], live_res: dict[str, Any]) -> str:
 
     # Flash
     txt = flash_res.get("text", {})
-    md.append(f"| `{FLASH_MODEL}` | Text Turn (Urdu) | `{FLASH_LOCATION}` | {txt.get('status')} | {txt.get('latency_ms', '-')} ms | {txt.get('output', txt.get('error', ''))[:70]} |")
+    md.append(f"| `{FLASH_MODEL}` | Text Turn (Urdu) | `{LOCATION}` | {txt.get('status')} | {txt.get('latency_ms', '-')} ms | {txt.get('output', txt.get('error', ''))[:70]} |")
     img = flash_res.get("image", {})
-    md.append(f"| `{FLASH_MODEL}` | Image Vision Turn | `{FLASH_LOCATION}` | {img.get('status')} | {img.get('latency_ms', '-')} ms | Output: \"{img.get('output', img.get('error', ''))}\" |")
+    md.append(f"| `{FLASH_MODEL}` | Image Vision Turn | `{LOCATION}` | {img.get('status')} | {img.get('latency_ms', '-')} ms | Output: \"{img.get('output', img.get('error', ''))}\" |")
     st = flash_res.get("structured", {})
-    md.append(f"| `{FLASH_MODEL}` | Structured Output | `{FLASH_LOCATION}` | {st.get('status')} | {st.get('latency_ms', '-')} ms | Valid JSON schema parsed |")
+    md.append(f"| `{FLASH_MODEL}` | Structured Output | `{LOCATION}` | {st.get('status')} | {st.get('latency_ms', '-')} ms | Valid JSON schema parsed |")
 
     # Live
     st_live = live_res.get("status")
     lat_live = f"Connect: {live_res.get('connect_latency_ms')}ms, Total: {live_res.get('total_latency_ms')}ms" if st_live == "PASS" else "-"
     det_live = f"Native Audio received: {live_res.get('audio_bytes')} bytes" if st_live == "PASS" else live_res.get("error", "")[:70]
-    md.append(f"| `{LIVE_MODEL}` | Bidirectional Native Audio | `{LIVE_LOCATION}` | {st_live} | {lat_live} | {det_live} |")
+    md.append(f"| `{LIVE_MODEL}` | Bidirectional Native Audio | `{LOCATION}` | {st_live} | {lat_live} | {det_live} |")
 
     md.append("")
     md.append("## 2. Infrastructure Services in `europe-west1`")
@@ -158,11 +160,11 @@ def generate_report(flash_res: dict[str, Any], live_res: dict[str, Any]) -> str:
 
 
 async def main():
-    print(f"Verifying {FLASH_MODEL} on {FLASH_LOCATION}...")
-    flash_res = await verify_flash(PROJECT_ID, FLASH_LOCATION, FLASH_MODEL)
+    print(f"Verifying {FLASH_MODEL} on {LOCATION}...")
+    flash_res = await verify_flash(PROJECT_ID, LOCATION, FLASH_MODEL)
 
-    print(f"Verifying {LIVE_MODEL} on {LIVE_LOCATION}...")
-    live_res = await verify_live(PROJECT_ID, LIVE_LOCATION, LIVE_MODEL)
+    print(f"Verifying {LIVE_MODEL} on {LOCATION}...")
+    live_res = await verify_live(PROJECT_ID, LOCATION, LIVE_MODEL)
 
     report = generate_report(flash_res, live_res)
     os.makedirs("docs", exist_ok=True)

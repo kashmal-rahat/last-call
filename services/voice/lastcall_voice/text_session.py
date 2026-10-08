@@ -13,6 +13,7 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.workflow._retry_config import RetryConfig
 from google.genai import types
 
+from lastcall_shared.config import get_settings
 from lastcall_shared.models import (
     CallRecord,
     CallResult,
@@ -33,7 +34,7 @@ from lastcall_voice.negotiator.price_guard import (
 )
 
 PKT = ZoneInfo("Asia/Karachi")
-GEMINI_FLASH_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.8-flash")
+GEMINI_FLASH_MODEL = get_settings().GEMINI_FLASH_MODEL
 APP_NAME = "lastcall_voice"
 
 _ACTIVE_SESSIONS: dict[str, dict[str, Any]] = {}
@@ -88,7 +89,7 @@ async def start_text_call(
     )
 
     retry_cfg = RetryConfig(max_attempts=5, initial_delay=2.0, backoff_factor=2.0)
-    flash_model = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.8-flash")
+    flash_model = get_settings().GEMINI_FLASH_MODEL
     agent = build_negotiator(
         model=flash_model,
         view=call.brief.agent_view(),

@@ -5,6 +5,7 @@ description = "Shared schemas, types and utilities for Last Call"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.7.0",
+    "pydantic-settings>=2.0",
     "google-cloud-firestore>=2.20",
     "tzdata",
 ]

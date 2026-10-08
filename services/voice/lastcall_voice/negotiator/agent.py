@@ -53,7 +53,7 @@ def build_negotiator(
             extra={
                 "tool": tool_name,
                 "call_id": tool_context.state.get("call_id") if tool_context else None,
-                "args": safe_args,
+                "tool_args": safe_args,
             },
         )
         return None
