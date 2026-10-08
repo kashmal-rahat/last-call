@@ -114,8 +114,8 @@ Both services were deployed with `./scripts/deploy.sh` to Cloud Run (`europe-wes
 - **True Measured Cost Per Minute:** **~$0.1340 USD / minute** (superseding the earlier hardcoded $0.072/min probe estimate).
 
 ### Safety Limits & Daily Session Cap
-- **Configured Cap:** `DEMO_DAILY_SESSION_CAP = 10` (user will adjust after review).
-- **Daily Spend at Cap:** $0.24 × 10 = **~$2.40 USD / day**.
+- **Configured Cap:** `DEMO_DAILY_SESSION_CAP = 50` (updated per user review).
+- **Daily Spend at Cap:** $0.24 × 50 = **~$12.00 USD / day**.
 - **Budget Ceiling Margin:** Hard project kill switch is set at **$25.00 USD** (user decision per M4). With an expected judging window of 3–5 days, maximum demo usage will cost ~$7.20 – $12.00, well within the safety envelope.
 
 ---
@@ -139,6 +139,6 @@ The kill switch was verified end-to-end:
 ## 6. Pytest Verification
 
 ```text
-=================== 91 passed, 5 skipped, 1 warning in 1.82s ===================
+=================== 94 passed, 5 skipped, 1 warning in 1.92s ===================
 ```
 All unit, contract, integration, model-policy, and security regression tests pass.

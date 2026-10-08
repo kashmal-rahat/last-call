@@ -130,7 +130,8 @@ async def create_demo_session(
     if not _verify_access_code(x_demo_access_code):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access code")
 
-    # 2. Per-IP rate limiting (5 sessions per hour)
+    # 2. Per-IP rate limiting (configurable via IP_RATE_LIMIT_PER_HOUR, default 50 sessions per hour)
+    ip_limit = int(os.getenv("IP_RATE_LIMIT_PER_HOUR", "50"))
     forwarded = request.headers.get("x-forwarded-for", "")
     client_ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "127.0.0.1")
     now_ts = time.time()
@@ -138,11 +139,11 @@ async def create_demo_session(
     async with _IP_LIMITER_LOCK:
         history = _IP_REQUEST_HISTORY.get(client_ip, [])
         valid_history = [t for t in history if now_ts - t < 3600.0]
-        if len(valid_history) >= 5:
-            logger.warning("ip_rate_limit_exceeded", extra={"client_ip": client_ip})
+        if len(valid_history) >= ip_limit:
+            logger.warning("ip_rate_limit_exceeded", extra={"client_ip": client_ip, "limit": ip_limit})
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Hourly IP limit reached (max 5 sessions per hour)",
+                detail=f"Hourly IP limit reached (max {ip_limit} sessions per hour)",
             )
         valid_history.append(now_ts)
         _IP_REQUEST_HISTORY[client_ip] = valid_history
@@ -160,7 +161,7 @@ async def create_demo_session(
     # 4. Daily session cap check (only incremented if scenario is valid)
     store = _get_store()
     date_str = now_pkt.strftime("%Y-%m-%d")
-    daily_cap = int(os.getenv("DEMO_DAILY_SESSION_CAP", "10"))
+    daily_cap = int(os.getenv("DEMO_DAILY_SESSION_CAP", "50"))
     allowed = await store.incr_daily_sessions(date_str, daily_cap)
     if not allowed:
         logger.warning("daily_demo_cap_exceeded", extra={"date": date_str, "cap": daily_cap})

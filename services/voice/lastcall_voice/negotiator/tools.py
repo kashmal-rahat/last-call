@@ -21,10 +21,10 @@ async def verify_offer(
     buyer_offer_per_unit: int | None = None,
     tool_context: ToolContext = None,
 ) -> dict[str, Any]:
-    """Evaluates the buyer's offer or provides a quote against the negotiated price ladder.
+    """Evaluates the buyer's offer or provides a quote/counter against the negotiated price ladder.
 
     Args:
-        buyer_offer_per_unit: The price per unit offered by the buyer in PKR, or None to get the opening/current quote.
+        buyer_offer_per_unit: The price per unit offered by the buyer in PKR, or None to get the opening quote or the next counter if the buyer asks to lower the price without naming a number.
     """
     call_id = tool_context.state.get("call_id") if tool_context else None
     ctx = get_context(call_id) if call_id else None

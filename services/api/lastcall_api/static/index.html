@@ -504,11 +504,9 @@
 
         if (res.status === 401) {
           throw new Error('Invalid access code.');
-        } else if (res.status === 429) {
-          throw new Error('Rate limit or daily demo cap reached.');
         } else if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || 'Failed to initialize session');
+          throw new Error(errData.detail || errData.error || 'Failed to initialize session');
         }
 
         const session = await res.json();

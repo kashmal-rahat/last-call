@@ -249,7 +249,11 @@ resource "google_cloud_run_v2_service" "api" {
       }
       env {
         name  = "DEMO_DAILY_SESSION_CAP"
-        value = "10"
+        value = "50"
+      }
+      env {
+        name  = "IP_RATE_LIMIT_PER_HOUR"
+        value = "50"
       }
       env {
         name = "DEMO_ACCESS_CODE"

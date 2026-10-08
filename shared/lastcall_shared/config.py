@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     # Service & Security
     APP_SIGNING_KEY: SecretStr
     DEMO_ACCESS_CODE: str | None = None
-    DEMO_DAILY_SESSION_CAP: int = 10
+    DEMO_DAILY_SESSION_CAP: int = 50
     VOICE_WS_URL: str | None = None
 
     @field_validator("APP_SIGNING_KEY")

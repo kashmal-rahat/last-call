@@ -75,7 +75,8 @@ def test_post_demo_sessions_success():
     assert payload["call_id"] == data["call_id"]
 
 
-def test_post_demo_sessions_ip_rate_limit():
+def test_post_demo_sessions_ip_rate_limit(monkeypatch):
+    monkeypatch.setenv("IP_RATE_LIMIT_PER_HOUR", "5")
     client = TestClient(app)
     headers = {"X-Demo-Access-Code": CODE, "X-Forwarded-For": "203.0.113.195"}
 

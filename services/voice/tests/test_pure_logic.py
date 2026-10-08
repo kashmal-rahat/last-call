@@ -632,3 +632,50 @@ def test_input_audio_transcription_vocabulary_h5():
     assert "Sindhri" not in cfg_kinnow.custom_vocabulary
 
 
+def test_verify_offer_no_numeric_offer_ladder_progression():
+    brief = make_test_brief(floor=130, opening=180)
+    policy = NegotiationPolicy()
+    state = init_negotiation(brief, policy)
+    # easy_yes ladder: [180, 160, 145, 135, 130]
+
+    # 1. Opening quote
+    d0 = verify_offer(state, policy, "sale", None)
+    assert d0.decision == "quote"
+    assert d0.price_per_unit == 180
+    assert state.rung == 0
+    assert state.quoted is True
+
+    # 2. Buyer asks to reduce price ("bohat zyada hai") -> counters at 160
+    d1 = verify_offer(state, policy, "sale", None)
+    assert d1.decision == "counter"
+    assert d1.price_per_unit == 160
+    assert state.rung == 1
+    assert 160 in state.approved_prices
+
+    # 3. Buyer asks to reduce price further ("is se thora kam karo") -> counters at 145
+    d2 = verify_offer(state, policy, "sale", None)
+    assert d2.decision == "counter"
+    assert d2.price_per_unit == 145
+    assert state.rung == 2
+    assert 145 in state.approved_prices
+
+    # 4. Buyer asks again -> counters at 135
+    d3 = verify_offer(state, policy, "sale", None)
+    assert d3.decision == "counter"
+    assert d3.price_per_unit == 135
+    assert state.rung == 3
+
+    # 5. Buyer asks again -> reaches floor at 130, decision is final
+    d4 = verify_offer(state, policy, "sale", None)
+    assert d4.decision == "final"
+    assert d4.price_per_unit == 130
+    assert state.rung == 4
+
+    # 6. Buyer asks again -> firmly stays at 130 floor, never goes back up
+    d5 = verify_offer(state, policy, "sale", None)
+    assert d5.decision == "final"
+    assert d5.price_per_unit == 130
+    assert state.rung == 4
+
+
+

@@ -43,21 +43,38 @@ def verify_offer(
         price = 0
         state.accepted_price = 0
     elif buyer_offer is None:
-        decision = "quote"
-        price = current_price
+        if not state.quoted:
+            decision = "quote"
+            price = current_price
+            state.quoted = True
+        elif state.rung + 1 < len(state.ladder):
+            state.rung += 1
+            price = state.ladder[state.rung]
+            if price not in state.approved_prices:
+                state.approved_prices.append(price)
+            if state.rung == len(state.ladder) - 1:
+                decision = "final"
+            else:
+                decision = "counter"
+        else:
+            decision = "final"
+            price = current_price
     elif buyer_offer >= current_price:
+        state.quoted = True
         decision = "accept"
         price = current_price
         state.accepted_price = price
         if price not in state.approved_prices:
             state.approved_prices.append(price)
     elif (state.rung + 1 < len(state.ladder)) and (buyer_offer >= state.ladder[state.rung + 1]):
+        state.quoted = True
         decision = "accept"
         price = buyer_offer
         state.accepted_price = price
         if price not in state.approved_prices:
             state.approved_prices.append(price)
     elif state.rung + 1 < len(state.ladder):
+        state.quoted = True
         state.rung += 1
         price = state.ladder[state.rung]
         if price not in state.approved_prices:
@@ -67,6 +84,7 @@ def verify_offer(
         else:
             decision = "counter"
     else:
+        state.quoted = True
         decision = "final"
         price = current_price
 

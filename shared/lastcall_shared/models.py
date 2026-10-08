@@ -334,6 +334,7 @@ class NegotiationState(BaseModel):
     approved_prices: list[int] = Field(default_factory=list)
     last_buyer_offer: int | None = None
     accepted_price: int | None = None
+    quoted: bool = False
 
 
 def round_half_up(val: float) -> int:
