@@ -132,3 +132,46 @@ Bump to PROMPT_VERSION 1.5, together with C0 and H3.
 ## Checks I couldn't do
 - **Firestore contents and Cloud Logging:** gcloud wasn't used in this review. H4 needs a quick look by the user.
 - **Whether the budget is linked** to the `budget-alerts` topic in the console.
+
+---
+
+# Re-review at `e41aee1`: critical items
+
+The earlier criticals (C0–C4) are verified fixed. The "Updated the Limit" commit introduced these two:
+
+### K1. `verify_offer(None)` now concedes a step every time it's called
+`pricing.py` (commit `e41aee1`) now makes every call with no offer after the first one **move down a rung**. The prompt also says "call verify_offer BEFORE you say any price". So the price drops whenever the agent only needs to **repeat** it:
+- **Confirmation:** step 4 repeats the price, so `verify_offer(None)` is called and the price falls a rung (for example 140 → 135) *after* the buyer already agreed. The lower price is now "approved", so `confirm_deal` accepts it. The mart loses money, even though it stays above the floor.
+- **After a `[SYSTEM]` price correction**, or when the buyer asks "kitna bataya tha?" (what was the price again?): the price drops again.
+- **After an `accept`:** a later call with no offer moves below the agreed price.
+- **The buyer can also just say "mehnga hai" ("too expensive") four times** and reach the floor without ever naming a number. That one is a strategy choice, but it only works if a repeat never concedes.
+
+**Fix (make the intent explicit):**
+- `verify_offer(buyer_offer_per_unit: int | None = None, buyer_asks_lower: bool = False)`:
+  - No offer, `buyer_asks_lower=False`: return the current price **without moving**. Use `quote` the first time, then `repeat`. If a price was already accepted, return `accepted_price`.
+  - No offer, `buyer_asks_lower=True`, and nothing accepted yet: move to the next rung (`counter`, or `final` at the last rung).
+  - After an accept, nothing moves the price any more.
+- **Prompt v1.6:** "To repeat a price, call verify_offer with no arguments. Only set buyer_asks_lower=true when the buyer asks for a lower price without naming a number."
+- **Tests:**
+  - Repeated calls with no offer return the same price.
+  - After an accept, calls with no offer return the accepted price.
+  - `buyer_asks_lower` moves exactly one rung.
+  - **Scripted test B10:** the buyer agrees at 140, then the agent confirms. The saved deal is at 140.
+
+### K2. nothing stops runaway spending at the new limits
+- **Limits:** `DEMO_DAILY_SESSION_CAP=50` and `IP_RATE_LIMIT_PER_HOUR=50`.
+- **Real cost:** $0.134 per minute, so a full 5-minute call is about $0.67.
+- **Worst case:** 50 × $0.67 ≈ **$33 a day**. The doc's "$12 a day" assumes every call lasts 1.8 minutes.
+- **The kill switch isn't armed.** Terraform still has `SIMULATE_DEACTIVATION="true"` and `KILL_RATIO="1.0"`, which against your $50 budget means it would only fire at $50, and even then just log. The doc says "Hard project kill switch is set at $25.00". That's wrong.
+- **So there is no hard stop today.** Anyone with the access code could use up the whole $50 in about 1.5 days.
+- **User decision (2026-10-08): both.**
+  - Arm the kill switch: `SIMULATE_DEACTIVATION=false`, `KILL_RATIO=0.5`, so it fires at $25.
+  - Set `DEMO_DAILY_SESSION_CAP=20`, in both Terraform and the `Settings` default.
+  - Lower `IP_RATE_LIMIT_PER_HOUR` to 10.
+  - The user confirms the budget is linked to `budget-alerts` before the apply.
+- **The options were:**
+  - **A:** arm the kill switch: `SIMULATE_DEACTIVATION=false`, `KILL_RATIO=0.5` (fires at $25). Confirm the budget is linked to `budget-alerts`.
+  - **B:** lower the daily cap to about 20 (worst case about $13 a day).
+  - **Both:** recommended before the link goes to anyone beyond the native-speaker testers.
+- **Fix the doc** to show the real worst-case cost and the actual kill-switch state.
+

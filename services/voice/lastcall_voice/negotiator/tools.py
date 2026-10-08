@@ -19,12 +19,14 @@ PKT = ZoneInfo("Asia/Karachi")
 
 async def verify_offer(
     buyer_offer_per_unit: int | None = None,
+    buyer_asks_lower: bool = False,
     tool_context: ToolContext = None,
 ) -> dict[str, Any]:
-    """Evaluates the buyer's offer or provides a quote/counter against the negotiated price ladder.
+    """Evaluates the buyer's offer or provides a quote against the negotiated price ladder.
 
     Args:
-        buyer_offer_per_unit: The price per unit offered by the buyer in PKR, or None to get the opening quote or the next counter if the buyer asks to lower the price without naming a number.
+        buyer_offer_per_unit: The price per unit offered by the buyer in PKR, or None to repeat or ask for a lower price.
+        buyer_asks_lower: Set to True only when the buyer asks for a lower price without naming a number. To repeat a price, leave False.
     """
     call_id = tool_context.state.get("call_id") if tool_context else None
     ctx = get_context(call_id) if call_id else None
@@ -41,6 +43,7 @@ async def verify_offer(
         deal_type=call.brief.deal_type,
         buyer_offer=buyer_offer_per_unit,
         unit=call.brief.opening_price_unit,
+        buyer_asks_lower=buyer_asks_lower,
     )
     await ctx.store.save_negotiation(call_id, call.negotiation)
     ctx.negotiation = call.negotiation

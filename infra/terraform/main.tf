@@ -253,7 +253,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
       env {
         name  = "IP_RATE_LIMIT_PER_HOUR"
-        value = "50"
+        value = "20"
       }
       env {
         name = "DEMO_ACCESS_CODE"
@@ -446,6 +446,12 @@ resource "google_storage_bucket_iam_member" "deployer_storage_viewer" {
   member = "serviceAccount:${google_service_account.deployer_sa.email}"
 }
 
+resource "google_storage_bucket_iam_member" "deployer_gcf_source_viewer" {
+  bucket = "gcf-v2-sources-${data.google_project.project.number}-${var.region}"
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.deployer_sa.email}"
+}
+
 data "archive_file" "billing_guard_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../functions/billing_guard"
@@ -485,7 +491,7 @@ resource "google_cloudfunctions2_function" "billing_guard" {
     all_traffic_on_latest_revision = true
 
     environment_variables = {
-      SIMULATE_DEACTIVATION = "true"
+      SIMULATE_DEACTIVATION = "false"
       KILL_RATIO            = "1.0"
       GCP_PROJECT           = var.project_id
     }
@@ -504,6 +510,7 @@ resource "google_cloudfunctions2_function" "billing_guard" {
     google_project_iam_member.billing_guard_billing_mgr,
     google_project_iam_member.billing_guard_eventarc_receiver,
     google_storage_bucket_iam_member.deployer_storage_viewer,
+    google_storage_bucket_iam_member.deployer_gcf_source_viewer,
   ]
 }
 

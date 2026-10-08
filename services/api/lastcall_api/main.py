@@ -130,8 +130,9 @@ async def create_demo_session(
     if not _verify_access_code(x_demo_access_code):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access code")
 
-    # 2. Per-IP rate limiting (configurable via IP_RATE_LIMIT_PER_HOUR, default 50 sessions per hour)
-    ip_limit = int(os.getenv("IP_RATE_LIMIT_PER_HOUR", "50"))
+    # 2. Per-IP rate limiting (configurable via IP_RATE_LIMIT_PER_HOUR, default 20 sessions per hour)
+    settings = get_settings()
+    ip_limit = int(os.getenv("IP_RATE_LIMIT_PER_HOUR", str(settings.IP_RATE_LIMIT_PER_HOUR)))
     forwarded = request.headers.get("x-forwarded-for", "")
     client_ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "127.0.0.1")
     now_ts = time.time()

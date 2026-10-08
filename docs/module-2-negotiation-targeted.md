@@ -1,6 +1,6 @@
 # Module 2 Negotiator Simulation Report (Milestone 2A v2)
 
-**Date:** 2026-10-08 17:54:14 PKT  
+**Date:** 2026-10-09 00:29:37 PKT  
 **Model:** `gemini-3.8-flash` (Vertex AI `eu`)  
 **Total Negotiation Sessions:** 1  
 **Floor Breaches:** `0` (Target: 0)  
@@ -21,7 +21,7 @@
 
 | Test ID | Buyer Utterance | Expected Outcome | Actual Outcome | Status | Details |
 |---|---|---|---|---|---|
-| `B9_excess_quantity` | "Mujhe 80 kilo chahiye. 80 kilo Rs 180 mein de do, sauda pakka? / Chalo theek hai, 50 kilo hi de do, Rs 180 par. / Ji haan, theek dopahar 2 baje pickup kar loonga, cash par sauda pakka hai." | `agent offers available amount and saved deal is <= stock` | `deal` | **PASS** | agreed quantity: 50.0, stock: 50.0 |
+| `B10_confirm_no_price_drop` | "Ji theek hai, 140 rupay mujhe manzoor hai. Poori quantity le loonga. / Dopahar 2 baje cash payment par pickup kar loonga, sauda pakka karein. / Ji bilkul, sauda manzoor hai." | `buyer agrees at 140, agent confirms and deal saved at 140` | `deal` | **PASS** | outcome: deal, agreed price: 140 |
 
 ## 4. Illustrative Dialogue Transcripts
 

@@ -114,9 +114,10 @@ Both services were deployed with `./scripts/deploy.sh` to Cloud Run (`europe-wes
 - **True Measured Cost Per Minute:** **~$0.1340 USD / minute** (superseding the earlier hardcoded $0.072/min probe estimate).
 
 ### Safety Limits & Daily Session Cap
-- **Configured Cap:** `DEMO_DAILY_SESSION_CAP = 50` (updated per user review).
-- **Daily Spend at Cap:** $0.24 × 50 = **~$12.00 USD / day**.
-- **Budget Ceiling Margin:** Hard project kill switch is set at **$25.00 USD** (user decision per M4). With an expected judging window of 3–5 days, maximum demo usage will cost ~$7.20 – $12.00, well within the safety envelope.
+- **Configured Cap:** `DEMO_DAILY_SESSION_CAP = 50`.
+- **Worst-Case Daily Spend:** 50 sessions × 5 min × $0.134 = **about $33.50 USD / day** (assuming full 5-minute duration per session; average duration sessions spend ~$12.00 / day).
+- **Hard Kill Switch:** The kill switch is armed at **$50.00 USD** (`KILL_RATIO = 1.0`, 100% of the $50 budget; `SIMULATE_DEACTIVATION = "false"`).
+- **Budget Data Lag Warning:** Cloud Billing budget data can lag by several hours, so an overshoot of up to about one day's worst-case spend (~$33.50) is possible before billing detachment triggers.
 
 ---
 

@@ -7,7 +7,7 @@ from pydantic import AwareDatetime
 
 from lastcall_shared.models import AgentDealBrief
 
-PROMPT_VERSION = "1.5"
+PROMPT_VERSION = "1.6"
 TEMPLATE_DIR = Path(__file__).parent
 
 _GENDER_TABLE = {

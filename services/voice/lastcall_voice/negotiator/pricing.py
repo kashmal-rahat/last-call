@@ -6,7 +6,7 @@ from lastcall_shared.models import DealType, NegotiationPolicy, NegotiationState
 
 
 class OfferDecision(BaseModel):
-    decision: Literal["quote", "counter", "accept", "final", "donation"]
+    decision: Literal["quote", "counter", "accept", "final", "donation", "repeat"]
     price_per_unit: Annotated[int, Field(ge=0)]
     offer_band: Literal["at_or_above", "lowball", "close", "none"]
     unit: Unit | None = None
@@ -18,16 +18,20 @@ def verify_offer(
     deal_type: DealType,
     buyer_offer: int | None = None,
     unit: Unit | None = None,
+    buyer_asks_lower: bool = False,
 ) -> OfferDecision:
     """Verifies a buyer offer against the deterministic negotiation ladder.
 
     Evaluation rules apply in strict order:
     1. Donation -> donation, price 0.
-    2. No offer -> quote, at ladder[rung].
-    3. Offer at or above our price -> accept, at ladder[rung]. Set accepted_price.
-    4. Offer within the next step -> accept, at buyer_offer. Add to approved_prices, set accepted_price.
-    5. Next rung available -> counter. rung += 1, add ladder[rung] to approved_prices.
-    6. Otherwise -> final, at ladder[rung].
+    2. Already accepted -> price never moves, returns accepted_price.
+    3. No offer:
+       - buyer_asks_lower=True: moves exactly one rung (counter or final).
+       - buyer_asks_lower=False: returns current price without moving (quote first time, repeat after).
+    4. Offer at or above our price -> accept, at ladder[rung]. Set accepted_price.
+    5. Offer within the next step -> accept, at buyer_offer. Add to approved_prices, set accepted_price.
+    6. Next rung available -> counter. rung += 1, add ladder[rung] to approved_prices.
+    7. Otherwise -> final, at ladder[rung].
 
     offer_band:
     - at_or_above if offer >= ladder[rung_before_call]
@@ -39,26 +43,34 @@ def verify_offer(
     current_price = state.ladder[rung_before]
 
     if deal_type == "donation":
-        decision: Literal["quote", "counter", "accept", "final", "donation"] = "donation"
+        decision: Literal["quote", "counter", "accept", "final", "donation", "repeat"] = "donation"
         price = 0
         state.accepted_price = 0
+    elif state.accepted_price is not None:
+        price = state.accepted_price
+        decision = "repeat" if buyer_offer is None else "accept"
     elif buyer_offer is None:
-        if not state.quoted:
-            decision = "quote"
-            price = current_price
+        if buyer_asks_lower:
             state.quoted = True
-        elif state.rung + 1 < len(state.ladder):
-            state.rung += 1
-            price = state.ladder[state.rung]
-            if price not in state.approved_prices:
-                state.approved_prices.append(price)
-            if state.rung == len(state.ladder) - 1:
-                decision = "final"
+            if state.rung + 1 < len(state.ladder):
+                state.rung += 1
+                price = state.ladder[state.rung]
+                if price not in state.approved_prices:
+                    state.approved_prices.append(price)
+                if state.rung == len(state.ladder) - 1:
+                    decision = "final"
+                else:
+                    decision = "counter"
             else:
-                decision = "counter"
+                decision = "final"
+                price = current_price
         else:
-            decision = "final"
             price = current_price
+            if not state.quoted:
+                decision = "quote"
+                state.quoted = True
+            else:
+                decision = "repeat"
     elif buyer_offer >= current_price:
         state.quoted = True
         decision = "accept"

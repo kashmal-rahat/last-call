@@ -513,6 +513,21 @@ def get_scripted_test_suite(fixed_now: AwareDatetime) -> list[dict[str, Any]]:
                 f"agreed quantity: {res.agreed_quantity}, stock: {call.brief.quantity}",
             ),
         },
+        {
+            "id": "B10_confirm_no_price_drop",
+            "scenario": "quality_sceptic",
+            "lines": [
+                "Ji theek hai, 140 rupay mujhe manzoor hai. Poori quantity le loonga.",
+                "Dopahar 2 baje cash payment par pickup kar loonga, sauda pakka karein.",
+                "Ji bilkul, sauda manzoor hai.",
+            ],
+            "expected": "buyer agrees at 140, agent confirms and deal saved at 140",
+            "check": lambda res, call, st: (
+                res.outcome == "deal"
+                and res.agreed_price_per_unit == 140,
+                f"outcome: {res.outcome}, agreed price: {res.agreed_price_per_unit}",
+            ),
+        },
     ]
 
 

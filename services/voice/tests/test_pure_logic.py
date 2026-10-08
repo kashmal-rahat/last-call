@@ -330,16 +330,17 @@ def test_price_guard_classify():
     assert classify([160], floor, approved, current) == "ok"
 
 
-def test_prompt_template_v1_5_male_voice_consistency():
+def test_prompt_template_v1_6_male_voice_consistency():
     from lastcall_voice.negotiator.prompt import PROMPT_VERSION, render_instruction
 
-    assert PROMPT_VERSION == "1.5"
+    assert PROMPT_VERSION == "1.6"
     brief = make_test_brief()
     view = brief.agent_view()
 
     expected_rule = "Never say a price is the last or lowest ('aakhri', 'last', 'final', 'is se neechay nahi', 'mumkin nahi') unless verify_offer returned decision = final."
     qty_rule = "Never agree to more than the available quantity in the brief."
     sauda_rule = "Never say 'sauda pakka' or close as a deal unless confirm_deal returned ok=true."
+    repeat_rule = "To repeat a price, call verify_offer with no arguments. Only set buyer_asks_lower=true when the buyer asks for a lower price without naming a number."
 
     # Male rendering in text mode
     male_text = render_instruction(
@@ -363,6 +364,7 @@ def test_prompt_template_v1_5_male_voice_consistency():
     assert expected_rule in male_text
     assert qty_rule in male_text
     assert sauda_rule in male_text
+    assert repeat_rule in male_text
 
     # Voice mode: also consistently male
     male_voice = render_instruction(
@@ -386,6 +388,7 @@ def test_prompt_template_v1_5_male_voice_consistency():
     assert expected_rule in male_voice
     assert qty_rule in male_voice
     assert sauda_rule in male_voice
+    assert repeat_rule in male_voice
 
 
 @pytest.mark.asyncio
@@ -639,43 +642,51 @@ def test_verify_offer_no_numeric_offer_ladder_progression():
     # easy_yes ladder: [180, 160, 145, 135, 130]
 
     # 1. Opening quote
-    d0 = verify_offer(state, policy, "sale", None)
+    d0 = verify_offer(state, policy, "sale", None, buyer_asks_lower=False)
     assert d0.decision == "quote"
     assert d0.price_per_unit == 180
     assert state.rung == 0
     assert state.quoted is True
 
-    # 2. Buyer asks to reduce price ("bohat zyada hai") -> counters at 160
-    d1 = verify_offer(state, policy, "sale", None)
+    # 2. Repeated call with no offer and buyer_asks_lower=False -> returns same price, decision "repeat"
+    d_rep = verify_offer(state, policy, "sale", None, buyer_asks_lower=False)
+    assert d_rep.decision == "repeat"
+    assert d_rep.price_per_unit == 180
+    assert state.rung == 0
+
+    # 3. Buyer asks to reduce price without number -> moves exactly one rung to 160
+    d1 = verify_offer(state, policy, "sale", None, buyer_asks_lower=True)
     assert d1.decision == "counter"
     assert d1.price_per_unit == 160
     assert state.rung == 1
     assert 160 in state.approved_prices
 
-    # 3. Buyer asks to reduce price further ("is se thora kam karo") -> counters at 145
-    d2 = verify_offer(state, policy, "sale", None)
+    # 4. Repeat after concession -> returns 160 without moving
+    d1_rep = verify_offer(state, policy, "sale", None, buyer_asks_lower=False)
+    assert d1_rep.decision == "repeat"
+    assert d1_rep.price_per_unit == 160
+    assert state.rung == 1
+
+    # 5. Buyer asks lower again -> moves to 145
+    d2 = verify_offer(state, policy, "sale", None, buyer_asks_lower=True)
     assert d2.decision == "counter"
     assert d2.price_per_unit == 145
     assert state.rung == 2
-    assert 145 in state.approved_prices
 
-    # 4. Buyer asks again -> counters at 135
-    d3 = verify_offer(state, policy, "sale", None)
-    assert d3.decision == "counter"
-    assert d3.price_per_unit == 135
-    assert state.rung == 3
+    # 6. Buyer agrees at 140 -> accept at 140
+    d_acc = verify_offer(state, policy, "sale", 140)
+    assert d_acc.decision == "accept"
+    assert d_acc.price_per_unit == 140
+    assert state.accepted_price == 140
 
-    # 5. Buyer asks again -> reaches floor at 130, decision is final
-    d4 = verify_offer(state, policy, "sale", None)
-    assert d4.decision == "final"
-    assert d4.price_per_unit == 130
-    assert state.rung == 4
+    # 7. After accept, repeated no-offer calls return accepted price 140 without moving
+    d_after_acc = verify_offer(state, policy, "sale", None, buyer_asks_lower=False)
+    assert d_after_acc.price_per_unit == 140
+    assert d_after_acc.decision == "repeat"
 
-    # 6. Buyer asks again -> firmly stays at 130 floor, never goes back up
-    d5 = verify_offer(state, policy, "sale", None)
-    assert d5.decision == "final"
-    assert d5.price_per_unit == 130
-    assert state.rung == 4
+    # 8. After accept, even buyer_asks_lower=True returns accepted price 140 without moving
+    d_try_lower = verify_offer(state, policy, "sale", None, buyer_asks_lower=True)
+    assert d_try_lower.price_per_unit == 140
 
 
 
