@@ -13,8 +13,16 @@ COMMIT = os.getenv("GIT_COMMIT", "dev")
 logger = setup_structured_logging(service_name=SERVICE_NAME)
 
 
+from lastcall_shared.config import get_settings
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    settings = get_settings()
+    key_val = settings.APP_SIGNING_KEY.get_secret_value() if settings.APP_SIGNING_KEY else ""
+    if len(key_val.strip()) < 32:
+        raise RuntimeError("APP_SIGNING_KEY must be configured with at least 32 characters")
+
     logger.info("Voice service starting up", extra={"extra_fields": {"version": VERSION}})
     yield
     logger.info("Voice service shutting down")

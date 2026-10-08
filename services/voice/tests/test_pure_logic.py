@@ -330,14 +330,16 @@ def test_price_guard_classify():
     assert classify([160], floor, approved, current) == "ok"
 
 
-def test_prompt_template_v1_4_and_gender_consistency():
+def test_prompt_template_v1_5_male_voice_consistency():
     from lastcall_voice.negotiator.prompt import PROMPT_VERSION, render_instruction
 
-    assert PROMPT_VERSION == "1.4"
+    assert PROMPT_VERSION == "1.5"
     brief = make_test_brief()
     view = brief.agent_view()
 
-    expected_rule = "Never call a price 'aakhri', 'last' or 'final' unless verify_offer returned decision = final."
+    expected_rule = "Never say a price is the last or lowest ('aakhri', 'last', 'final', 'is se neechay nahi', 'mumkin nahi') unless verify_offer returned decision = final."
+    qty_rule = "Never agree to more than the available quantity in the brief."
+    sauda_rule = "Never say 'sauda pakka' or close as a deal unless confirm_deal returned ok=true."
 
     # Male rendering in text mode
     male_text = render_instruction(
@@ -350,28 +352,283 @@ def test_prompt_template_v1_4_and_gender_consistency():
     assert 'main bol raha hoon' in male_text
     assert 'kar deta hoon' in male_text
     assert 'keh raha tha' in male_text
+    assert 'ka AI assistant hoon' in male_text
+    assert 'Photo bhej deta hoon' in male_text
     assert 'bol rahi' not in male_text
     assert 'kar deti' not in male_text
     assert 'keh rahi thi' not in male_text
+    assert 'ki AI assistant' not in male_text
     assert 'Text testing mode' in male_text
     assert 'Rs 145 per kilo' in male_text
     assert expected_rule in male_text
+    assert qty_rule in male_text
+    assert sauda_rule in male_text
 
-    # Female rendering in voice mode
-    female_voice = render_instruction(
+    # Voice mode: also consistently male
+    male_voice = render_instruction(
         view,
         mode="voice",
-        agent_gender="female",
+        agent_gender="male",
         city_style="- Karachi market style",
         now=NOW,
     )
-    assert 'main bol rahi hoon' in female_voice
-    assert 'kar deti hoon' in female_voice
-    assert 'keh rahi thi' in female_voice
-    assert 'bol raha' not in female_voice
-    assert 'kar deta' not in female_voice
-    assert 'keh raha tha' not in female_voice
-    assert 'Text testing mode' not in female_voice
-    assert 'plainly in words' in female_voice
-    assert expected_rule in female_voice
+    assert 'main bol raha hoon' in male_voice
+    assert 'kar deta hoon' in male_voice
+    assert 'keh raha tha' in male_voice
+    assert 'ka AI assistant hoon' in male_voice
+    assert 'Photo bhej deta hoon' in male_voice
+    assert 'bol rahi' not in male_voice
+    assert 'kar deti' not in male_voice
+    assert 'keh rahi thi' not in male_voice
+    assert 'ki AI assistant' not in male_voice
+    assert 'Text testing mode' not in male_voice
+    assert 'plainly in words' in male_voice
+    assert expected_rule in male_voice
+    assert qty_rule in male_voice
+    assert sauda_rule in male_voice
+
+
+@pytest.mark.asyncio
+async def test_confirm_deal_c0_validations():
+    from lastcall_shared.store import InMemoryStore
+    from lastcall_shared.scenarios.loader import build_call
+    from lastcall_voice.call_context import CallContext, register_context, unregister_context
+    from lastcall_voice.negotiator.tools import confirm_deal
+    from google.adk.tools.tool_context import ToolContext
+
+    store = InMemoryStore(clock=lambda: NOW)
+    brief = make_test_brief(floor=100, opening=150)
+    policy = NegotiationPolicy()
+    state = init_negotiation(brief, policy)
+    state.approved_prices = [150, 130]
+
+    call, batch = build_call("easy_yes", now=NOW)
+    call.negotiation = state
+    batch.remaining_quantity = 50.0
+    await store.create_call(call, batch)
+    await store.lock_batch(batch.batch_id, call.call_id, NOW + timedelta(minutes=10))
+
+    ctx = CallContext(store=store, call_id=call.call_id, clock=lambda: NOW)
+    register_context(ctx)
+
+    tc = type("MockTC", (), {"state": {"call_id": call.call_id}})()
+
+    # 1. Asking for 60 when 50 is available -> ok: False, available_quantity=50.0, no deal saved
+    res_qty = await confirm_deal(
+        price_per_unit=130,
+        quantity=60.0,
+        pickup_time_iso=(NOW + timedelta(hours=2)).isoformat(),
+        buyer_confirmed=True,
+        tool_context=tc,
+    )
+    assert res_qty["ok"] is False
+    assert res_qty["available_quantity"] == 50.0
+    assert any("Only 50" in r for r in res_qty["reasons"])
+    assert not ctx.outcome_set
+    assert await store.get_deal(call.call_id) is None
+
+    # 2. Naive time (missing timezone) -> ok: False
+    res_naive = await confirm_deal(
+        price_per_unit=130,
+        quantity=40.0,
+        pickup_time_iso="2026-10-07T14:00:00",
+        buyer_confirmed=True,
+        tool_context=tc,
+    )
+    assert res_naive["ok"] is False
+    assert any("ask the buyer for the pickup time again" in r for r in res_naive["reasons"])
+
+    # 3. Past time -> ok: False
+    res_past = await confirm_deal(
+        price_per_unit=130,
+        quantity=40.0,
+        pickup_time_iso=(NOW - timedelta(hours=1)).isoformat(),
+        buyer_confirmed=True,
+        tool_context=tc,
+    )
+    assert res_past["ok"] is False
+    assert any("ask the buyer for the pickup time again" in r for r in res_past["reasons"])
+
+    # 4. Valid confirmation -> ok: True, deal saved
+    res_valid = await confirm_deal(
+        price_per_unit=150,
+        quantity=40.0,
+        pickup_time_iso=(NOW + timedelta(hours=2)).isoformat(),
+        buyer_confirmed=True,
+        tool_context=tc,
+    )
+    assert res_valid["ok"] is True
+    assert ctx.outcome_set
+    assert ctx.agreed_quantity == 40.0
+    saved_deal = await store.get_deal(call.call_id)
+    assert saved_deal is not None
+    assert saved_deal.quantity == 40.0
+
+    unregister_context(call.call_id)
+
+
+@pytest.mark.asyncio
+async def test_fresh_state_in_price_guard_c1():
+    from lastcall_shared.store import InMemoryStore
+    from lastcall_shared.scenarios.loader import build_call
+    from lastcall_voice.call_context import CallContext, register_context, unregister_context
+    from lastcall_voice.negotiator.tools import verify_offer
+    from lastcall_voice.negotiator import price_guard
+
+    store = InMemoryStore(clock=lambda: NOW)
+    call, batch = build_call("hard_bargainer", now=NOW)
+    await store.create_call(call, batch)
+
+    ctx = CallContext(store=store, call_id=call.call_id, clock=lambda: NOW, negotiation=call.negotiation)
+    register_context(ctx)
+
+    tc = type("MockTC", (), {"state": {"call_id": call.call_id}})()
+
+    stale_negotiation = call.negotiation.model_copy(deep=True)
+
+    # Concession 1
+    ans1 = await verify_offer(buyer_offer_per_unit=130, tool_context=tc)
+    c1_price = ans1["price_per_unit"]
+
+    # Concession 2
+    ans2 = await verify_offer(buyer_offer_per_unit=130, tool_context=tc)
+    c2_price = ans2["price_per_unit"]
+
+    assert ctx.negotiation is not None
+    assert c2_price in ctx.negotiation.approved_prices
+
+    agent_text = f"Main Rs {c2_price} mein de sakta hoon"
+    prices = price_guard.find_prices(agent_text)
+
+    # Classifying against initial stale negotiation fails as "unapproved"
+    stale_cls = price_guard.classify(
+        prices=prices,
+        floor=call.brief.floor_price_per_unit,
+        approved_prices=stale_negotiation.approved_prices,
+        current_price=stale_negotiation.ladder[stale_negotiation.rung],
+    )
+    assert stale_cls == "unapproved"
+
+    # Classifying against fresh ctx.negotiation succeeds as "ok"
+    current_neg = ctx.negotiation
+    fresh_cls = price_guard.classify(
+        prices=prices,
+        floor=call.brief.floor_price_per_unit,
+        approved_prices=current_neg.approved_prices,
+        current_price=current_neg.ladder[current_neg.rung],
+    )
+    assert fresh_cls == "ok"
+
+    unregister_context(call.call_id)
+
+
+@pytest.mark.asyncio
+async def test_spoken_price_guard_fallback_c2():
+    import asyncio
+    from lastcall_voice.negotiator.price_guard import fallback_extract_prices
+
+    class FakeResp:
+        def __init__(self, text: str):
+            self.text = text
+
+    class FakeModels:
+        def __init__(self, text: str, delay: float = 0.0):
+            self._text = text
+            self._delay = delay
+
+        async def generate_content(self, **kwargs):
+            if self._delay:
+                await asyncio.sleep(self._delay)
+            return FakeResp(self._text)
+
+    class FakeAio:
+        def __init__(self, text: str, delay: float = 0.0):
+            self.models = FakeModels(text, delay)
+
+    class FakeClient:
+        def __init__(self, text: str, delay: float = 0.0):
+            self.aio = FakeAio(text, delay)
+
+    # 1. Success case
+    fake_client = FakeClient('{"agent_offered_prices": [145]}')
+    prices, unchecked = await fallback_extract_prices(
+        "ek sau pentalis rupay mein de doonga",
+        client=fake_client,
+        timeout=1.0,
+    )
+    assert prices == [145]
+    assert unchecked is False
+
+    # 2. Timeout case -> unchecked=True
+    timeout_client = FakeClient('{"agent_offered_prices": [145]}', delay=0.5)
+    prices, unchecked = await fallback_extract_prices(
+        "ek sau pentalis rupay mein de doonga",
+        client=timeout_client,
+        timeout=0.05,
+    )
+    assert prices == []
+    assert unchecked is True
+
+
+def test_prompt_h5_cleanups():
+    from lastcall_voice.negotiator.prompt import generate_pitch, render_instruction, CITY_STYLES
+
+    # 1. Pitch: donation case uses "aap ke idaare ke liye"
+    brief_donation = make_test_brief(deal_type="donation")
+    view_donation = brief_donation.agent_view()
+    pitch_donation = generate_pitch(view_donation)
+    assert "aap ke idaare ke liye bilkul free" in pitch_donation
+    assert "shelter" not in pitch_donation
+
+    # 2. Pitch: sale case drops "taaza"
+    brief_sale = make_test_brief()
+    view_sale = brief_sale.agent_view()
+    pitch_sale = generate_pitch(view_sale)
+    assert "taaza" not in pitch_sale
+    assert "condition Ripe, minor spots" in pitch_sale
+    assert "rate bohat munasib hai" in pitch_sale
+
+    # 3. Quality doubt line in prompt uses condition_short
+    rendered_sale = render_instruction(view_sale, now=NOW)
+    assert "Chhilka thora daagi" not in rendered_sale
+    # condition is "Ripe, minor spots" -> condition_short is "ripe"
+    assert "Bahar se thora ripe hai, andar se maal theek hai. Photo bhej deta hoon, khud tasalli kar lein." in rendered_sale
+
+    # 4. City style mapping
+    prompt_lahore = render_instruction(view_sale, city_style="lahore", now=NOW)
+    assert "Lahori style: Punjabi-flavoured words where natural" in prompt_lahore
+    assert "- lahore" not in prompt_lahore
+
+    prompt_karachi = render_instruction(view_sale, city_style="karachi", now=NOW)
+    assert "Karachi market style: polite, friendly, business-minded" in prompt_karachi
+
+    prompt_isb = render_instruction(view_sale, city_style="islamabad", now=NOW)
+    assert "Islamabad style: polite, formal and courteous market tone" in prompt_isb
+
+    prompt_custom = render_instruction(view_sale, city_style="- Custom market style", now=NOW)
+    assert "- Custom market style" in prompt_custom
+
+
+def test_input_audio_transcription_vocabulary_h5():
+    from lastcall_voice.live_session import (
+        BASE_MARKET_VOCABULARY,
+        CUSTOM_VOCABULARY,
+        build_input_transcription_config,
+    )
+
+    assert "Sindhri" not in BASE_MARKET_VOCABULARY
+    assert "Sindhri" not in CUSTOM_VOCABULARY
+
+    cfg_default = build_input_transcription_config()
+    assert "Sindhri" not in cfg_default.custom_vocabulary
+
+    cfg_sindhri = build_input_transcription_config(item_words=["Sindhri", "Mangoes"])
+    assert "Sindhri" in cfg_sindhri.custom_vocabulary
+    assert "Mangoes" in cfg_sindhri.custom_vocabulary
+
+    cfg_kinnow = build_input_transcription_config(item_words=["Kinnow", "Oranges"])
+    assert "Kinnow" in cfg_kinnow.custom_vocabulary
+    assert "Oranges" in cfg_kinnow.custom_vocabulary
+    assert "Sindhri" not in cfg_kinnow.custom_vocabulary
+
 

@@ -7,7 +7,7 @@ from pydantic import AwareDatetime
 
 from lastcall_shared.models import AgentDealBrief
 
-PROMPT_VERSION = "1.4"
+PROMPT_VERSION = "1.5"
 TEMPLATE_DIR = Path(__file__).parent
 
 _GENDER_TABLE = {
@@ -93,12 +93,19 @@ def buyer_type_words(buyer_type: str) -> str:
     return mapping.get(buyer_type, "business")
 
 
+CITY_STYLES: dict[str, str] = {
+    "karachi": "- Karachi market style: polite, friendly, business-minded. Call the buyer 'Bhai'.",
+    "lahore": "- Lahori style: Punjabi-flavoured words where natural, vigorous and warm bargaining. Call the buyer 'Paaji' or 'Bhai'.",
+    "islamabad": "- Islamabad style: polite, formal and courteous market tone.",
+}
+
+
 def generate_pitch(view: AgentDealBrief) -> str:
     u = unit_words(view.quantity_unit)
     q = quantity_words(view.quantity, view.quantity_unit, view.quantity_confirmed_by_staff)
     if view.deal_type == "donation":
-        return f"Humare paas {q} {view.item} hain jo abhi theek hain, aap ke shelter ke liye bilkul free dene ko tayyar hain."
-    return f"Humare paas {q} taaza {view.item} hain, condition {view.condition} hai, aur rate bohat munasib hai."
+        return f"Humare paas {q} {view.item} hain jo abhi theek hain, aap ke idaare ke liye bilkul free dene ko tayyar hain."
+    return f"Humare paas {q} {view.item} hain, condition {view.condition} hai, aur rate bohat munasib hai."
 
 
 def render_instruction(
@@ -106,7 +113,7 @@ def render_instruction(
     *,
     mode: Literal["text", "voice"] = "text",
     agent_gender: Literal["male", "female"] = "male",
-    city_style: str = "- Karachi style: friendly and polite.",
+    city_style: str = "karachi",
     now: AwareDatetime | None = None,
 ) -> str:
     """Renders the negotiator system instruction prompt from prompt_template.j2."""
@@ -128,6 +135,9 @@ def render_instruction(
     if view.market_rate_per_unit is not None:
         market_rate_w = price_words(view.market_rate_per_unit, view.opening_price_unit)
 
+    resolved_city_style = CITY_STYLES.get(city_style, city_style)
+    condition_short = view.condition.split(",")[0].strip().lower()
+
     rendered = template.render(
         mart_name=view.mart.name,
         mart_location=view.mart.location,
@@ -135,6 +145,7 @@ def render_instruction(
         buyer_type_words=buyer_type_words(view.buyer.type),
         item=view.item,
         condition=view.condition,
+        condition_short=condition_short,
         quantity_words=quantity_words(view.quantity, view.quantity_unit, view.quantity_confirmed_by_staff),
         pickup_window_words=pickup_window_words,
         pickup_deadline_words=pickup_deadline_words,
@@ -143,7 +154,7 @@ def render_instruction(
         market_rate_words=market_rate_w,
         gender_words=f"{agent_gender} shopkeeper",
         g=g,
-        city_style=city_style,
+        city_style=resolved_city_style,
         buyer_honorific="Bhai",
         mode=mode,
         deal_type=view.deal_type,

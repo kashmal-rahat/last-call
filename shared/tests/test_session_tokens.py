@@ -78,3 +78,20 @@ def test_token_malformed():
     assert verify("invalid_no_dot", key)[0] is False
     assert verify("a.b.c", key)[0] is False
     assert verify(".sig", key)[0] is False
+
+
+def test_token_mint_empty_key_raises():
+    with pytest.raises(ValueError, match="cannot be empty"):
+        mint(call_id="call_1", nonce="nonce_1", key="")
+
+    with pytest.raises(ValueError, match="cannot be empty"):
+        mint(call_id="call_1", nonce="nonce_1", key="   ")
+
+
+def test_token_verify_empty_key_raises():
+    token = mint(call_id="call_1", nonce="nonce_1", key="test-signing-key-12345", ttl=120)
+    with pytest.raises(ValueError, match="cannot be empty"):
+        verify(token, key="")
+
+    with pytest.raises(ValueError, match="cannot be empty"):
+        verify(token, key="   ")

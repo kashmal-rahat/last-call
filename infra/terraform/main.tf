@@ -24,7 +24,7 @@ locals {
     "roles/cloudtrace.agent",
   ]
 
-  effective_allowed_origins = "${var.allowed_origins},https://api-${data.google_project.project.number}.europe-west1.run.app,https://voice-${data.google_project.project.number}.europe-west1.run.app"
+  effective_allowed_origins = var.environment == "dev" ? "${var.allowed_origins},${var.dev_allowed_origins},https://api-${data.google_project.project.number}.europe-west1.run.app,https://voice-${data.google_project.project.number}.europe-west1.run.app" : "${var.allowed_origins},https://api-${data.google_project.project.number}.europe-west1.run.app,https://voice-${data.google_project.project.number}.europe-west1.run.app"
 }
 
 resource "google_project_service" "services" {
@@ -436,10 +436,10 @@ resource "google_storage_bucket" "function_source" {
   depends_on                  = [google_project_service.services]
 }
 
-resource "google_project_iam_member" "deployer_storage_viewer" {
-  project = var.project_id
-  role    = "roles/storage.objectViewer"
-  member  = "serviceAccount:${google_service_account.deployer_sa.email}"
+resource "google_storage_bucket_iam_member" "deployer_storage_viewer" {
+  bucket = google_storage_bucket.function_source.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.deployer_sa.email}"
 }
 
 data "archive_file" "billing_guard_zip" {
@@ -499,7 +499,7 @@ resource "google_cloudfunctions2_function" "billing_guard" {
     google_project_service.services,
     google_project_iam_member.billing_guard_billing_mgr,
     google_project_iam_member.billing_guard_eventarc_receiver,
-    google_project_iam_member.deployer_storage_viewer,
+    google_storage_bucket_iam_member.deployer_storage_viewer,
   ]
 }
 

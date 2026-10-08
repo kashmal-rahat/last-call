@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Callable, Literal
 from pydantic import AwareDatetime
+from lastcall_shared.models import NegotiationState
 from lastcall_shared.store import CallStore
 
 
@@ -22,6 +23,7 @@ class CallContext:
     buyer_spoke: bool = False
     flags: list[str] = None
     clock: Callable[[], AwareDatetime] | None = None
+    negotiation: NegotiationState | None = None
 
     def __post_init__(self):
         if self.flags is None:

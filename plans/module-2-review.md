@@ -101,6 +101,16 @@ The quantity check in `validate_deal_terms` is correct. But `tools.confirm_deal`
 - **Check:** in `deals/` for `call_hard_bargainer_d8e6ab9d`, the quantity must be 30.
 - If it isn't, `confirm_deal` received a wrong quantity. Add to the prompt: "In the confirmation, say the quantity in digits-as-words exactly as given to confirm_deal."
 
+### H5. Test-scenario leftovers in the prompt code
+The agent and prompt are built only from `agent_view()`; persona and hidden-price data never reach them, which is correct. But a few pieces of scenario-specific wording are hardcoded:
+1. **`generate_pitch`, donation case:** it says "aap ke **shelter** ke liye", which comes from the Edhi animal-shelter test scenario. Use a neutral phrase ("aap ke idaare ke liye"), or one per `buyer.type`.
+2. **`generate_pitch`, sale case:** "Humare paas {q} **taaza** {item}" calls overripe produce fresh, which breaks the "describe the condition honestly" rule. Drop "taaza", and let `condition` describe it.
+3. **The template's quality-doubt line is banana-specific** ("Chhilka thora daagi hai…"). Replace it with a generic line built from the brief: "Bahar se thora {condition_short} hai, andar se maal theek hai. Photo bhej {g.deta} hoon, khud tasalli kar lein."
+4. **The city style is broken.** `agent.py` passes the key `"karachi"`, but `render_instruction` prints `city_style` as the style text, so the prompt just contains "karachi". Add a map, for example `CITY_STYLES = {"karachi": "- Karachi market style: …", "lahore": "- Lahori style: Punjabi-flavoured words where natural …", "islamabad": …}`, and render the mapped text. Add a test that the Lahore style text appears when `city_style="lahore"`.
+5. **The transcription vocabulary has "Sindhri" hardcoded** (`live_session.CUSTOM_VOCABULARY`). Build the list for each call: generic market words plus the brief's `item` words.
+
+Bump to PROMPT_VERSION 1.5, together with C0 and H3.
+
 ---
 
 ## 🟡 Medium

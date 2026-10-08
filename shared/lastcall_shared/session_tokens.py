@@ -42,6 +42,9 @@ def mint(
         ttl: Time to live in seconds (default 120s).
         now: Optional reference timestamp.
     """
+    if not key or not key.strip():
+        raise ValueError("Signing key cannot be empty")
+
     now_ts = now.timestamp() if now else time.time()
     payload = {
         "call_id": call_id,
@@ -65,6 +68,9 @@ def verify(
     Returns:
         (valid, payload, error_message)
     """
+    if not key or not key.strip():
+        raise ValueError("Signing key cannot be empty")
+
     now_ts = now.timestamp() if now else time.time()
     parts = token.split(".")
     if len(parts) != 2:

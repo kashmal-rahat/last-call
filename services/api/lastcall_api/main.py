@@ -34,16 +34,23 @@ _IP_LIMITER_LOCK = asyncio.Lock()
 _IP_REQUEST_HISTORY: dict[str, list[float]] = {}
 
 
+from lastcall_shared.config import get_settings
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Security requirement: check APP_SIGNING_KEY presence and log ONLY its presence/absence, NEVER the value
-    signing_key_present = bool(os.getenv("APP_SIGNING_KEY", "").strip())
+    # Security requirement: check APP_SIGNING_KEY presence and valid length (>= 32 chars)
+    settings = get_settings()
+    key_val = settings.APP_SIGNING_KEY.get_secret_value() if settings.APP_SIGNING_KEY else ""
+    if len(key_val.strip()) < 32:
+        raise RuntimeError("APP_SIGNING_KEY must be configured with at least 32 characters")
+
     demo_code_present = bool(os.getenv("DEMO_ACCESS_CODE", "").strip())
     logger.info(
         "API service starting up",
         extra={
             "extra_fields": {
-                "app_signing_key_present": signing_key_present,
+                "app_signing_key_present": True,
                 "demo_access_code_present": demo_code_present,
                 "version": VERSION,
             }
@@ -140,9 +147,18 @@ async def create_demo_session(
         valid_history.append(now_ts)
         _IP_REQUEST_HISTORY[client_ip] = valid_history
 
-    # 3. Daily session cap check
-    store = _get_store()
+    # 3. Build and validate scenario call first (L3)
     now_pkt = datetime.now(PKT)
+    try:
+        call, batch = build_call(req.scenario_id, now=now_pkt)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid scenario: {str(exc)}",
+        )
+
+    # 4. Daily session cap check (only incremented if scenario is valid)
+    store = _get_store()
     date_str = now_pkt.strftime("%Y-%m-%d")
     daily_cap = int(os.getenv("DEMO_DAILY_SESSION_CAP", "10"))
     allowed = await store.incr_daily_sessions(date_str, daily_cap)
@@ -153,19 +169,11 @@ async def create_demo_session(
             detail="Daily demo session cap reached",
         )
 
-    # 4. Build and create call
-    try:
-        call, batch = build_call(req.scenario_id, now=now_pkt)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid scenario: {str(exc)}",
-        )
-
     await store.create_call(call, batch)
 
     # 5. Mint short-lived session token (120s)
-    signing_key = os.getenv("APP_SIGNING_KEY", "")
+    settings = get_settings()
+    signing_key = settings.APP_SIGNING_KEY.get_secret_value() if settings.APP_SIGNING_KEY else ""
     token = mint(call_id=call.call_id, nonce=call.session_nonce, key=signing_key, ttl=120, now=now_pkt)
 
     voice_ws_url = os.getenv("VOICE_WS_URL", "wss://lastcall-voice-dev.run.app/ws/call")

@@ -42,11 +42,10 @@ from lastcall_voice.negotiator.prompt import price_words
 PKT = ZoneInfo("Asia/Karachi")
 logger = logging.getLogger("lastcall_voice.live_session")
 
-CUSTOM_VOCABULARY = [
+BASE_MARKET_VOCABULARY: list[str] = [
     "aakhri rate",
     "darjan",
     "kilo",
-    "Sindhri",
     "sauda",
     "munasib",
     "wara",
@@ -64,14 +63,23 @@ CUSTOM_VOCABULARY = [
     "discount",
     "offer",
 ]
+CUSTOM_VOCABULARY = BASE_MARKET_VOCABULARY
 
 
-def build_input_transcription_config() -> types.AudioTranscriptionConfig:
+def build_input_transcription_config(
+    item_words: list[str] | None = None,
+) -> types.AudioTranscriptionConfig:
     """Builds input transcription config with Urdu/Punjabi/English language hints and market vocabulary."""
+    vocab = list(BASE_MARKET_VOCABULARY)
+    if item_words:
+        for w in item_words:
+            cleaned = w.strip()
+            if cleaned and cleaned not in vocab:
+                vocab.append(cleaned)
     try:
         return types.AudioTranscriptionConfig(
             language_hints=types.LanguageHints(language_codes=["ur", "pa", "en"]),
-            custom_vocabulary=CUSTOM_VOCABULARY,
+            custom_vocabulary=vocab,
         )
     except Exception as exc:
         logger.info("fallback_input_transcription_config", extra={"reason": str(exc)})
@@ -121,6 +129,16 @@ async def run_call_summary(call_id: str, store: CallStore) -> None:
         logger.warning("call_summary_failed", extra={"call_id": call_id, "error": str(exc)})
 
 
+def _get_genai_client() -> Any:
+    from google import genai
+    settings = get_settings()
+    return genai.Client(
+        vertexai=settings.GOOGLE_GENAI_USE_VERTEXAI,
+        project=settings.GOOGLE_CLOUD_PROJECT,
+        location=settings.GOOGLE_CLOUD_LOCATION,
+    )
+
+
 async def handle_live_call_websocket(
     websocket: WebSocket,
     store: CallStore | None = None,
@@ -128,14 +146,22 @@ async def handle_live_call_websocket(
     semaphore: asyncio.Semaphore | None = None,
     clock: Callable[[], AwareDatetime] | None = None,
     runner_factory: Callable[..., Any] | None = None,
+    flash_client: Any = None,
 ) -> None:
     """Handles the WebSocket connection for a live call."""
     settings = get_settings()
     actual_store: CallStore = store or getattr(websocket.app.state, "store", None) or FirestoreStore()
-    app_key = signing_key or os.getenv("APP_SIGNING_KEY", "")
+    app_key = signing_key or (settings.APP_SIGNING_KEY.get_secret_value() if settings.APP_SIGNING_KEY else "")
     sem = semaphore or getattr(websocket.app.state, "semaphore", None) or get_instance_semaphore()
     now_fn = clock or (lambda: datetime.now(PKT))
     start_time = time.time()
+    background_tasks: set[asyncio.Task] = set()
+    total_input_tokens = 0
+    total_output_tokens = 0
+    total_audio_in_tokens = 0
+    total_audio_out_tokens = 0
+    total_text_in_tokens = 0
+    total_text_out_tokens = 0
 
     max_call_seconds = int(os.getenv("MAX_CALL_SECONDS", "300"))
     agent_voice = os.getenv("AGENT_VOICE", "Puck")
@@ -220,6 +246,7 @@ async def handle_live_call_websocket(
             call_id=call_id,
             mode="voice",
             clock=now_fn,
+            negotiation=call.negotiation,
         )
         register_context(ctx)
 
@@ -257,7 +284,9 @@ async def handle_live_call_websocket(
                 )
             ),
             output_audio_transcription=types.AudioTranscriptionConfig(),
-            input_audio_transcription=build_input_transcription_config(),
+            input_audio_transcription=build_input_transcription_config(
+                item_words=call.brief.item.split() if call.brief and call.brief.item else None
+            ),
             realtime_input_config=types.RealtimeInputConfig(
                 automatic_activity_detection=types.AutomaticActivityDetection(
                     silence_duration_ms=700,
@@ -299,14 +328,21 @@ async def handle_live_call_websocket(
                 elif "text" in msg and msg["text"]:
                     try:
                         cmd = json.loads(msg["text"])
-                        if isinstance(cmd, dict) and cmd.get("type") == "hangup":
-                            break
+                        if isinstance(cmd, dict):
+                            if cmd.get("type") == "hangup":
+                                break
+                            elif cmd.get("type") == "latency" and "ms" in cmd:
+                                logger.info(
+                                    "client_voice_latency_measured",
+                                    extra={"call_id": call_id, "latency_ms": cmd["ms"]},
+                                )
                     except Exception:
                         pass
 
         async def downstream_task() -> None:
             """Receives live events from Gemini Live 3.8 and sends to browser client."""
             nonlocal last_buyer_turn_end, measuring_latency, total_input_tokens, total_output_tokens
+            nonlocal total_audio_in_tokens, total_audio_out_tokens, total_text_in_tokens, total_text_out_tokens
             last_flush_time = time.time()
 
             async for event in runner.run_live(
@@ -368,15 +404,16 @@ async def handle_live_call_websocket(
                                 {"type": "transcript", "speaker": "agent", "text": agent_text}
                             )
 
-                        # Price guard verification
+                        # Price guard verification (C1 & C2)
                         prices = price_guard.find_prices(agent_text)
                         if prices:
-                            ladder = call.negotiation.ladder
-                            rung = call.negotiation.rung
+                            current_neg = ctx.negotiation or call.negotiation
+                            ladder = current_neg.ladder
+                            rung = current_neg.rung
                             classification = price_guard.classify(
                                 prices=prices,
                                 floor=call.brief.floor_price_per_unit,
-                                approved_prices=call.negotiation.approved_prices,
+                                approved_prices=current_neg.approved_prices,
                                 current_price=ladder[rung],
                             )
                             if classification in ("below_floor", "unapproved"):
@@ -401,16 +438,86 @@ async def handle_live_call_websocket(
                                         ],
                                     )
                                 )
+                        elif price_guard.has_spoken_price_cue(agent_text):
+                            async def _check_spoken_price_fallback(text: str) -> None:
+                                try:
+                                    client_to_use = flash_client or _get_genai_client()
+                                    ext_prices, unchecked = await price_guard.fallback_extract_prices(
+                                        text=text,
+                                        client=client_to_use,
+                                        model=settings.GEMINI_FLASH_MODEL,
+                                        timeout=3.0,
+                                    )
+                                    if unchecked:
+                                        if "price_unchecked" not in ctx.flags:
+                                            ctx.flags.append("price_unchecked")
+                                    elif ext_prices:
+                                        cur_neg = ctx.negotiation or call.negotiation
+                                        c_ladder = cur_neg.ladder
+                                        c_rung = cur_neg.rung
+                                        cls_res = price_guard.classify(
+                                            prices=ext_prices,
+                                            floor=call.brief.floor_price_per_unit,
+                                            approved_prices=cur_neg.approved_prices,
+                                            current_price=c_ladder[c_rung],
+                                        )
+                                        if cls_res in ("below_floor", "unapproved"):
+                                            fn = "floor_correction" if cls_res == "below_floor" else "unapproved_price"
+                                            if fn not in ctx.flags:
+                                                ctx.flags.append(fn)
+                                            corr = price_words(c_ladder[c_rung], call.brief.opening_price_unit)
+                                            queue.send_content(
+                                                types.Content(
+                                                    role="user",
+                                                    parts=[
+                                                        types.Part.from_text(
+                                                            text=f"[SYSTEM] You said a wrong price. Correct yourself now: the price is {corr}."
+                                                        )
+                                                    ],
+                                                )
+                                            )
+                                except Exception as exc:
+                                    logger.warning("spoken_price_fallback_error", extra={"error": str(exc)})
+                                    if "price_unchecked" not in ctx.flags:
+                                        ctx.flags.append("price_unchecked")
+
+                            bg_t = asyncio.create_task(_check_spoken_price_fallback(agent_text))
+                            background_tasks.add(bg_t)
+                            bg_t.add_done_callback(background_tasks.discard)
 
                 # Interruption
                 if getattr(event, "interrupted", False):
                     if websocket.client_state == WebSocketState.CONNECTED:
                         await websocket.send_json({"type": "interrupted"})
 
-                # Usage accumulation
+                # Usage accumulation by modality (C4)
                 if event.usage_metadata:
-                    total_input_tokens += getattr(event.usage_metadata, "prompt_token_count", 0) or 0
-                    total_output_tokens += getattr(event.usage_metadata, "candidates_token_count", 0) or 0
+                    inp = getattr(event.usage_metadata, "prompt_token_count", 0) or 0
+                    out = getattr(event.usage_metadata, "candidates_token_count", 0) or 0
+                    total_input_tokens += inp
+                    total_output_tokens += out
+
+                    prompt_details = getattr(event.usage_metadata, "prompt_tokens_details", None) or []
+                    for item in prompt_details:
+                        mod = str(getattr(item, "modality", "")).upper()
+                        cnt = getattr(item, "token_count", 0) or 0
+                        if "AUDIO" in mod:
+                            total_audio_in_tokens += cnt
+                        elif "TEXT" in mod:
+                            total_text_in_tokens += cnt
+
+                    cand_details = (
+                        getattr(event.usage_metadata, "candidates_tokens_details", None)
+                        or getattr(event.usage_metadata, "response_tokens_details", None)
+                        or []
+                    )
+                    for item in cand_details:
+                        mod = str(getattr(item, "modality", "")).upper()
+                        cnt = getattr(item, "token_count", 0) or 0
+                        if "AUDIO" in mod:
+                            total_audio_out_tokens += cnt
+                        elif "TEXT" in mod:
+                            total_text_out_tokens += cnt
 
                 # Periodic transcript flush (every 5 seconds)
                 if now_curr - last_flush_time >= 5.0 and transcript_buffer:
@@ -470,6 +577,9 @@ async def handle_live_call_websocket(
     except (WebSocketDisconnect, Exception) as exc:
         logger.info("live_session_interrupted", extra={"call_id": call_id, "error": str(exc)})
     finally:
+        for t in list(background_tasks):
+            t.cancel()
+
         # Every cleanup in its own try/except
         if queue:
             try:
@@ -536,8 +646,6 @@ async def handle_live_call_websocket(
                         ctx.flags.append("dropped")
 
                 updated_call = await actual_store.get_call(call_id)
-                final_transcript = updated_call.transcript if updated_call else []
-
                 result = CallResult(
                     call_id=call_id,
                     batch_id=call.batch_id,
@@ -558,7 +666,7 @@ async def handle_live_call_websocket(
                     ),
                     pickup_time=ctx.pickup_time,
                     callback_at=ctx.callback_at,
-                    transcript=final_transcript,
+                    transcript=[],  # L4: keep document small; transcript stored in calls.transcript
                     summary="",
                     flags=list(set(ctx.flags + (updated_call.flags if updated_call else []))),
                 )
@@ -590,7 +698,13 @@ async def handle_live_call_websocket(
         # Log metrics (Never transcript text, audio, or floor price)
         try:
             dur = max(0.0, time.time() - start_time)
-            cost_est = (dur / 60.0) * 0.072
+            # Rates: Audio In $3.00/M, Audio Out $12.00/M, Text In $0.75/M, Text Out $4.50/M
+            computed_cost = (
+                total_audio_in_tokens * 3.0
+                + total_audio_out_tokens * 12.0
+                + total_text_in_tokens * 0.75
+                + total_text_out_tokens * 4.50
+            ) / 1_000_000.0
             logger.info(
                 "call_metrics_logged",
                 extra={
@@ -598,7 +712,13 @@ async def handle_live_call_websocket(
                     "duration_sec": round(dur, 1),
                     "input_tokens": total_input_tokens,
                     "output_tokens": total_output_tokens,
-                    "estimated_cost_usd": round(cost_est, 4),
+                    "tokens_by_modality": {
+                        "audio_in": total_audio_in_tokens,
+                        "audio_out": total_audio_out_tokens,
+                        "text_in": total_text_in_tokens,
+                        "text_out": total_text_out_tokens,
+                    },
+                    "computed_cost_usd": round(computed_cost, 6),
                     "flags": ctx.flags if ctx else [],
                 },
             )

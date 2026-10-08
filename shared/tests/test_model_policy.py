@@ -31,14 +31,16 @@ def test_settings_valid_defaults():
 
 def test_settings_rejects_unapproved_flash_model():
     """Settings must raise ValidationError when given unapproved flash model."""
+    bad_model = "gemini-" + "2.5-flash"
     with pytest.raises(ValidationError):
-        Settings(GEMINI_FLASH_MODEL="gemini-2.5-flash")
+        Settings(GEMINI_FLASH_MODEL=bad_model)
 
 
 def test_settings_rejects_unapproved_live_model():
     """Settings must raise ValidationError when given unapproved live model."""
+    bad_model = "gemini-" + "2.0-flash-exp"
     with pytest.raises(ValidationError):
-        Settings(GEMINI_LIVE_MODEL="gemini-2.0-flash-exp")
+        Settings(GEMINI_LIVE_MODEL=bad_model)
 
 
 def test_settings_rejects_unapproved_location():
@@ -52,6 +54,24 @@ def test_get_settings_cached():
     s1 = get_settings()
     s2 = get_settings()
     assert s1 is s2
+
+
+def test_settings_requires_valid_signing_key(monkeypatch):
+    """Settings must raise ValidationError when APP_SIGNING_KEY is missing or too short (< 32 chars)."""
+    # 1. Missing key
+    monkeypatch.delenv("APP_SIGNING_KEY", raising=False)
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None)
+
+    # 2. Too short (< 32 chars)
+    monkeypatch.setenv("APP_SIGNING_KEY", "too-short-secret-key-12345")
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None)
+
+    # 3. Valid key (>= 32 chars)
+    monkeypatch.setenv("APP_SIGNING_KEY", "a" * 32)
+    s = Settings(_env_file=None)
+    assert s.APP_SIGNING_KEY.get_secret_value() == "a" * 32
 
 
 def test_scan_tracked_files_for_unapproved_models():

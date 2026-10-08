@@ -44,7 +44,10 @@ Both services were deployed with `./scripts/deploy.sh` to Cloud Run (`europe-wes
 
 ---
 
-## 3. Human / Native Speaker Test Results
+## 3. Human / Native Speaker Test Results (Pending: user's native-speaker test)
+
+> [!NOTE]
+> **Status:** Pending: user's native-speaker test. Formal evaluation across all 4 bargaining personas and 3 situation tests with dual native speakers and 1–5 scoring is pending user completion. The call recorded below serves as an initial deployment smoke check.
 
 - **Scenario Tested:** `hard_bargainer` (Sindhri Mangoes surplus lot, opening Rs 190, floor Rs 130)
 - **Duration:** 107.4 seconds (~1.8 minutes)
@@ -94,16 +97,26 @@ Both services were deployed with `./scripts/deploy.sh` to Cloud Run (`europe-wes
 - **Average Latency:** **~480 ms** (significantly faster than the ~1.5s requirement, producing natural turn-taking).
 
 ### Token Counts & Financial Cost (from Cloud Logging: `call_metrics_logged`)
-- **Input Tokens:** 70,421 (audio input stream accumulation)
-- **Output Tokens:** 2,374 (audio output stream generation)
+- **Measured Token Counts (by modality):**
+  - **Audio Input Tokens:** 70,421
+  - **Audio Output Tokens:** 2,374
+  - **Text Input / Output Tokens:** 0
 - **Duration:** 107.4 seconds (~1.79 minutes)
-- **Call Cost:** **$0.1289 USD**
-- **Cost Per Minute:** **~$0.072 USD / minute**
+- **Modality Rates (`gemini-3.8-live` on Vertex AI `eu`):**
+  - Audio In: $3.00 / million tokens ($0.000003 / token)
+  - Audio Out: $12.00 / million tokens ($0.000012 / token)
+  - Text In: $0.75 / million tokens ($0.00000075 / token)
+  - Text Out: $4.50 / million tokens ($0.0000045 / token)
+- **True Computed Call Cost:**
+  $$\text{Audio In Cost} = 70,421 \times \$0.000003 = \$0.2113$$
+  $$\text{Audio Out Cost} = 2,374 \times \$0.000012 = \$0.0285$$
+  $$\text{Total Call Cost} = \$0.2113 + \$0.0285 = \mathbf{\$0.2398\text{ USD}}$$
+- **True Measured Cost Per Minute:** **~$0.1340 USD / minute** (superseding the earlier hardcoded $0.072/min probe estimate).
 
 ### Safety Limits & Daily Session Cap
-- **Configured Cap:** `DEMO_DAILY_SESSION_CAP = 10` (up to 15 sessions/day allowed).
-- **Daily Spend at Cap:** $0.13 × 10 = **~$1.30 USD / day**.
-- **Budget Ceiling Margin:** Hard project kill switch is set at **$25.00 USD**. With an expected judging window of 3–5 days, maximum demo usage will cost ~$5.00 – $6.50, leaving a comfortable **>70% budget safety margin**.
+- **Configured Cap:** `DEMO_DAILY_SESSION_CAP = 10` (user will adjust after review).
+- **Daily Spend at Cap:** $0.24 × 10 = **~$2.40 USD / day**.
+- **Budget Ceiling Margin:** Hard project kill switch is set at **$25.00 USD** (user decision per M4). With an expected judging window of 3–5 days, maximum demo usage will cost ~$7.20 – $12.00, well within the safety envelope.
 
 ---
 
@@ -126,6 +139,6 @@ The kill switch was verified end-to-end:
 ## 6. Pytest Verification
 
 ```text
-=================== 85 passed, 5 skipped, 1 warning in 1.86s ===================
+=================== 91 passed, 5 skipped, 1 warning in 1.82s ===================
 ```
 All unit, contract, integration, model-policy, and security regression tests pass.

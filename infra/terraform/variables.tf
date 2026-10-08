@@ -53,9 +53,15 @@ variable "voice_public_url" {
 }
 
 variable "allowed_origins" {
-  description = "Allowed CORS and WebSocket origins"
+  description = "Allowed CORS and WebSocket origins for production"
   type        = string
-  default     = "https://api-cujkm3kt5q-ew.a.run.app,https://voice-cujkm3kt5q-ew.a.run.app,http://localhost:8080,http://localhost:8000"
+  default     = "https://api-cujkm3kt5q-ew.a.run.app,https://voice-cujkm3kt5q-ew.a.run.app"
+}
+
+variable "dev_allowed_origins" {
+  description = "Additional allowed origins for development"
+  type        = string
+  default     = "http://localhost:8080,http://localhost:8000"
 }
 
 

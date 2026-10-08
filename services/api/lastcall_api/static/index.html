@@ -547,6 +547,9 @@
       ws = new WebSocket(wsUrl);
       ws.binaryType = 'arraybuffer';
 
+      let speechEndTs = 0;
+      let waitingForAgentAudio = false;
+
       ws.onopen = () => {
         setStatus('Authenticating...', 'busy');
         // Send initial auth message
@@ -554,8 +557,13 @@
 
         // Start streaming mic audio from capture worklet
         captureNode.port.onmessage = (event) => {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(event.data);
+          if (event.data instanceof ArrayBuffer) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(event.data);
+            }
+          } else if (event.data && event.data.type === 'speech_end') {
+            speechEndTs = performance.now();
+            waitingForAgentAudio = true;
           }
         };
       };
@@ -563,6 +571,14 @@
       ws.onmessage = (event) => {
         if (event.data instanceof ArrayBuffer) {
           // Live 24 kHz PCM audio chunk
+          if (waitingForAgentAudio && speechEndTs > 0) {
+            const latMs = Math.round(performance.now() - speechEndTs);
+            waitingForAgentAudio = false;
+            speechEndTs = 0;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'latency', ms: latMs }));
+            }
+          }
           playbackNode.port.postMessage(event.data, [event.data]);
         } else {
           try {

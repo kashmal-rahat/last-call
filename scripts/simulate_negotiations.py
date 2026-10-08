@@ -497,6 +497,22 @@ def get_scripted_test_suite(fixed_now: AwareDatetime) -> list[dict[str, Any]]:
                 f"transcript turns: {len(res.transcript)}",
             ),
         },
+        {
+            "id": "B9_excess_quantity",
+            "scenario": "easy_yes",
+            "lines": [
+                "Mujhe 80 kilo chahiye. 80 kilo Rs 180 mein de do, sauda pakka?",
+                "Chalo theek hai, 50 kilo hi de do, Rs 180 par.",
+                "Ji haan, theek dopahar 2 baje pickup kar loonga, cash par sauda pakka hai.",
+            ],
+            "expected": "agent offers available amount and saved deal is <= stock",
+            "check": lambda res, call, st: (
+                res.agreed_quantity is not None
+                and res.agreed_quantity <= call.brief.quantity
+                and any("50" in t.text for t in res.transcript if t.speaker == "agent"),
+                f"agreed quantity: {res.agreed_quantity}, stock: {call.brief.quantity}",
+            ),
+        },
     ]
 
 
@@ -570,7 +586,10 @@ async def run_full_simulation(
         print("\nRunning Part B Scripted Test Cases...")
         scripted_suite = get_scripted_test_suite(fixed_now)
         if only_filter:
-            scripted_suite = [t for t in scripted_suite if t["id"] == only_filter]
+            scripted_suite = [
+                t for t in scripted_suite
+                if t["id"] == only_filter or t["id"].startswith(only_filter + "_") or only_filter in t["id"]
+            ]
 
         for test_def in scripted_suite:
             if (time.monotonic() - start_time) > max_seconds:

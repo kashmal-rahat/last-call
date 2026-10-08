@@ -43,6 +43,7 @@ async def verify_offer(
         unit=call.brief.opening_price_unit,
     )
     await ctx.store.save_negotiation(call_id, call.negotiation)
+    ctx.negotiation = call.negotiation
 
     return {
         "decision": decision.decision,
@@ -53,13 +54,10 @@ async def verify_offer(
 
 
 async def confirm_deal(
-    price_per_unit: int | None = None,
-    quantity: float | None = None,
-    pickup_time_iso: str | None = None,
-    buyer_confirmed: bool = True,
-    agreed_price_per_unit: int | None = None,
-    agreed_quantity: float | None = None,
-    payment_terms: str | None = None,
+    price_per_unit: int,
+    quantity: float,
+    pickup_time_iso: str,
+    buyer_confirmed: bool,
     tool_context: ToolContext = None,
 ) -> dict[str, Any]:
     """Records an agreed deal after clear confirmation from the buyer on all terms.
@@ -69,9 +67,6 @@ async def confirm_deal(
         quantity: Agreed quantity in the brief's unit.
         pickup_time_iso: Pickup time in ISO format with timezone offset (e.g. 2026-10-07T16:00:00+05:00).
         buyer_confirmed: True only if the buyer explicitly agreed to the repeated terms.
-        agreed_price_per_unit: Alternative name for price_per_unit.
-        agreed_quantity: Alternative name for quantity.
-        payment_terms: Payment terms agreed.
     """
     call_id = tool_context.state.get("call_id") if tool_context else None
     ctx = get_context(call_id) if call_id else None
@@ -85,33 +80,57 @@ async def confirm_deal(
     batch = await ctx.store.get_batch(call.batch_id)
     now = ctx.clock() if ctx.clock else datetime.now(PKT)
 
-    final_price = price_per_unit if price_per_unit is not None else (agreed_price_per_unit if agreed_price_per_unit is not None else 0)
-    final_quantity = quantity if quantity is not None else (agreed_quantity if agreed_quantity is not None else call.brief.quantity)
+    # 1. Parse ISO time without rewrites or defaults (C0)
+    if not pickup_time_iso or not isinstance(pickup_time_iso, str):
+        return {
+            "ok": False,
+            "reasons": ["Pickup time is missing or invalid. Please ask the buyer for the pickup time again."],
+        }
+    try:
+        pickup_dt = datetime.fromisoformat(pickup_time_iso)
+    except Exception:
+        return {
+            "ok": False,
+            "reasons": ["Unparseable pickup time format. Please ask the buyer for the pickup time again."],
+        }
 
-    # 1. Parse ISO time and enforce timezone and current date
-    if not pickup_time_iso:
-        pickup_dt = now + timedelta(hours=2)
-    else:
-        try:
-            pickup_dt = datetime.fromisoformat(pickup_time_iso)
-            if pickup_dt.tzinfo is None:
-                pickup_dt = pickup_dt.replace(tzinfo=PKT)
-            if pickup_dt.year < now.year:
-                pickup_dt = pickup_dt.replace(year=now.year)
-            if pickup_dt.date() < now.date():
-                pickup_dt = pickup_dt.replace(year=now.year, month=now.month, day=now.day)
-            if pickup_dt <= now:
-                pickup_dt = min(now + timedelta(hours=2), call.brief.pickup_deadline)
-        except Exception:
-            pickup_dt = now + timedelta(hours=2)
+    if pickup_dt.tzinfo is None:
+        return {
+            "ok": False,
+            "reasons": ["Pickup time must include timezone. Please ask the buyer for the pickup time again."],
+        }
 
-    # 2. Validate deal terms
+    if pickup_dt <= now:
+        return {
+            "ok": False,
+            "reasons": ["Pickup time cannot be in the past. Please ask the buyer for the pickup time again."],
+        }
+
+    if pickup_dt > call.brief.pickup_deadline:
+        return {
+            "ok": False,
+            "reasons": [
+                f"Pickup time ({pickup_dt.isoformat()}) exceeds pickup deadline ({call.brief.pickup_deadline.isoformat()}). Please ask the buyer for the pickup time again."
+            ],
+        }
+
+    # 2. Check quantity vs remaining stock (C0)
+    if quantity > batch.remaining_quantity:
+        rem_q = int(batch.remaining_quantity) if batch.remaining_quantity.is_integer() else batch.remaining_quantity
+        unit_str = call.brief.quantity_unit
+        return {
+            "ok": False,
+            "reasons": [f"Only {rem_q} {unit_str} is available"],
+            "available_quantity": batch.remaining_quantity,
+        }
+
+    # 3. Validate deal terms
     reasons = validate_deal_terms(
         state=call.negotiation,
         brief=call.brief,
         batch=batch,
-        price=final_price,
-        quantity=final_quantity,
+        price=price_per_unit,
+        quantity=quantity,
         pickup_time=pickup_dt,
         buyer_confirmed=buyer_confirmed,
         now=now,
@@ -119,27 +138,27 @@ async def confirm_deal(
     if reasons:
         return {"ok": False, "reasons": reasons}
 
-    # 3. Create deal and execute transaction
+    # 4. Create deal and execute transaction
     deal = DealRecord(
         mart_id=call.mart_id,
         call_id=call_id,
         batch_id=batch.batch_id,
         buyer_id=call.brief.buyer.buyer_id,
         deal_type=call.brief.deal_type,
-        price_per_unit=final_price,
+        price_per_unit=price_per_unit,
         unit=call.brief.quantity_unit,
-        quantity=final_quantity,
+        quantity=quantity,
         pickup_time=pickup_dt,
         pickup_deadline=call.brief.pickup_deadline,
         payment_terms=call.brief.payment_terms,
         status="agreed",
         created_at=now,
     )
-    ok, err = await ctx.store.save_deal_tx(call_id, deal, final_quantity)
+    ok, err = await ctx.store.save_deal_tx(call_id, deal, quantity)
     if not ok:
         return {"ok": False, "reasons": [err or "Failed to lock and save deal transaction."]}
 
-    # 4. Outbox WhatsApp confirmation
+    # 5. Outbox WhatsApp confirmation
     msg = OutboxMessage(
         mart_id=call.mart_id,
         kind="whatsapp_confirmation",
@@ -147,9 +166,9 @@ async def confirm_deal(
         to_buyer_id=call.brief.buyer.buyer_id,
         payload={
             "item": call.brief.item,
-            "quantity": final_quantity,
+            "quantity": quantity,
             "unit": call.brief.quantity_unit,
-            "price_per_unit": final_price,
+            "price_per_unit": price_per_unit,
             "pickup_time": pickup_dt.isoformat(),
         },
     )
@@ -157,9 +176,9 @@ async def confirm_deal(
 
     ctx.closing = True
     ctx.outcome_set = True
-    ctx.outcome = "deal" if final_quantity >= call.brief.quantity else "partial_deal"
-    ctx.agreed_price_per_unit = final_price
-    ctx.agreed_quantity = final_quantity
+    ctx.outcome = "deal" if quantity >= call.brief.quantity else "partial_deal"
+    ctx.agreed_price_per_unit = price_per_unit
+    ctx.agreed_quantity = quantity
     ctx.agreed_quantity_unit = call.brief.quantity_unit
     ctx.pickup_time = pickup_dt
     return {"ok": True, "deal_id": deal.call_id}

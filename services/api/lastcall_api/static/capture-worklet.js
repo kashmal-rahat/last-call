@@ -11,6 +11,12 @@ class CaptureWorkletProcessor extends AudioWorkletProcessor {
     this.buffer = new Float32Array(0);
     this.chunkSize = 1600; // 100 ms of 16 kHz audio
     this.resampleRatio = this.targetRate / sampleRate;
+
+    // Speech detection for client-side turn latency measurement
+    this.speechThreshold = 0.01;
+    this.silenceDurationMs = 700;
+    this.isSpeaking = false;
+    this.silenceSamples = 0;
   }
 
   process(inputs, outputs, parameters) {
@@ -20,6 +26,26 @@ class CaptureWorkletProcessor extends AudioWorkletProcessor {
     }
 
     const channelData = input[0];
+
+    // Energy tracking for speech end detection
+    let sumSq = 0;
+    for (let i = 0; i < channelData.length; i++) {
+      sumSq += channelData[i] * channelData[i];
+    }
+    const rms = Math.sqrt(sumSq / channelData.length);
+
+    if (rms > this.speechThreshold) {
+      this.isSpeaking = true;
+      this.silenceSamples = 0;
+    } else if (this.isSpeaking) {
+      this.silenceSamples += channelData.length;
+      const silenceMs = (this.silenceSamples / sampleRate) * 1000;
+      if (silenceMs >= this.silenceDurationMs) {
+        this.isSpeaking = false;
+        this.silenceSamples = 0;
+        this.port.postMessage({ type: 'speech_end' });
+      }
+    }
 
     // Simple linear interpolation downsampling to 16 kHz
     const newLen = Math.floor(channelData.length * this.resampleRatio);

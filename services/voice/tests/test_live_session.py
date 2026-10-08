@@ -14,14 +14,17 @@ from lastcall_shared.store import InMemoryStore
 from lastcall_voice.live_session import get_instance_semaphore
 from lastcall_voice.main import app
 
+from lastcall_shared.config import get_settings
+
 PKT = ZoneInfo("Asia/Karachi")
 NOW = datetime(2026, 10, 7, 14, 0, 0, tzinfo=PKT)
-KEY = "test-secret-key-12345"
+KEY = "test-secret-key-12345-at-least-32-chars-long"
 
 
 @pytest.fixture(autouse=True)
 def setup_test_app(monkeypatch):
     monkeypatch.setenv("APP_SIGNING_KEY", KEY)
+    get_settings.cache_clear()
     store = InMemoryStore()
     app.state.store = store
     app.state.signing_key = KEY

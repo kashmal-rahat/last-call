@@ -13,3 +13,5 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+infra/terraform/billing_guard.zip
+*.zip

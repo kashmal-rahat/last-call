@@ -8,7 +8,9 @@ from lastcall_api.main import app, _IP_REQUEST_HISTORY
 from lastcall_shared.session_tokens import verify
 from lastcall_shared.store import InMemoryStore
 
-KEY = "test-signing-key-12345"
+from lastcall_shared.config import get_settings
+
+KEY = "test-signing-key-12345-at-least-32-chars-long"
 CODE = "test-judge-access-code"
 
 
@@ -18,6 +20,7 @@ def setup_api_test(monkeypatch):
     monkeypatch.setenv("DEMO_ACCESS_CODE", CODE)
     monkeypatch.setenv("DEMO_DAILY_SESSION_CAP", "5")
     monkeypatch.setenv("VOICE_WS_URL", "wss://voice.example.com/ws/call")
+    get_settings.cache_clear()
     _IP_REQUEST_HISTORY.clear()
     store = InMemoryStore()
     app.state.store = store

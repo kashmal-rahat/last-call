@@ -10,6 +10,7 @@ Any other model ID or location fails at startup.
 
 from functools import lru_cache
 from typing import Literal
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -37,10 +38,17 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "*"
 
     # Service & Security
-    APP_SIGNING_KEY: str | None = None
+    APP_SIGNING_KEY: SecretStr
     DEMO_ACCESS_CODE: str | None = None
     DEMO_DAILY_SESSION_CAP: int = 10
     VOICE_WS_URL: str | None = None
+
+    @field_validator("APP_SIGNING_KEY")
+    @classmethod
+    def validate_app_signing_key(cls, v: SecretStr) -> SecretStr:
+        if len(v.get_secret_value().strip()) < 32:
+            raise ValueError("APP_SIGNING_KEY must be at least 32 characters long")
+        return v
 
     # Service Defaults
     PORT: int = 8080
