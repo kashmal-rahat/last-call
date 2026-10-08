@@ -69,7 +69,7 @@ Earlier modules don't exist yet, so per D1 the input is a hand-written `DealBrie
 
 ## Milestones: implement one, report, then 🛑 wait
 - **2A, text negotiator (no infrastructure changes).** Steps 0–7: Module 0 leftovers, packages, live probe, models, pure logic, `InMemoryStore`, agent, prompt, text sessions, simulator.
-- **2B, voice and deploy.** Steps 8–14: one Terraform change set, `FirestoreStore`, tokens, live session, demo page, cost limits, deploy, Urdu test, docs.
+- **2B, voice and deploy.** Steps 7.5–14 (7.5 is config and the model policy): one Terraform change set, `FirestoreStore`, tokens, live session, demo page, cost limits, deploy, Urdu test, docs.
 
 ## Research facts (2026-10-07). The code must follow these
 | Topic | Fact | Effect on the design |
@@ -343,6 +343,34 @@ The hard guarantee is `confirm_deal`, which can't save a price below the floor. 
 
 # Milestone 2B: voice and deploy (start only when the user approves)
 
+> **2B review (2026-10-07, after 2A sign-off).** 2A delivered `call_context`, `text_session`, `pricing`, `deals`, `price_guard` v2 (digits only), prompt v1.4, `InMemoryStore` with contract tests (`shared/tests/test_store.py`), scenarios and the simulator. 2B builds on those; don't rewrite them. The changes in this review: Step 7.5 (one config module, and only the two models), the Step 8 env var names, Step 10 transcription hints, and the Step 13 cost formula.
+
+### Step 7.5: Model and config policy (do this first in 2B; 20 minutes)
+**The 2A stop rules still apply in 2B:** if the same test fails twice for the same reason, stop and report. If you suspect a false positive, report the line instead of tuning. If you get 429s for more than 5 minutes, stop.
+
+**Only two models are allowed in Module 2: `gemini-3.8-live` (the voice negotiator) and `gemini-3.8-flash` (text mode, the simulator buyer and judge, the price-guard fallback, the call summary).** Both run on Vertex `eu` (D12, D13).
+- **New `shared/lastcall_shared/config.py`:** a pydantic-settings `Settings` with:
+  - `GEMINI_LIVE_MODEL: Literal["gemini-3.8-live"] = "gemini-3.8-live"`
+  - `GEMINI_FLASH_MODEL: Literal["gemini-3.8-flash"] = "gemini-3.8-flash"`
+  - `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION: Literal["eu"] = "eu"`, `GOOGLE_GENAI_USE_VERTEXAI: bool = True`
+  - `get_settings()` is cached.
+  - **Any other model ID or location fails at startup** with a clear error.
+- **Replace every hardcoded model or location default** with `get_settings()`:
+  - `text_session.py` (2 places)
+  - `price_guard.fallback_extract_prices(model=...)`
+  - `scripts/simulate_negotiations.py`, `scripts/recheck_sim_run.py`, `scripts/probe_live_3_8.py`
+- **One location variable only:** `GOOGLE_CLOUD_LOCATION`. Remove `GEMINI_FLASH_REGION`, `GEMINI_LIVE_REGION` and `GEMINI_FLASH_LOCATION` from:
+  - `infra/terraform` (variables and env blocks)
+  - `.env.example`
+  - `scripts/region_check.py` and `scripts/smoke_gemini.py`
+- **Guard test** `shared/tests/test_model_policy.py`:
+  - Scan every tracked `*.py`, `*.tf`, `*.toml`, `*.j2`, `*.json` and `.env.example` (excluding `docs/` and `plans/`) for `gemini-[0-9a-z.\-]+`.
+  - Fail on any ID other than the two allowed.
+  - Also assert that `Settings(GEMINI_FLASH_MODEL="gemini-2.5-flash")` raises.
+- **Live config the probe confirmed:**
+  - Don't set `thinking_config` on `gemini-3.8-live`. It isn't supported on the native-audio path (probe item 7).
+  - Voice `Puck`, gender `male` (the user's choice in the probe).
+
 ### Step 8: 🛑 Terraform, one change set (show `terraform plan`, get approval, apply once)
 - **APIs:** `firestore`, `pubsub`, `cloudfunctions`, `eventarc`, `cloudbilling`.
 - **Firestore:**
@@ -354,9 +382,9 @@ The hard guarantee is `confirm_deal`, which can't save a price below the floor. 
   - `app-signing-key` readable by **both** `api-sa` and `voice-sa`.
 - **Variables:** `voice_min_instances=0`, `api_public_url`, `voice_public_url`, `allowed_origins`. These carry the existing URLs and both URL forms (`*-cujkm3kt5q-ew.a.run.app` and `*-<project-number>.europe-west1.run.app`). **Never reference one service's `uri` in the other**, because that creates a cycle.
 - **Env vars** (Terraform owns them all):
-  - Both services: `GOOGLE_GENAI_USE_VERTEXAI=TRUE`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION=eu`.
-  - api: `VOICE_WS_URL` (`wss://…/ws/call`), `DEMO_DAILY_SESSION_CAP` (from the probe), `DEMO_ACCESS_CODE` (secret).
-  - voice: `APP_SIGNING_KEY` (secret), `ALLOWED_ORIGINS`, `MAX_CALL_SECONDS=300`, `MAX_SESSIONS_PER_INSTANCE=4`, `AGENT_VOICE`, `AGENT_GENDER`.
+  - Both services: `GOOGLE_GENAI_USE_VERTEXAI=TRUE`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION=eu`, `GEMINI_FLASH_MODEL=gemini-3.8-flash`, `GEMINI_LIVE_MODEL=gemini-3.8-live`. Use these exact names, matching `Settings` in Step 7.5. Remove the old `GEMINI_*_REGION` vars.
+  - api: `VOICE_WS_URL` (`wss://…/ws/call`), `DEMO_DAILY_SESSION_CAP=10` (**a placeholder**; the final value is set by the user after Step 13 measures the real cost), `DEMO_ACCESS_CODE` (secret).
+  - voice: `APP_SIGNING_KEY` (secret), `ALLOWED_ORIGINS`, `MAX_CALL_SECONDS=300`, `MAX_SESSIONS_PER_INSTANCE=4`, `AGENT_VOICE=Puck`, `AGENT_GENDER=male`.
 - **`voice` service:**
   - `session_affinity=true`, `timeout="900s"`
   - `max_instance_request_concurrency=4`
@@ -393,11 +421,16 @@ The hard guarantee is `confirm_deal`, which can't save a price below the floor. 
    - Register the `CallContext`.
    - Create the ADK session with `state={"call_id","mart_id"}`.
 5. **Agent and config:**
-   - Agent: `build_negotiator(GEMINI_LIVE_MODEL, brief.agent_view(), mode="voice", agent_gender=AGENT_GENDER, ...)`.
+   - Agent: `build_negotiator(get_settings().GEMINI_LIVE_MODEL, brief.agent_view(), mode="voice", agent_gender=AGENT_GENDER, ...)`.
    - `RunConfig`:
      - `response_modalities=["AUDIO"]`
      - `speech_config` with `AGENT_VOICE`
-     - input and output transcription on
+     - output transcription: `AudioTranscriptionConfig()`
+     - input transcription: `AudioTranscriptionConfig(language_hints=["ur", "pa", "en"], custom_vocabulary=[...])`
+       - The vocabulary is about 20 market words from the scenarios: aakhri rate, darjan, kilo, Sindhri, sauda, munasib, etc.
+       - **Why:** the probe transcribed the buyer's Urdu in Devanagari ("₹110 में दोगे?"). Managers will read these transcripts.
+       - **Check once:** run `data/probe/urdu_offer.wav` through the live session's config, and record the script in the probe doc.
+       - If 3.8 Live rejects `language_hints` or `custom_vocabulary`, drop that field, note it, and carry on. It's cosmetic: prices come from the tools, not the transcript.
      - `realtime_input_config`: VAD `silence_duration_ms=700`, `prefix_padding_ms=100`
      - `session_resumption=SessionResumptionConfig()`
      - `context_window_compression(trigger_tokens=100000, sliding_window(target_tokens=80000))`
@@ -493,7 +526,11 @@ The hard guarantee is `confirm_deal`, which can't save a price below the floor. 
 - 🛑 **Urdu test** (the user, with 2 native speakers, on the deployed link):
   - **Scenarios:** the 4 bargaining scenarios plus 3 situations (callback, photo, language switch). Use `docs/module-2-voice-test.md`.
   - **Ratings** (1–5): naturalness, market vocabulary, numbers spoken correctly, language switch, interruptions, disclosure.
-  - **Measurements:** latency median and p90 from the logs, and cost per call.
+  - **Measurements:** latency median and p90 from the logs (target median ≤ 2.0 s; the probe measured 1.78 s). If it's slower, also try VAD `silence_duration_ms` 500 and 600 in the test.
+  - **Cost per call** from the summed `usage_metadata` of each call, priced at the current Vertex list (2026-10-07; check again before setting the cap):
+    - `gemini-3.8-live`: audio in $3.00/M, audio out $12.00/M, text in $0.75/M, text out $4.50/M tokens. Audio is 25 tokens per second. Count prompt tokens for **every** turn, because Live re-bills the context on each turn.
+    - `gemini-3.8-flash`, for the summary and fallback: $0.75/M in, $3.75/M out until 2026-12-31, then $1.50/$7.50 from 2027-01-01. Note this if judging runs into January.
+    - Report cost per call and per minute. **The user sets the final `DEMO_DAILY_SESSION_CAP`** from that number and the judging window (see the 2A status note). The probe's $0.072/min was an estimate.
   - **Gate:** if naturalness is below 3, or numbers are wrong, **stop** and ask about the §10 fallback (Chirp → Gemini → TTS).
 
 ### Step 14: Docs and report
