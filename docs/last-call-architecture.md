@@ -57,13 +57,14 @@ Request-based CPU, scales to zero, many requests per instance, capped maximum in
 - **Implementation:** direct `google-genai` `generate_content` call with Pydantic structured output on `gemini-3.8-flash` in multi-region Vertex `eu` (D22, D13), with `media_resolution=high` and `thinking_level=low` (D30).
 - **Two-pass pipeline (D29):** pass 1 reads the full shelf; code picks doubtful groups (at most 6), crops them from the full-resolution photo, and pass 2 reads crops in parallel. Code merges results with worse `worst_stage` winning.
 - **Output per item:** name, bounding box (`box_2d`), freshness stage (`stage` typical piece, `worst_stage` worst piece, D24), 0–100 score computed deterministically in code, change since the last photo (matched by IoU overlap and produce name in code, D26), visible issues from 13 signs (D25), estimated quantity range in selling units (D31), confidence, staff check flag with plain English reasons.
+- **Quantity in production:** quantity comes from the mart's ERP (stock received − sold); the camera decides the condition, and the remaining stock goes down the ladder (D31).
 - Perception only
 
 ### Ladder Agent (ADK agent, structured output)
 
 - **Inputs:** Inspector result, rate of decline, quantity, hours until closing, the mart's rules, and `pricing_stats` from Firestore (average accepted price and acceptance rate by item and buyer type)
 - **Output:** shelf or off-shelf, discount, which off-shelf steps apply, opening price per kg, estimated hours of shelf life left, a reason for each
-- **Code guardrails:** mould or rot means compost only; low confidence means staff check before donation or animal feed; discount clamped to the manager's maximum; opening price at or above the floor
+- **Code guardrails:** a group whose `stage` is unsafe (mould or slime through the group) goes to compost only; when only `worst_stage` is spoiled or unsafe, staff remove those pieces and the rest of the group is decided normally (D24); low confidence means staff check before donation or animal feed; discount clamped to the manager's maximum; opening price at or above the floor
 - **One call per item, run in parallel** (at most 4 at a time), so latency stays flat as the number of items grows and a failure affects only that item (D32)
 - **Fallback:** a rules version if the agent fails or times out
 - **Discount path:** the `api` saves the new price and creates a discount tag; the item stays on the shelf and the next photo re-evaluates it
