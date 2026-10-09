@@ -82,4 +82,5 @@ Active service URLs:
 | Module | Title | Status |
 |---|---|---|
 | **0** | **Foundations** | **Completed** |
-| **2** | **Negotiator** | Pending planning approval |
+| **2** | **Negotiator** | **Implemented and deployed** (pending native-speaker test) |
+| **1** | **Freshness Inspector** | **Implemented and deployed** (eval pending labels & decay photos) |

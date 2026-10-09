@@ -51,10 +51,12 @@
 
 Request-based CPU, scales to zero, many requests per instance, capped maximum instances. Every endpoint does one step, saves state to Firestore, and returns.
 
-### Freshness Inspector (ADK agent, structured output)
+### Freshness Inspector (two-pass vision, structured output)
 
 - **Input:** the shelf photo, plus the previous result for the same shelf
-- **Output per item:** name, position, freshness stage, 0–100 score, change since the last photo, visible issues (mould, rot, bruising, wilting), estimated quantity range, confidence, needs staff check
+- **Implementation:** direct `google-genai` `generate_content` call with Pydantic structured output on `gemini-3.8-flash` in multi-region Vertex `eu` (D22, D13), with `media_resolution=high` and `thinking_level=low` (D30).
+- **Two-pass pipeline (D29):** pass 1 reads the full shelf; code picks doubtful groups (at most 6), crops them from the full-resolution photo, and pass 2 reads crops in parallel. Code merges results with worse `worst_stage` winning.
+- **Output per item:** name, bounding box (`box_2d`), freshness stage (`stage` typical piece, `worst_stage` worst piece, D24), 0–100 score computed deterministically in code, change since the last photo (matched by IoU overlap and produce name in code, D26), visible issues from 13 signs (D25), estimated quantity range in selling units (D31), confidence, staff check flag with plain English reasons.
 - Perception only
 
 ### Ladder Agent (ADK agent, structured output)
@@ -159,6 +161,8 @@ Every record keyed by mart.
 
 - `marts`: settings, rules, floor prices, calling hours, calls per step, review setting, quantity check setting
 - `inspections`: stores `inspection_id`, `shelf_id`, `previous_inspection_id`, `photo_uri`, `taken_at`, `items` (each with `item_key` and `decision`), `photo_issues`
+    - Pointer: `shelves/{mart_id}__{shelf_id}` points to `latest_inspection_id` for fast sequential shelf lookup without composite index (D28)
+    - Quantities: stored as estimated range in selling units (`kg` or `dozen`, D4, D31); staff can confirm/override; final actual weight settled at pickup (no ERP in prototype)
     - States: inspecting → deciding → decided | needs attention
 - `batches`: discrete off-shelf produce batch for every off-shelf item (including compost), holding `inspection_id` and `item_key`. Stores ladder plan, current step, calls made in this step, remaining quantity, `locked_until`
     - States: finding buyers → awaiting quantity check / awaiting review / scheduled → in negotiation (locked) → sold / partly sold / next step, plus awaiting compost approval → composted, and needs attention from any step
