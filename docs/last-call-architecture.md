@@ -33,7 +33,8 @@
 - **App Check** ensures only the real web app can call the `api`.
 - **Manager portal** (login required): shelf results with reasons, quantity checks, buyer list review, live call transcript, discount tags, approvals (compost), rules and floor prices, daily summary.
 - **Judge demo** (public): runs as its own isolated **demo mart** with test buyers and test rules.
-    - Upload a shelf photo or choose a sample; the full pipeline runs: Inspector, Ladder, Scout.
+    - Upload a shelf photo or choose a sample; the Inspector and then the Ladder run automatically on every item. The screen shows the 3 most actionable items first, with the rest collapsed.
+    - For each off-shelf batch, the judge clicks **Find buyers** to run the Scout, then **Call** to start the Negotiator. Paid steps run only on these clicks (D33).
     - The estimated quantity is shown as an editable field that doesn't block the flow.
     - The call happens in the browser, with the judge playing the buyer.
     - No route to Twilio; never touches real marts or real stock.
@@ -61,6 +62,7 @@ Request-based CPU, scales to zero, many requests per instance, capped maximum in
 - **Inputs:** Inspector result, rate of decline, quantity, hours until closing, the mart's rules, and `pricing_stats` from Firestore (average accepted price and acceptance rate by item and buyer type)
 - **Output:** shelf or off-shelf, discount, which off-shelf steps apply, opening price per kg, estimated hours of shelf life left, a reason for each
 - **Code guardrails:** mould or rot means compost only; low confidence means staff check before donation or animal feed; discount clamped to the manager's maximum; opening price at or above the floor
+- **One call per item, run in parallel** (at most 4 at a time), so latency stays flat as the number of items grows and a failure affects only that item (D32)
 - **Fallback:** a rules version if the agent fails or times out
 - **Discount path:** the `api` saves the new price and creates a discount tag; the item stays on the shelf and the next photo re-evaluates it
 
@@ -73,6 +75,7 @@ Request-based CPU, scales to zero, many requests per instance, capped maximum in
 - Results cached in Firestore, so the same area isn't searched repeatedly
 - Chooses buyer types for the item and its condition, ranks buyers with a reason for each, puts past successful buyers first
 - Skips businesses that are closed, have no phone number, are too far away, were called recently, or are on the do-not-call list
+- **When it runs:** in production, for every off-shelf batch through Cloud Tasks; in the judge demo, only when the judge clicks Find buyers for a batch (D33). No cap on batches per photo
 
 ### Orchestrator (event-driven, plain Python)
 

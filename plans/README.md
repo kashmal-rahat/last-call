@@ -60,6 +60,8 @@ If any of these conflict, **ask the user. Don't choose silently.**
 | D19 | 2026-10-07 | `api` serves demo page at `/demo`. Page talks to `voice` over WebSocket authenticated by short-lived HMAC token in first message | Secure voice session handoff without tokens in request URLs |
 | D20 | 2026-10-07 | WhatsApp and photo sends are stubs written to `outbox`. Do-not-call entries are written in Module 2 and enforced by Scout in Module 4 | Clear module boundaries |
 | D21 | 2026-10-09 | Kill switch armed: SIMULATE_DEACTIVATION=false, KILL_RATIO=1.0 (fires at the $50 budget). Testing limits: daily cap 50, IP 20/h, to be lowered after testing. | Production safety hardening per user review |
+| D32 | 2026-10-09 | The Ladder is a Gemini agent (not code rules), making **one call per inspected item, run in parallel** (at most 4 at a time). Code still enforces the money and safety rules. Details in the Ladder module plan | What a freshness stage means depends on the produce, so hard-coded rules don't fit; per-item parallel calls keep latency flat as items grow and contain failures to one item |
+| D33 | 2026-10-09 | No cap on batches per photo. In the judge demo, the Scout agent (with Places API) runs **only when the judge clicks "Find buyers"** for a batch, and the Negotiator only on "Call". In production, the Scout runs for every off-shelf batch through Cloud Tasks. The screen shows the 3 most actionable items first | Cost is controlled where it is spent (Scout and Negotiator), not by dropping produce; a fixed cap would leave rescuable stock unhandled |
 
 ## Module status
 
