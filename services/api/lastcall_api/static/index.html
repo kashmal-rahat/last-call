@@ -35,6 +35,9 @@
       background-image: 
         radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.12) 0px, transparent 50%),
         radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.08) 0px, transparent 50%);
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      background-size: cover;
       color: var(--text-main);
       min-height: 100vh;
       display: flex;
@@ -1029,24 +1032,44 @@
     let activeSampleBlob = null;
     let activeSampleUrl = null;
 
-    function getOrCreateShelfId() {
+    function getStoredItem(key, defaultVal = '') {
       try {
-        let id = localStorage.getItem('lc_shelf_id');
-        if (!id || !/^demo_[a-z0-9_-]{8}$/.test(id)) {
-          id = 'demo_' + Math.random().toString(36).substring(2, 10);
-          localStorage.setItem('lc_shelf_id', id);
-        }
-        return id;
+        const val = localStorage.getItem(key);
+        return val !== null ? val : defaultVal;
       } catch (e) {
-        return 'demo_' + Math.random().toString(36).substring(2, 10);
+        return defaultVal;
       }
     }
 
-    function resetShelfId() {
-      const newId = 'demo_' + Math.random().toString(36).substring(2, 10);
+    function setStoredItem(key, val) {
       try {
-        localStorage.setItem('lc_shelf_id', newId);
+        localStorage.setItem(key, val);
       } catch (e) {}
+    }
+
+    function generateShelfId() {
+      const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      const bytes = new Uint8Array(8);
+      crypto.getRandomValues(bytes);
+      let randStr = '';
+      for (let i = 0; i < 8; i++) {
+        randStr += chars[bytes[i] % chars.length];
+      }
+      return 'demo_' + randStr;
+    }
+
+    function getOrCreateShelfId() {
+      let id = getStoredItem('lc_shelf_id', '');
+      if (!id || !/^demo_[a-z0-9]{8}$/.test(id)) {
+        id = generateShelfId();
+        setStoredItem('lc_shelf_id', id);
+      }
+      return id;
+    }
+
+    function resetShelfId() {
+      const newId = generateShelfId();
+      setStoredItem('lc_shelf_id', newId);
       shelfIdDisplay.textContent = newId;
       return newId;
     }
@@ -1451,7 +1474,7 @@
         inspectAccessCodeEl.focus();
         return;
       }
-      localStorage.setItem('lc_code', code);
+      setStoredItem('lc_code', code);
       inspectAccessCodeEl.value = code;
       accessCodeEl.value = code;
 
@@ -1545,19 +1568,19 @@
     const resultCard = document.getElementById('resultCard');
     const resultContent = document.getElementById('resultContent');
 
-    // Sync access codes
-    const savedCode = localStorage.getItem('lc_code') || '';
+    // Sync access codes safely
+    const savedCode = getStoredItem('lc_code', '');
     if (savedCode) {
       accessCodeEl.value = savedCode;
       inspectAccessCodeEl.value = savedCode;
     }
     inspectAccessCodeEl.addEventListener('input', () => {
       accessCodeEl.value = inspectAccessCodeEl.value;
-      localStorage.setItem('lc_code', inspectAccessCodeEl.value.trim());
+      setStoredItem('lc_code', inspectAccessCodeEl.value.trim());
     });
     accessCodeEl.addEventListener('input', () => {
       inspectAccessCodeEl.value = accessCodeEl.value;
-      localStorage.setItem('lc_code', accessCodeEl.value.trim());
+      setStoredItem('lc_code', accessCodeEl.value.trim());
     });
 
     function setStatus(text, type = '') {
@@ -1568,7 +1591,16 @@
     function appendMessage(speaker, text) {
       const msg = document.createElement('div');
       msg.className = 'msg msg-' + speaker;
-      msg.innerHTML = `<span class="msg-speaker">${speaker === 'agent' ? 'AI Assistant (Mart)' : 'You (Buyer)'}</span><span>${text}</span>`;
+
+      const speakerSpan = document.createElement('span');
+      speakerSpan.className = 'msg-speaker';
+      speakerSpan.textContent = speaker === 'agent' ? 'AI Assistant (Mart)' : 'You (Buyer)';
+
+      const textSpan = document.createElement('span');
+      textSpan.textContent = text;
+
+      msg.appendChild(speakerSpan);
+      msg.appendChild(textSpan);
       transcript.appendChild(msg);
       transcript.scrollTop = transcript.scrollHeight;
     }
@@ -1588,7 +1620,7 @@
         accessCodeEl.focus();
         return;
       }
-      localStorage.setItem('lc_code', code);
+      setStoredItem('lc_code', code);
 
       btnStart.disabled = true;
       btnHangup.disabled = false;

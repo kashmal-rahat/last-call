@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from fastapi.testclient import TestClient
 
+from lastcall_api.inspector.images import ImageError
 from lastcall_api.inspector.inspector import InspectorError
 from lastcall_api.main import app, _IP_REQUEST_HISTORY
 from lastcall_shared.config import get_settings
@@ -254,12 +255,12 @@ async def test_post_demo_inspect_success_and_repeat_shelf(setup_api_test):
     assert received_calls[1]["previous"].inspection_id == "insp_1"
 
 
-def test_post_demo_inspect_value_error():
+def test_post_demo_inspect_image_error():
     client = TestClient(app)
     headers = {"X-Demo-Access-Code": CODE}
 
     async def fake_inspect(*args, **kwargs):
-        raise ValueError("Corrupted image stream")
+        raise ImageError("Corrupted image stream")
 
     app.state.inspect_fn = fake_inspect
 
@@ -267,6 +268,22 @@ def test_post_demo_inspect_value_error():
     resp = client.post("/demo/inspect", headers=headers, files=files, data={"shelf_id": "shelf_1"})
     assert resp.status_code == 400
     assert "Not a readable image" in resp.json()["detail"]
+
+
+def test_post_demo_inspect_validation_error_not_turned_into_400():
+    client = TestClient(app, raise_server_exceptions=False)
+    headers = {"X-Demo-Access-Code": CODE}
+
+    async def fake_inspect(*args, **kwargs):
+        # Trigger real pydantic ValidationError
+        FreshnessResult.model_validate({"invalid": "data"})
+
+    app.state.inspect_fn = fake_inspect
+
+    files = {"photo": ("valid.jpg", b"good-data", "image/jpeg")}
+    resp = client.post("/demo/inspect", headers=headers, files=files, data={"shelf_id": "shelf_1"})
+    assert resp.status_code != 400
+    assert resp.status_code == 500
 
 
 def test_post_demo_inspect_inspector_error():
@@ -282,3 +299,52 @@ def test_post_demo_inspect_inspector_error():
     resp = client.post("/demo/inspect", headers=headers, files=files, data={"shelf_id": "shelf_1"})
     assert resp.status_code == 502
     assert "Inspection failed, please try again" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_post_demo_inspect_concurrency_semaphore():
+    import asyncio
+    from httpx import ASGITransport, AsyncClient
+
+    current_concurrent = 0
+    max_concurrent_seen = 0
+    gate = asyncio.Event()
+
+    async def blocking_inspect(*args, **kwargs):
+        nonlocal current_concurrent, max_concurrent_seen
+        current_concurrent += 1
+        max_concurrent_seen = max(max_concurrent_seen, current_concurrent)
+        await gate.wait()
+        current_concurrent -= 1
+        return _make_dummy_result()
+
+    app.state.inspect_fn = blocking_inspect
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        headers = {"X-Demo-Access-Code": CODE}
+        data = {"shelf_id": "shelf_conc"}
+
+        # Launch 3 requests concurrently
+        t1 = asyncio.create_task(
+            client.post("/demo/inspect", headers=headers, files={"photo": ("img1.jpg", b"data1", "image/jpeg")}, data=data)
+        )
+        t2 = asyncio.create_task(
+            client.post("/demo/inspect", headers=headers, files={"photo": ("img2.jpg", b"data2", "image/jpeg")}, data=data)
+        )
+        t3 = asyncio.create_task(
+            client.post("/demo/inspect", headers=headers, files={"photo": ("img3.jpg", b"data3", "image/jpeg")}, data=data)
+        )
+
+        # Allow tasks to start and queue
+        await asyncio.sleep(0.05)
+        # Exactly 2 should have entered inspect_fn due to semaphore(2)
+        assert current_concurrent == 2
+        assert max_concurrent_seen == 2
+
+        # Release the gate to let the first 2 finish and the 3rd enter
+        gate.set()
+        resps = await asyncio.gather(t1, t2, t3)
+        for r in resps:
+            assert r.status_code == 200
+        assert max_concurrent_seen == 2

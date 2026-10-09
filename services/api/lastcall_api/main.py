@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from lastcall_api.inspector.images import ImageError
 from lastcall_api.inspector.inspector import InspectorError, inspect_photo
 from lastcall_shared.firestore_store import FirestoreStore
 from lastcall_shared.logging_utils import setup_structured_logging
@@ -31,6 +32,9 @@ PKT = ZoneInfo("Asia/Karachi")
 logger = setup_structured_logging(service_name=SERVICE_NAME)
 
 STATIC_DIR = Path(__file__).parent / "static"
+
+# Concurrency limiting: max 2 simultaneous inspections per instance
+_INSPECT_SEMAPHORE = asyncio.Semaphore(2)
 
 # Per-IP rate limiting: history keyed by (bucket, client_ip)
 _IP_LIMITER_LOCK = asyncio.Lock()
@@ -289,18 +293,19 @@ async def demo_inspect(
     # 7. Get previous inspection for the shelf
     previous = await store.get_latest_inspection("demo_mart", shelf_id)
 
-    # 8. Call inspection function
+    # 8. Call inspection function with concurrency limit
     inspect_fn = getattr(app.state, "inspect_fn", inspect_photo)
     try:
-        result = await inspect_fn(
-            contents,
-            mart_id="demo_mart",
-            shelf_id=shelf_id,
-            previous=previous,
-            now=now_pkt,
-            bin_capacity_kg=bin_capacity_kg,
-        )
-    except ValueError as exc:
+        async with _INSPECT_SEMAPHORE:
+            result = await inspect_fn(
+                contents,
+                mart_id="demo_mart",
+                shelf_id=shelf_id,
+                previous=previous,
+                now=now_pkt,
+                bin_capacity_kg=bin_capacity_kg,
+            )
+    except ImageError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Not a readable image",

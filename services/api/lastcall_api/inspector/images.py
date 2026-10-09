@@ -8,6 +8,11 @@ from PIL import Image, ImageOps
 Image.MAX_IMAGE_PIXELS = 40_000_000
 
 
+class ImageError(ValueError):
+    """Raised when an image cannot be opened, decoded, or read."""
+    pass
+
+
 class PreparedImage(NamedTuple):
     full: Image.Image
     jpeg: bytes
@@ -20,7 +25,7 @@ def prepare_image(raw: bytes) -> PreparedImage:
     """Decodes, validates, normalizes, and prepares shelf photo for inspection.
 
     1. Decompression bomb guard: Image.MAX_IMAGE_PIXELS = 40M.
-    2. Any open or decode failure raises ValueError('not a readable image').
+    2. Any open or decode failure raises ImageError('not a readable image').
     3. Handles EXIF orientation via ImageOps.exif_transpose and converts to RGB.
     4. full: kept in memory, downscaled only if long side > 4096 px.
     5. jpeg: downscaled so long side <= 1600 px (LANCZOS; never upscaled), quality 85, no EXIF.
@@ -29,7 +34,7 @@ def prepare_image(raw: bytes) -> PreparedImage:
         img = Image.open(io.BytesIO(raw))
         img.load()
     except Exception as exc:
-        raise ValueError("not a readable image") from exc
+        raise ImageError("not a readable image") from exc
 
     # Handle EXIF orientation
     transposed = ImageOps.exif_transpose(img)
