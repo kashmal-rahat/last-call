@@ -22,7 +22,44 @@ DealType = Literal["sale", "donation"]
 Language = Literal["ur", "en", "pa"]
 
 ProduceStage = Literal["fresh", "ripening", "overripe", "spoiled", "unsafe"]
-ProduceIssue = Literal["bruising", "browning", "mould", "rot", "wilting", "other"]
+ProduceIssue = Literal[
+    "bruising",
+    "browning",
+    "dark_spots",
+    "yellowing",
+    "wilting",
+    "shrivelling",
+    "soft_spots",
+    "splitting",
+    "leaking",
+    "pest_damage",
+    "rot",
+    "slime",
+    "mould",
+]
+StageLevel = Literal["early", "mid", "late"]
+ConfidenceLevel = Literal["high", "medium", "low"]
+QuantityMethod = Literal["count", "fill_level"]
+PhotoStatus = Literal["ok", "no_produce", "unreadable"]
+PhotoIssue = Literal[
+    "blurry",
+    "too_dark",
+    "overexposed",
+    "glare",
+    "partly_blocked",
+    "too_far",
+    "instruction_text",
+]
+StaffCheckReason = Literal[
+    "spoiled_or_unsafe",
+    "bad_pieces_in_group",
+    "low_confidence",
+    "unknown_produce",
+    "mixed_crate",
+    "safety_override",
+    "model_flagged",
+    "zoom_disagreement",
+]
 
 BuyerType = Literal[
     "juice_shop",
@@ -95,30 +132,88 @@ class BoundingBox(BaseModel):
         return self
 
 
+class ObservedQuantity(BaseModel):
+    method: QuantityMethod
+    min: Annotated[int, Field(ge=0)]
+    max: Annotated[int, Field(ge=0)]  # pieces for "count", percent full for "fill_level"
+
+    @model_validator(mode="after")
+    def validate_range(self) -> "ObservedQuantity":
+        if self.min > self.max:
+            raise ValueError(f"min ({self.min}) cannot exceed max ({self.max})")
+        if self.method == "fill_level" and self.max > 100:
+            raise ValueError(f"fill_level max ({self.max}) cannot exceed 100")
+        return self
+
+
 class ItemAssessment(BaseModel):
     item_key: str  # Stable key per crate/slot on shelf to match items across photos (R1)
     name: str
     position: BoundingBox
-    stage: ProduceStage
-    score: Annotated[float, Field(ge=0.0, le=100.0)]
+    grid: str  # "top-left" … "bottom-right", derived from the box
+    in_mixed_crate: bool = False
+    issues: list[ProduceIssue] = Field(default_factory=list)
+    evidence: str = ""
+    stage: ProduceStage  # typical piece
+    stage_level: StageLevel
+    worst_stage: ProduceStage  # worst piece; never better than stage
+    score: Annotated[float, Field(ge=0.0, le=100.0)]  # computed in code
     change_since_last: float | None = None
     change_note: str | None = None
-    issues: list[ProduceIssue] = Field(default_factory=list)
-    quantity: QuantityEstimate
-    confidence: Annotated[float, Field(ge=0.0, le=1.0)]
+    observed: ObservedQuantity
+    quantity: QuantityEstimate  # kg or dozen (D4)
+    confidence: Annotated[float, Field(ge=0.0, le=1.0)]  # computed in code from confidence_level
+    confidence_level: ConfidenceLevel
     needs_staff_check: bool = False
+    staff_check_reasons: list[StaffCheckReason] = Field(default_factory=list)
+    check_reason: str = ""  # the model's sentence for staff
+    zoomed: bool = False  # True if pass 2 re-read this group
+
+    @model_validator(mode="after")
+    def validate_worst_stage(self) -> "ItemAssessment":
+        order = {"fresh": 0, "ripening": 1, "overripe": 2, "spoiled": 3, "unsafe": 4}
+        if order.get(self.worst_stage, 0) < order.get(self.stage, 0):
+            raise ValueError(
+                f"worst_stage ({self.worst_stage}) cannot be better than stage ({self.stage})"
+            )
+        return self
+
+
+class InspectorMeta(BaseModel):
+    model: str
+    prompt_version: str
+    thinking_level: str
+    latency_ms: int  # whole inspection, both passes
+    calls: int = 1  # Gemini calls, including retries and zoom calls
+    hedges: int = 0  # Number of hedged calls spawned
+    zoomed_groups: int = 0
+    zoom_failures: int = 0  # crops whose call failed (pass 1 reading kept)
+    input_tokens: int = 0  # summed over all calls
+    output_tokens: int = 0  # candidates + thoughts, summed
+    cached_tokens: int = 0
+    thoughts_tokens: int = 0
+    candidates_tokens: int = 0
 
 
 class FreshnessResult(BaseModel):
-    schema_version: str = "2.0.0"
+    schema_version: str = "3.0.0"
     mart_id: str
     shelf_id: str
     inspection_id: str
     previous_inspection_id: str | None = None
     photo_uri: str
     taken_at: AwareDatetime
+    photo_status: PhotoStatus = "ok"
+    photo_note: str = ""
+    photo_issues: list[PhotoIssue] = Field(default_factory=list)
     items: list[ItemAssessment]
-    photo_issues: list[str] = Field(default_factory=list)
+    inspector: InspectorMeta | None = None
+
+    @model_validator(mode="after")
+    def validate_photo_status(self) -> "FreshnessResult":
+        if self.photo_status != "ok" and len(self.items) > 0:
+            raise ValueError(f"items must be empty when photo_status is '{self.photo_status}'")
+        return self
 
 
 class AgentBuyerInfo(BaseModel):

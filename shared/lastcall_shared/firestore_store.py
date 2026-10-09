@@ -12,6 +12,7 @@ from lastcall_shared.models import (
     CallRecord,
     CallResult,
     DealRecord,
+    FreshnessResult,
     NegotiationState,
     OutboxMessage,
     StaffTask,
@@ -312,11 +313,50 @@ class FirestoreStore:
         tx = self.client.transaction()
         return await _tx(tx)
 
+    async def save_inspection(self, result: FreshnessResult) -> None:
+        batch = self.client.batch()
+        insp_ref = self._col("inspections").document(result.inspection_id)
+        shelf_ref = self._col("shelves").document(f"{result.mart_id}__{result.shelf_id}")
+        batch.set(insp_ref, result.model_dump(mode="json"))
+        batch.set(
+            shelf_ref,
+            {
+                "latest_inspection_id": result.inspection_id,
+                "updated_at": self._now().isoformat(),
+            },
+        )
+        await batch.commit()
+
+    async def get_inspection(self, inspection_id: str) -> FreshnessResult | None:
+        snap = await self._col("inspections").document(inspection_id).get()
+        if not snap.exists:
+            return None
+        return FreshnessResult.model_validate(snap.to_dict())
+
+    async def get_latest_inspection(self, mart_id: str, shelf_id: str) -> FreshnessResult | None:
+        snap = await self._col("shelves").document(f"{mart_id}__{shelf_id}").get()
+        if not snap.exists:
+            return None
+        latest_id = (snap.to_dict() or {}).get("latest_inspection_id")
+        if not latest_id:
+            return None
+        return await self.get_inspection(latest_id)
+
     async def clean_prefix(self) -> None:
         """Deletes all test documents created under collection_prefix."""
         if not self.collection_prefix:
             return
-        collections = ["calls", "batches", "deals", "do_not_call", "outbox", "staff_tasks", "daily_sessions"]
+        collections = [
+            "calls",
+            "batches",
+            "deals",
+            "do_not_call",
+            "outbox",
+            "staff_tasks",
+            "daily_sessions",
+            "inspections",
+            "shelves",
+        ]
         for col_name in collections:
             col_ref = self._col(col_name)
             async for doc in col_ref.stream():

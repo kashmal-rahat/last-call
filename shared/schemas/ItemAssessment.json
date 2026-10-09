@@ -36,6 +36,35 @@
       "title": "BoundingBox",
       "type": "object"
     },
+    "ObservedQuantity": {
+      "properties": {
+        "method": {
+          "enum": [
+            "count",
+            "fill_level"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "min": {
+          "minimum": 0,
+          "title": "Min",
+          "type": "integer"
+        },
+        "max": {
+          "minimum": 0,
+          "title": "Max",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "method",
+        "min",
+        "max"
+      ],
+      "title": "ObservedQuantity",
+      "type": "object"
+    },
     "QuantityEstimate": {
       "properties": {
         "unit": {
@@ -78,6 +107,42 @@
     "position": {
       "$ref": "#/$defs/BoundingBox"
     },
+    "grid": {
+      "title": "Grid",
+      "type": "string"
+    },
+    "in_mixed_crate": {
+      "default": false,
+      "title": "In Mixed Crate",
+      "type": "boolean"
+    },
+    "issues": {
+      "items": {
+        "enum": [
+          "bruising",
+          "browning",
+          "dark_spots",
+          "yellowing",
+          "wilting",
+          "shrivelling",
+          "soft_spots",
+          "splitting",
+          "leaking",
+          "pest_damage",
+          "rot",
+          "slime",
+          "mould"
+        ],
+        "type": "string"
+      },
+      "title": "Issues",
+      "type": "array"
+    },
+    "evidence": {
+      "default": "",
+      "title": "Evidence",
+      "type": "string"
+    },
     "stage": {
       "enum": [
         "fresh",
@@ -87,6 +152,26 @@
         "unsafe"
       ],
       "title": "Stage",
+      "type": "string"
+    },
+    "stage_level": {
+      "enum": [
+        "early",
+        "mid",
+        "late"
+      ],
+      "title": "Stage Level",
+      "type": "string"
+    },
+    "worst_stage": {
+      "enum": [
+        "fresh",
+        "ripening",
+        "overripe",
+        "spoiled",
+        "unsafe"
+      ],
+      "title": "Worst Stage",
       "type": "string"
     },
     "score": {
@@ -119,20 +204,8 @@
       "default": null,
       "title": "Change Note"
     },
-    "issues": {
-      "items": {
-        "enum": [
-          "bruising",
-          "browning",
-          "mould",
-          "rot",
-          "wilting",
-          "other"
-        ],
-        "type": "string"
-      },
-      "title": "Issues",
-      "type": "array"
+    "observed": {
+      "$ref": "#/$defs/ObservedQuantity"
     },
     "quantity": {
       "$ref": "#/$defs/QuantityEstimate"
@@ -143,9 +216,45 @@
       "title": "Confidence",
       "type": "number"
     },
+    "confidence_level": {
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "Confidence Level",
+      "type": "string"
+    },
     "needs_staff_check": {
       "default": false,
       "title": "Needs Staff Check",
+      "type": "boolean"
+    },
+    "staff_check_reasons": {
+      "items": {
+        "enum": [
+          "spoiled_or_unsafe",
+          "bad_pieces_in_group",
+          "low_confidence",
+          "unknown_produce",
+          "mixed_crate",
+          "safety_override",
+          "model_flagged",
+          "zoom_disagreement"
+        ],
+        "type": "string"
+      },
+      "title": "Staff Check Reasons",
+      "type": "array"
+    },
+    "check_reason": {
+      "default": "",
+      "title": "Check Reason",
+      "type": "string"
+    },
+    "zoomed": {
+      "default": false,
+      "title": "Zoomed",
       "type": "boolean"
     }
   },
@@ -153,10 +262,15 @@
     "item_key",
     "name",
     "position",
+    "grid",
     "stage",
+    "stage_level",
+    "worst_stage",
     "score",
+    "observed",
     "quantity",
-    "confidence"
+    "confidence",
+    "confidence_level"
   ],
   "title": "ItemAssessment",
   "type": "object"

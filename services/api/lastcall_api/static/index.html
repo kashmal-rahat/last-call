@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Last Call — Autonomous Urdu Produce Negotiator (Gemini 3.8 Live Demo)</title>
+  <title>Last Call — Freshness Inspector & Autonomous Urdu Negotiator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Nastaliq+Urdu:wght@500;700&display=swap" rel="stylesheet">
@@ -124,9 +124,13 @@
       width: 100%;
       margin: 0 auto;
       padding: 2rem 1.5rem;
-      display: grid;
-      grid-template-columns: 380px 1fr;
-      gap: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5rem;
+    }
+
+    .module-section {
+      width: 100%;
     }
 
     .card {
@@ -148,16 +152,59 @@
       letter-spacing: 0.05em;
     }
 
-    .banner-headphones {
-      background: rgba(245, 158, 11, 0.12);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-      padding: 0.85rem 1rem;
-      border-radius: 10px;
-      font-size: 0.85rem;
-      color: #fbbf24;
+    /* Section 1: Inspector UI styles */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 0.75rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.1rem;
+      color: #34d399;
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 0.5rem;
+    }
+
+    .shelf-indicator {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .shelf-indicator strong {
+      color: var(--text-main);
+      font-family: monospace;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .btn-text {
+      background: none;
+      border: none;
+      color: #38bdf8;
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0;
+      flex: none;
+    }
+    .btn-text:hover {
+      color: #7dd3fc;
+    }
+
+    .inspect-controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
     }
 
     .field {
@@ -186,6 +233,417 @@
 
     input:focus, select:focus {
       border-color: var(--primary);
+    }
+
+    .file-input {
+      padding: 0.5rem 0.6rem;
+      font-size: 0.85rem;
+    }
+
+    .samples-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .samples-list {
+      display: flex;
+      gap: 0.75rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .sample-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 0.4rem 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .sample-chip:hover {
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.08);
+    }
+
+    .sample-chip.active {
+      border-color: var(--primary);
+      background: rgba(16, 185, 129, 0.15);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+    }
+
+    .sample-thumb {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+
+    .sample-label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-main);
+    }
+
+    .inspect-actions {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .inspect-loading {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #34d399;
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(16, 185, 129, 0.2);
+      border-top-color: #10b981;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .inspect-error-banner {
+      padding: 0.85rem 1rem;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 8px;
+      color: #fca5a5;
+      font-size: 0.88rem;
+    }
+
+    .inspect-warning-banner {
+      padding: 0.85rem 1rem;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 8px;
+      color: #fcd34d;
+      font-size: 0.88rem;
+    }
+
+    .inspect-result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .photo-viewer-card {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .photo-wrapper {
+      position: relative;
+      width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+      line-height: 0;
+    }
+
+    .inspected-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 8px;
+    }
+
+    .bbox-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .bbox-rect {
+      box-sizing: border-box;
+      position: absolute;
+      pointer-events: auto;
+      transition: opacity 0.2s;
+    }
+
+    .bbox-label {
+      position: absolute;
+      top: -18px;
+      left: -1px;
+      padding: 1px 5px;
+      font-size: 9px;
+      font-weight: 700;
+      color: #000;
+      border-radius: 2px 2px 0 0;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+
+    .items-display-column {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .items-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .items-header h3 {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .items-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-height: 700px;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+
+    .item-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .item-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .item-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .item-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f3f4f6;
+      text-transform: capitalize;
+    }
+
+    .tag-chip {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .tag-zoomed {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #7dd3fc;
+    }
+
+    .score-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+    }
+
+    .score-bar-bg {
+      flex: 1;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 9999px;
+      transition: width 0.4s ease;
+    }
+
+    .score-text {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 45px;
+      text-align: right;
+    }
+
+    .worst-warning-chip {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .evidence-text {
+      font-size: 0.85rem;
+      color: #d1d5db;
+      line-height: 1.4;
+    }
+
+    .issues-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .issue-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #9ca3af;
+      font-size: 0.72rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+    }
+
+    .item-metrics-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .metric-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .metric-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .metric-value {
+      color: #f3f4f6;
+      font-weight: 500;
+    }
+
+    .staff-check-badge {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      color: #fcd34d;
+      font-size: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .staff-check-title {
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.03em;
+    }
+
+    .change-note-banner {
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 6px;
+      padding: 0.4rem 0.65rem;
+      font-size: 0.8rem;
+      color: #7dd3fc;
+    }
+
+    .btn-toggle-collapsed {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 0.65rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      width: 100%;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .btn-toggle-collapsed:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+    }
+
+    .remaining-cards-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 0.75rem;
+    }
+
+    .inspect-meta-footer {
+      border-top: 1px solid var(--card-border);
+      padding-top: 0.75rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+    }
+
+    /* Section 2: Voice Negotiator styles */
+    .voice-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 1.5rem;
+    }
+
+    .banner-headphones {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 0.85rem 1rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      color: #fbbf24;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
     }
 
     .scenario-info {
@@ -263,7 +721,7 @@
       box-shadow: none !important;
     }
 
-    /* Right pane: Live Dialogue */
+    /* Dialogue Pane */
     .dialogue-pane {
       display: flex;
       flex-direction: column;
@@ -347,12 +805,34 @@
       margin-bottom: 0.4rem;
     }
 
+    /* Responsive Mobile Layout (down to 375px) */
     @media (max-width: 900px) {
-      main {
+      .voice-grid {
         grid-template-columns: 1fr;
       }
       .dialogue-pane {
         height: 500px;
+      }
+      .inspect-result-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      header {
+        padding: 1rem;
+      }
+      main {
+        padding: 1rem 0.75rem;
+      }
+      .card {
+        padding: 1rem;
+      }
+      .inspect-controls-grid {
+        grid-template-columns: 1fr;
+      }
+      .item-metrics-row {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -363,7 +843,7 @@
     <div class="brand">
       <div class="brand-logo">LC</div>
       <div>
-        <h1>Last Call <span>Voice Negotiator</span></h1>
+        <h1>Last Call <span>Autonomous Produce System</span></h1>
       </div>
     </div>
     <div id="statusBadge" class="status-badge">
@@ -373,65 +853,681 @@
   </header>
 
   <main>
-    <!-- Left Configuration & Controls -->
-    <div class="card">
-      <h2>Session Config</h2>
+    <!-- SECTION 1: Freshness Inspector -->
+    <section class="module-section" id="inspectorSection">
+      <div class="card">
+        <div class="section-header">
+          <h2>1 · Inspect a shelf</h2>
+          <div class="shelf-indicator">
+            <span>Shelf ID:</span>
+            <strong id="shelfIdDisplay">demo_...</strong>
+            <button type="button" id="btnNewShelf" class="btn-text">New shelf</button>
+          </div>
+        </div>
 
-      <div class="banner-headphones">
-        <span>🎧</span>
-        <div><strong>Please use headphones</strong> to prevent microphone echo during real-time Urdu conversation.</div>
-      </div>
+        <!-- Controls Grid -->
+        <div class="inspect-controls-grid">
+          <div class="field">
+            <label for="inspectAccessCode">Demo Access Code</label>
+            <input type="password" id="inspectAccessCode" placeholder="Enter judge access code">
+          </div>
 
-      <div class="field">
-        <label for="accessCode">Demo Access Code</label>
-        <input type="password" id="accessCode" placeholder="Enter judge code" value="">
-      </div>
+          <div class="field">
+            <label for="binCapacity">Bin Capacity (kg, optional)</label>
+            <input type="number" id="binCapacity" placeholder="e.g. 50" min="0" max="500" step="any">
+          </div>
 
-      <div class="field">
-        <label for="scenarioSelect">Bargaining Scenario</label>
-        <select id="scenarioSelect">
-          <option value="easy_yes">Easy Yes (Mangoes — quick agreement)</option>
-          <option value="hard_bargainer">Hard Bargainer (Apples — multiple counters)</option>
-          <option value="quality_sceptic">Quality Sceptic (Oranges — wants photo)</option>
-          <option value="wants_half">Wants Half (Bananas — split quantity)</option>
-          <option value="donation">Donation (Bread — zero rupee salvage)</option>
-        </select>
-      </div>
+          <div class="field">
+            <label for="shelfPhotoInput">Upload Photo (or take camera photo)</label>
+            <input type="file" id="shelfPhotoInput" class="file-input" accept="image/jpeg,image/png,image/webp">
+          </div>
+        </div>
 
-      <div class="scenario-info" id="scenarioInfo">
-        <div class="info-row"><span class="info-label">Item:</span><span class="info-val" id="infoItem">Sindhri Mangoes</span></div>
-        <div class="info-row"><span class="info-label">Available:</span><span class="info-val" id="infoQty">50 kg</span></div>
-        <div class="info-row"><span class="info-label">Opening Quote:</span><span class="info-val" id="infoOpening">Rs 180 / kg</span></div>
-        <div class="info-row"><span class="info-label">Floor Price (Hidden):</span><span class="info-val" id="infoFloor">Rs 130 / kg</span></div>
-      </div>
+        <!-- Sample Photos Selector -->
+        <div class="samples-container">
+          <label>Or pick a sample shelf photo:</label>
+          <div id="samplesList" class="samples-list">
+            <!-- Dynamically populated from /demo/samples -->
+          </div>
+        </div>
 
-      <div class="actions">
-        <button id="btnStart" class="btn-start">
-          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" /></svg>
-          Start Call
-        </button>
-        <button id="btnHangup" class="btn-hangup" disabled>
-          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.684A1 1 0 008.279 3H5z" /></svg>
-          Hang Up
-        </button>
-      </div>
-    </div>
+        <div class="inspect-actions">
+          <button id="btnInspect" class="btn-start" style="flex: none; min-width: 180px;">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Inspect Shelf
+          </button>
+        </div>
 
-    <!-- Right Live Audio & Transcript Stream -->
-    <div class="card dialogue-pane">
-      <h2>Live Conversation (Gemini 3.8 Live Voice)</h2>
-      <div class="transcript-container" id="transcript">
-        <div class="tool-notice">Waiting to start call...</div>
-      </div>
+        <!-- Loading & Status States -->
+        <div id="inspectLoading" class="inspect-loading" style="display: none;">
+          <div class="spinner"></div>
+          <div id="inspectLoadingText">Analyzing shelf with Gemini 3.8 Flash...</div>
+        </div>
 
-      <div class="result-card" id="resultCard">
-        <div class="result-title">Call Outcome</div>
-        <div id="resultContent" style="font-size: 0.88rem; color: #d1fae5;"></div>
+        <div id="inspectError" class="inspect-error-banner" style="display: none;"></div>
+
+        <!-- Warning Banners -->
+        <div id="inspectStatusBanner" class="inspect-warning-banner" style="display: none;"></div>
+        <div id="inspectInstructionBanner" class="inspect-warning-banner" style="display: none;">
+          Writing in the photo tried to give instructions; it was ignored.
+        </div>
+
+        <!-- Inspection Results Display -->
+        <div id="inspectResultContainer" class="inspect-result-grid" style="display: none;">
+          <!-- Left: Photo Viewer with Bounding Boxes -->
+          <div class="photo-viewer-card">
+            <div class="photo-wrapper" id="photoWrapper">
+              <img id="inspectedImage" class="inspected-img" alt="Inspected Shelf">
+              <div id="bboxOverlay" class="bbox-overlay"></div>
+            </div>
+          </div>
+
+          <!-- Right: Actionable Produce Cards -->
+          <div class="items-display-column">
+            <div class="items-header">
+              <h3>Produce Findings</h3>
+              <span id="itemsSummaryCount" class="text-muted" style="font-size: 0.8rem;"></span>
+            </div>
+            <div id="itemsContainer" class="items-container"></div>
+          </div>
+        </div>
+
+        <!-- Footer Metadata -->
+        <div id="inspectFooter" class="inspect-meta-footer" style="display: none;"></div>
       </div>
-    </div>
+    </section>
+
+    <!-- SECTION 2: Voice Negotiator -->
+    <section class="module-section" id="voiceSection">
+      <div class="voice-grid">
+        <!-- Left Configuration & Controls -->
+        <div class="card">
+          <h2>2 · Negotiate a deal (Voice Agent)</h2>
+
+          <div class="banner-headphones">
+            <span>🎧</span>
+            <div><strong>Please use headphones</strong> to prevent microphone echo during real-time Urdu conversation.</div>
+          </div>
+
+          <div class="field">
+            <label for="accessCode">Demo Access Code</label>
+            <input type="password" id="accessCode" placeholder="Enter judge code" value="">
+          </div>
+
+          <div class="field">
+            <label for="scenarioSelect">Bargaining Scenario</label>
+            <select id="scenarioSelect">
+              <option value="easy_yes">Easy Yes (Mangoes — quick agreement)</option>
+              <option value="hard_bargainer">Hard Bargainer (Apples — multiple counters)</option>
+              <option value="quality_sceptic">Quality Sceptic (Oranges — wants photo)</option>
+              <option value="wants_half">Wants Half (Bananas — split quantity)</option>
+              <option value="donation">Donation (Bread — zero rupee salvage)</option>
+            </select>
+          </div>
+
+          <div class="scenario-info" id="scenarioInfo">
+            <div class="info-row"><span class="info-label">Item:</span><span class="info-val" id="infoItem">Sindhri Mangoes</span></div>
+            <div class="info-row"><span class="info-label">Available:</span><span class="info-val" id="infoQty">50 kg</span></div>
+            <div class="info-row"><span class="info-label">Opening Quote:</span><span class="info-val" id="infoOpening">Rs 180 / kg</span></div>
+            <div class="info-row"><span class="info-label">Floor Price (Hidden):</span><span class="info-val" id="infoFloor">Rs 130 / kg</span></div>
+          </div>
+
+          <div class="actions">
+            <button id="btnStart" class="btn-start">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" /></svg>
+              Start Call
+            </button>
+            <button id="btnHangup" class="btn-hangup" disabled>
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.684A1 1 0 008.279 3H5z" /></svg>
+              Hang Up
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Live Audio & Transcript Stream -->
+        <div class="card dialogue-pane">
+          <h2>Live Conversation (Gemini 3.8 Live Voice)</h2>
+          <div class="transcript-container" id="transcript">
+            <div class="tool-notice">Waiting to start call...</div>
+          </div>
+
+          <div class="result-card" id="resultCard">
+            <div class="result-title">Call Outcome</div>
+            <div id="resultContent" style="font-size: 0.88rem; color: #d1fae5;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script>
+    /* =========================================================================
+       SECTION 1: Shelf Inspector Script (Milestone 1B Step 10)
+       ========================================================================= */
+
+    const inspectAccessCodeEl = document.getElementById('inspectAccessCode');
+    const binCapacityEl = document.getElementById('binCapacity');
+    const shelfPhotoInput = document.getElementById('shelfPhotoInput');
+    const btnInspect = document.getElementById('btnInspect');
+    const shelfIdDisplay = document.getElementById('shelfIdDisplay');
+    const btnNewShelf = document.getElementById('btnNewShelf');
+    const samplesList = document.getElementById('samplesList');
+    const inspectLoading = document.getElementById('inspectLoading');
+    const inspectError = document.getElementById('inspectError');
+    const inspectStatusBanner = document.getElementById('inspectStatusBanner');
+    const inspectInstructionBanner = document.getElementById('inspectInstructionBanner');
+    const inspectResultContainer = document.getElementById('inspectResultContainer');
+    const inspectedImage = document.getElementById('inspectedImage');
+    const bboxOverlay = document.getElementById('bboxOverlay');
+    const itemsSummaryCount = document.getElementById('itemsSummaryCount');
+    const itemsContainer = document.getElementById('itemsContainer');
+    const inspectFooter = document.getElementById('inspectFooter');
+
+    let activeSampleBlob = null;
+    let activeSampleUrl = null;
+
+    function getOrCreateShelfId() {
+      try {
+        let id = localStorage.getItem('lc_shelf_id');
+        if (!id || !/^demo_[a-z0-9_-]{8}$/.test(id)) {
+          id = 'demo_' + Math.random().toString(36).substring(2, 10);
+          localStorage.setItem('lc_shelf_id', id);
+        }
+        return id;
+      } catch (e) {
+        return 'demo_' + Math.random().toString(36).substring(2, 10);
+      }
+    }
+
+    function resetShelfId() {
+      const newId = 'demo_' + Math.random().toString(36).substring(2, 10);
+      try {
+        localStorage.setItem('lc_shelf_id', newId);
+      } catch (e) {}
+      shelfIdDisplay.textContent = newId;
+      return newId;
+    }
+
+    shelfIdDisplay.textContent = getOrCreateShelfId();
+    btnNewShelf.addEventListener('click', (e) => {
+      e.preventDefault();
+      resetShelfId();
+    });
+
+    // Populate Samples
+    async function loadSamples() {
+      try {
+        const res = await fetch('/demo/samples');
+        if (!res.ok) return;
+        const samples = await res.json();
+        samplesList.replaceChildren();
+
+        samples.forEach((sample, idx) => {
+          const chip = document.createElement('div');
+          chip.className = 'sample-chip';
+
+          const img = document.createElement('img');
+          img.className = 'sample-thumb';
+          img.src = sample.url;
+          img.alt = sample.label;
+
+          const label = document.createElement('span');
+          label.className = 'sample-label';
+          label.textContent = sample.label;
+
+          chip.appendChild(img);
+          chip.appendChild(label);
+
+          chip.addEventListener('click', async () => {
+            document.querySelectorAll('.sample-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            shelfPhotoInput.value = '';
+
+            try {
+              const imgRes = await fetch(sample.url);
+              activeSampleBlob = await imgRes.blob();
+              activeSampleUrl = sample.url;
+            } catch (err) {
+              console.error('Failed to load sample image blob', err);
+            }
+          });
+
+          samplesList.appendChild(chip);
+
+          // Auto-select first sample for immediate tester convenience
+          if (idx === 0) {
+            chip.click();
+          }
+        });
+      } catch (e) {
+        console.warn('Failed to fetch /demo/samples', e);
+      }
+    }
+
+    loadSamples();
+
+    shelfPhotoInput.addEventListener('change', () => {
+      if (shelfPhotoInput.files.length > 0) {
+        activeSampleBlob = null;
+        activeSampleUrl = null;
+        document.querySelectorAll('.sample-chip').forEach(c => c.classList.remove('active'));
+      }
+    });
+
+    // Ranking algorithm per plan Step 10
+    function rankItems(items) {
+      const stageSeverity = {
+        'unsafe': 5,
+        'spoiled': 4,
+        'overripe': 3,
+        'ripening': 2,
+        'fresh': 1
+      };
+
+      function getTier(item) {
+        if (['overripe', 'spoiled', 'unsafe'].includes(item.stage)) {
+          return 1;
+        }
+        if (item.needs_staff_check) {
+          return 2;
+        }
+        return 3;
+      }
+
+      function boxArea(pos) {
+        if (!pos) return 0;
+        return Math.max(0, (pos.ymax - pos.ymin) * (pos.xmax - pos.xmin));
+      }
+
+      return [...items].sort((a, b) => {
+        const tierA = getTier(a);
+        const tierB = getTier(b);
+        if (tierA !== tierB) {
+          return tierA - tierB;
+        }
+        const sevA = stageSeverity[a.stage] || 0;
+        const sevB = stageSeverity[b.stage] || 0;
+        if (sevA !== sevB) {
+          return sevB - sevA;
+        }
+        return boxArea(b.position) - boxArea(a.position);
+      });
+    }
+
+    function getStageColor(stage) {
+      switch (stage) {
+        case 'fresh': return '#10b981';
+        case 'ripening': return '#f59e0b';
+        case 'overripe': return '#f97316';
+        case 'spoiled': return '#ef4444';
+        case 'unsafe': return '#dc2626';
+        default: return '#9ca3af';
+      }
+    }
+
+    function formatObserved(obs) {
+      if (!obs) return '';
+      if (obs.method === 'count') {
+        return obs.min === obs.max ? `about ${obs.min} pieces` : `about ${obs.min}–${obs.max} pieces`;
+      }
+      return obs.min === obs.max ? `about ${obs.min}% full` : `about ${obs.min}–${obs.max}% full`;
+    }
+
+    function formatQuantity(qty) {
+      if (!qty) return '';
+      const unit = qty.unit || '';
+      return qty.low === qty.high ? `${qty.low} ${unit}` : `${qty.low}–${qty.high} ${unit}`;
+    }
+
+    // Safe card builder using textContent exclusively
+    function createItemCard(item) {
+      const card = document.createElement('div');
+      card.className = 'item-card';
+
+      // Top Row: Name, Stage Chip, Zoomed
+      const topRow = document.createElement('div');
+      topRow.className = 'item-card-top';
+
+      const titleGroup = document.createElement('div');
+      titleGroup.className = 'item-title-group';
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'item-name';
+      nameEl.textContent = item.name;
+      titleGroup.appendChild(nameEl);
+
+      const stageChip = document.createElement('span');
+      stageChip.className = 'tag-chip';
+      stageChip.style.backgroundColor = getStageColor(item.stage) + '22';
+      stageChip.style.color = getStageColor(item.stage);
+      stageChip.style.border = `1px solid ${getStageColor(item.stage)}55`;
+      stageChip.textContent = `${item.stage} · ${item.stage_level}`;
+      titleGroup.appendChild(stageChip);
+
+      if (item.zoomed) {
+        const zoomedTag = document.createElement('span');
+        zoomedTag.className = 'tag-chip tag-zoomed';
+        zoomedTag.textContent = '🔍 zoomed in';
+        titleGroup.appendChild(zoomedTag);
+      }
+
+      topRow.appendChild(titleGroup);
+
+      // Worst stage warning badge
+      if (item.worst_stage !== item.stage) {
+        const worstBadge = document.createElement('div');
+        worstBadge.className = 'worst-warning-chip';
+        worstBadge.textContent = `Worst: ${item.worst_stage}`;
+        topRow.appendChild(worstBadge);
+      }
+
+      card.appendChild(topRow);
+
+      // Score bar
+      const scoreContainer = document.createElement('div');
+      scoreContainer.className = 'score-container';
+
+      const barBg = document.createElement('div');
+      barBg.className = 'score-bar-bg';
+
+      const barFill = document.createElement('div');
+      barFill.className = 'score-bar-fill';
+      barFill.style.width = Math.min(100, Math.max(0, item.score)) + '%';
+      barFill.style.backgroundColor = getStageColor(item.stage);
+      barBg.appendChild(barFill);
+
+      const scoreText = document.createElement('span');
+      scoreText.className = 'score-text';
+      scoreText.textContent = `${Math.round(item.score)} / 100`;
+
+      scoreContainer.appendChild(barBg);
+      scoreContainer.appendChild(scoreText);
+      card.appendChild(scoreContainer);
+
+      // Evidence text
+      if (item.evidence) {
+        const ev = document.createElement('div');
+        ev.className = 'evidence-text';
+        ev.textContent = item.evidence;
+        card.appendChild(ev);
+      }
+
+      // Produce issues chips
+      if (item.issues && item.issues.length > 0) {
+        const issuesContainer = document.createElement('div');
+        issuesContainer.className = 'issues-chips';
+        item.issues.forEach(iss => {
+          const chip = document.createElement('span');
+          chip.className = 'issue-chip';
+          chip.textContent = iss.replace(/_/g, ' ');
+          issuesContainer.appendChild(chip);
+        });
+        card.appendChild(issuesContainer);
+      }
+
+      // Metrics: Observed & Quantity
+      const metricsRow = document.createElement('div');
+      metricsRow.className = 'item-metrics-row';
+
+      const obsItem = document.createElement('div');
+      obsItem.className = 'metric-item';
+      const obsLbl = document.createElement('span');
+      obsLbl.className = 'metric-label';
+      obsLbl.textContent = 'Observed';
+      const obsVal = document.createElement('span');
+      obsVal.className = 'metric-value';
+      obsVal.textContent = formatObserved(item.observed);
+      obsItem.appendChild(obsLbl);
+      obsItem.appendChild(obsVal);
+
+      const qtyItem = document.createElement('div');
+      qtyItem.className = 'metric-item';
+      const qtyLbl = document.createElement('span');
+      qtyLbl.className = 'metric-label';
+      qtyLbl.textContent = 'Estimated Stock';
+      const qtyVal = document.createElement('span');
+      qtyVal.className = 'metric-value';
+      qtyVal.textContent = formatQuantity(item.quantity) + ` (${item.confidence_level} conf.)`;
+      qtyItem.appendChild(qtyLbl);
+      qtyItem.appendChild(qtyVal);
+
+      metricsRow.appendChild(obsItem);
+      metricsRow.appendChild(qtyItem);
+      card.appendChild(metricsRow);
+
+      // Staff check alert
+      if (item.needs_staff_check) {
+        const staffBox = document.createElement('div');
+        staffBox.className = 'staff-check-badge';
+        const stTitle = document.createElement('span');
+        stTitle.className = 'staff-check-title';
+        stTitle.textContent = '⚠️ Staff Check Required';
+        const stReason = document.createElement('span');
+        stReason.textContent = item.check_reason || 'Staff review recommended';
+        staffBox.appendChild(stTitle);
+        staffBox.appendChild(stReason);
+        card.appendChild(staffBox);
+      }
+
+      // Change Note (Day-to-day progression)
+      if (item.change_note) {
+        const chgBox = document.createElement('div');
+        chgBox.className = 'change-note-banner';
+        chgBox.textContent = `Change: ${item.change_note}`;
+        card.appendChild(chgBox);
+      }
+
+      return card;
+    }
+
+    function renderResults(data, imgSrc) {
+      inspectedImage.src = imgSrc;
+      bboxOverlay.replaceChildren();
+
+      // Draw bounding boxes on photo
+      if (data.items && data.items.length > 0) {
+        data.items.forEach(item => {
+          if (!item.position) return;
+          const box = document.createElement('div');
+          box.className = 'bbox-rect';
+          box.style.top = (item.position.ymin * 100) + '%';
+          box.style.left = (item.position.xmin * 100) + '%';
+          box.style.width = ((item.position.xmax - item.position.xmin) * 100) + '%';
+          box.style.height = ((item.position.ymax - item.position.ymin) * 100) + '%';
+          box.style.border = `2px solid ${getStageColor(item.stage)}`;
+
+          if (item.worst_stage === 'spoiled' || item.worst_stage === 'unsafe') {
+            box.style.outline = '2px solid #ef4444';
+            box.style.outlineOffset = '1px';
+          }
+
+          const label = document.createElement('span');
+          label.className = 'bbox-label';
+          label.style.backgroundColor = getStageColor(item.stage);
+          label.textContent = item.name;
+          box.appendChild(label);
+
+          bboxOverlay.appendChild(box);
+        });
+      }
+
+      // Status & Instruction banners
+      if (data.photo_status !== 'ok') {
+        inspectStatusBanner.textContent = `Photo status: ${data.photo_status}. ${data.photo_note || ''}`;
+        inspectStatusBanner.style.display = 'block';
+      } else {
+        inspectStatusBanner.style.display = 'none';
+      }
+
+      const hasInstruction = (data.photo_issues && data.photo_issues.includes('instruction_text')) ||
+        (data.items && data.items.some(i => i.issues && i.issues.includes('instruction_text')));
+      inspectInstructionBanner.style.display = hasInstruction ? 'block' : 'none';
+
+      // Rank produce items
+      itemsContainer.replaceChildren();
+      const items = data.items || [];
+      itemsSummaryCount.textContent = `${items.length} items detected`;
+
+      if (items.length === 0) {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'text-muted';
+        emptyMsg.style.padding = '1rem';
+        emptyMsg.textContent = data.photo_status === 'no_produce' ? 'No produce detected in this shelf photo.' : 'No items found.';
+        itemsContainer.appendChild(emptyMsg);
+      } else {
+        const ranked = rankItems(items);
+        const top3 = ranked.slice(0, 3);
+        const remaining = ranked.slice(3);
+
+        top3.forEach(item => {
+          itemsContainer.appendChild(createItemCard(item));
+        });
+
+        if (remaining.length > 0) {
+          const collapsedRow = document.createElement('div');
+          collapsedRow.className = 'collapsed-row';
+
+          const toggleBtn = document.createElement('button');
+          toggleBtn.type = 'button';
+          toggleBtn.className = 'btn-toggle-collapsed';
+          toggleBtn.textContent = `+${remaining.length} more items (click to expand)`;
+
+          const hiddenContainer = document.createElement('div');
+          hiddenContainer.className = 'remaining-cards-container';
+          hiddenContainer.style.display = 'none';
+
+          remaining.forEach(item => {
+            hiddenContainer.appendChild(createItemCard(item));
+          });
+
+          toggleBtn.addEventListener('click', () => {
+            const isHidden = hiddenContainer.style.display === 'none';
+            hiddenContainer.style.display = isHidden ? 'flex' : 'none';
+            toggleBtn.textContent = isHidden ? `Hide ${remaining.length} items` : `+${remaining.length} more items (click to expand)`;
+          });
+
+          collapsedRow.appendChild(toggleBtn);
+          collapsedRow.appendChild(hiddenContainer);
+          itemsContainer.appendChild(collapsedRow);
+        }
+      }
+
+      // Metadata footer
+      if (data.inspector) {
+        inspectFooter.replaceChildren();
+        const meta = data.inspector;
+        const metaItems = [
+          `Model: ${meta.model}`,
+          `Thinking: ${meta.thinking_level}`,
+          `Prompt: v${meta.prompt_version}`,
+          `Latency: ${meta.latency_ms} ms`,
+          `Gemini Calls: ${meta.calls}`,
+          `Hedges: ${meta.hedges || 0}`,
+          `Zoomed Groups: ${meta.zoomed_groups}`
+        ];
+
+        metaItems.forEach(text => {
+          const span = document.createElement('span');
+          span.textContent = text;
+          inspectFooter.appendChild(span);
+        });
+
+        inspectFooter.style.display = 'flex';
+      } else {
+        inspectFooter.style.display = 'none';
+      }
+
+      inspectResultContainer.style.display = 'grid';
+    }
+
+    async function handleInspect() {
+      const code = inspectAccessCodeEl.value.trim() || accessCodeEl.value.trim();
+      if (!code) {
+        inspectError.textContent = 'Please enter the Demo Access Code.';
+        inspectError.style.display = 'block';
+        inspectAccessCodeEl.focus();
+        return;
+      }
+      localStorage.setItem('lc_code', code);
+      inspectAccessCodeEl.value = code;
+      accessCodeEl.value = code;
+
+      let photoFile = null;
+      let displayUrl = null;
+
+      if (shelfPhotoInput.files && shelfPhotoInput.files.length > 0) {
+        photoFile = shelfPhotoInput.files[0];
+        displayUrl = URL.createObjectURL(photoFile);
+      } else if (activeSampleBlob) {
+        photoFile = activeSampleBlob;
+        displayUrl = activeSampleUrl;
+      }
+
+      if (!photoFile) {
+        inspectError.textContent = 'Please select a sample photo or upload a shelf photo.';
+        inspectError.style.display = 'block';
+        return;
+      }
+
+      inspectError.style.display = 'none';
+      inspectLoading.style.display = 'flex';
+      btnInspect.disabled = true;
+
+      const shelfId = getOrCreateShelfId();
+      const formData = new FormData();
+      formData.append('photo', photoFile, 'shelf_photo.jpg');
+      formData.append('shelf_id', shelfId);
+
+      const binKg = binCapacityEl.value.trim();
+      if (binKg) {
+        formData.append('bin_capacity_kg', binKg);
+      }
+
+      try {
+        const res = await fetch('/demo/inspect', {
+          method: 'POST',
+          headers: {
+            'X-Demo-Access-Code': code
+          },
+          body: formData
+        });
+
+        if (res.status === 401) {
+          throw new Error('Invalid access code.');
+        } else if (res.status === 415) {
+          throw new Error('Please upload a JPEG or PNG photo.');
+        } else if (res.status === 413) {
+          throw new Error('Image exceeds maximum upload size (8 MB).');
+        } else if (res.status === 429) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Rate limit reached. Please try again later.');
+        } else if (res.status === 502) {
+          throw new Error('Inspection failed, please try again.');
+        } else if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Inspection request failed (${res.status})`);
+        }
+
+        const data = await res.json();
+        renderResults(data, displayUrl);
+      } catch (err) {
+        inspectError.textContent = err.message;
+        inspectError.style.display = 'block';
+      } finally {
+        inspectLoading.style.display = 'none';
+        btnInspect.disabled = false;
+      }
+    }
+
+    btnInspect.addEventListener('click', handleInspect);
+
+    /* =========================================================================
+       SECTION 2: Voice Negotiator Script (Unchanged functionality)
+       ========================================================================= */
+
     let ws = null;
     let audioCtx = null;
     let micStream = null;
@@ -449,10 +1545,20 @@
     const resultCard = document.getElementById('resultCard');
     const resultContent = document.getElementById('resultContent');
 
-    // Restore saved code from localStorage if present
-    if (localStorage.getItem('lc_code')) {
-      accessCodeEl.value = localStorage.getItem('lc_code');
+    // Sync access codes
+    const savedCode = localStorage.getItem('lc_code') || '';
+    if (savedCode) {
+      accessCodeEl.value = savedCode;
+      inspectAccessCodeEl.value = savedCode;
     }
+    inspectAccessCodeEl.addEventListener('input', () => {
+      accessCodeEl.value = inspectAccessCodeEl.value;
+      localStorage.setItem('lc_code', inspectAccessCodeEl.value.trim());
+    });
+    accessCodeEl.addEventListener('input', () => {
+      inspectAccessCodeEl.value = accessCodeEl.value;
+      localStorage.setItem('lc_code', accessCodeEl.value.trim());
+    });
 
     function setStatus(text, type = '') {
       statusText.textContent = text;
@@ -491,7 +1597,6 @@
       resultCard.classList.remove('visible');
 
       try {
-        // 1. POST /demo/sessions
         const scenarioId = scenarioSelect.value;
         const res = await fetch('/demo/sessions', {
           method: 'POST',
@@ -512,16 +1617,13 @@
         const session = await res.json();
         const { ws_url, token } = session;
 
-        // 2. Setup AudioContexts on user gesture
         audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
         await audioCtx.audioWorklet.addModule('/static/capture-worklet.js');
         await audioCtx.audioWorklet.addModule('/static/playback-worklet.js');
 
-        // Playback node
         playbackNode = new AudioWorkletNode(audioCtx, 'playback-worklet');
         playbackNode.connect(audioCtx.destination);
 
-        // Capture mic
         micStream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
         });
@@ -529,7 +1631,6 @@
         captureNode = new AudioWorkletNode(audioCtx, 'capture-worklet');
         micSource.connect(captureNode);
 
-        // 3. Connect WebSocket
         setStatus('Connecting audio...', 'busy');
         connectWebSocket(ws_url, token);
 
@@ -550,10 +1651,8 @@
 
       ws.onopen = () => {
         setStatus('Authenticating...', 'busy');
-        // Send initial auth message
         ws.send(JSON.stringify({ type: 'auth', token: token }));
 
-        // Start streaming mic audio from capture worklet
         captureNode.port.onmessage = (event) => {
           if (event.data instanceof ArrayBuffer) {
             if (ws && ws.readyState === WebSocket.OPEN) {
@@ -568,7 +1667,6 @@
 
       ws.onmessage = (event) => {
         if (event.data instanceof ArrayBuffer) {
-          // Live 24 kHz PCM audio chunk
           if (waitingForAgentAudio && speechEndTs > 0) {
             const latMs = Math.round(performance.now() - speechEndTs);
             waitingForAgentAudio = false;

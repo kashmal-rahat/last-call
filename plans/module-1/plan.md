@@ -17,7 +17,7 @@ Judging gives 40% to technical implementation, so the module must be **robust an
 |---|---|
 | `temperature`, `top_p` and `top_k` are "deprecated and ignored" on Gemini 3.6 Flash and later; "in future model generations, supplying these parameters returns an HTTP 400 error". The 3.8 migration checklist says to remove them. `candidate_count`, `presence_penalty` and `frequency_penalty` return an error | **Never send any of them, or `seed`.** A test enforces this (Step 4) |
 | "To improve determinism, define a system instruction with explicit rules" | Consistency comes from the strict step-by-step prompt (Appendix A), a fixed `thinking_level`, the response schema, and code-computed scores |
-| Thinking is always on: `thinking_level` is `low`, `medium` (default) or `high`. `minimal` returns an error | Fixed at `medium`, Google's default and its recommended balance of quality and speed. Thinking tokens are billed as output |
+| Thinking: `thinking_level` is `low`, `medium` (default) or `high`. `minimal` returns an error | **Measured in the smoke check (2026-10-09): `medium` took 22–52 s per photo (2.2k–5.9k output tokens, mostly thinking) and timed out with zoom; `low` took 4–14 s with no thinking tokens and similar readings. Fixed at `low`** |
 | `media_resolution`: low 280, medium 560, high 1120 tokens per image (ultra_high 2240, set per image only). Google recommends `high` for image analysis | Always `high`. A wide shelf shot gets only 1120 tokens, so small details are lost; the zoom pass fixes that |
 | Boxes come as `[ymin, xmin, ymax, xmax]` on a 0–1000 scale. Structured output works with Pydantic schemas | Our schema. On Roboflow's vision evals, 3.8 Flash is strong at identification (97.9%) and weaker at detection (68.1%) and counting (78.8%), so code tolerates loose boxes and reports counts as ranges |
 | Agentic Vision (the model zooms using code execution) can take minutes, and code execution can't be combined with function calling in one request | Not used. We crop in code instead |
@@ -59,7 +59,7 @@ Judging gives 40% to technical implementation, so the module must be **robust an
 | D27 | Module 1 doesn't store photos: `photo_uri = "upload:sha256:<hex>"`. The bucket and signed uploads come in Module 8 | No Terraform change in Module 1 |
 | D28 | Results go to `inspections/{inspection_id}`, with a pointer `shelves/{mart_id}__{shelf_id}` → `latest_inspection_id`. Inspection states are added in Module 6 | Previous-photo lookup without a composite index |
 | D29 | Two passes: pass 1 reads the whole shelf; code picks doubtful groups (at most 6), crops them from the full-resolution photo, and pass 2 reads each crop in parallel. Code merges, and the worse `worst_stage` always wins | A shelf shot gets only 1120 image tokens, so small mould or rot is missed. Clear photos of sound stock still take one call |
-| D30 | No sampling parameters (`temperature`, `top_p`, `top_k`, `seed`, `candidate_count`, penalties) in any Gemini call. `media_resolution=high` and `thinking_level=medium` always | Deprecated and ignored on 3.6+, an error on future models; Google's determinism advice is explicit system instructions |
+| D30 | No sampling parameters (`temperature`, `top_p`, `top_k`, `seed`, `candidate_count`, penalties) in any Gemini call. `media_resolution=high` and `thinking_level=low` always (measured: medium was 3–5× slower with no better readings) | Deprecated and ignored on 3.6+, an error on future models; Google's determinism advice is explicit system instructions |
 | D31 | Quantity is the photo estimate as a range (counts taken from close-ups when zoomed). Staff can edit it, and the final weight is settled at pickup. No ERP in the prototype | An exact count from one photo isn't reliable (hidden layers, piece weight varies); a range plus confirmation is honest and enough for the demo |
 
 Also set the module order in `plans/README.md` to `0, 2, then 1`.
@@ -258,7 +258,13 @@ class InspectorOutput(BaseModel):
 
 **`zoom.py` (D29). Pure; works on pass-1 `DetectedItem`s after box and name cleaning (guardrail rules 1–2, exposed as `clean_item(item) -> DetectedItem | None`).**
 
-**One list, one set of indices:** right after pass 1, `items = [c for c in (clean_item(i) for i in out.items) if c]`. Zoom selection, merging and `apply_guardrails` all use this cleaned list, so an index always means the same group. Dropped items never come back.
+**One list, one set of indices:** right after pass 1, `items = merge_neighbours([c for c in (clean_item(i) for i in out.items) if c])`.
+
+**`merge_neighbours(items) -> list[DetectedItem]` (guardrails.py, pure).** Enforces the prompt's own grouping rule in code, because the model sometimes splits neighbouring crates of the same produce into separate groups (seen in the smoke check). Two groups merge when their simple names match (`names_match`) and their boxes overlap or the gap between them is at most 30 on the 0–1000 scale, both horizontally and vertically. Repeat until nothing merges. Never merge groups with `in_mixed_crate` true. Merged group:
+  - `box_2d` = the union box; `name`, `stage`, `stage_level`, `evidence` from the larger-area group
+  - `worst_stage` = the worst of all; `visible_issues` = union; `needs_staff_check` = any; `check_reason` = first non-empty; `confidence` = the lowest
+  - `observed`: if both use the same method, `count` adds min and max, `fill_level` keeps the larger group's; otherwise keep the larger group's. `sale_min`/`sale_max`: add them if the units match, otherwise keep the larger group's
+  - Tests: two touching tomato boxes become one with summed counts; same name far apart stays two; different names touching stay two; worst stage and lowest confidence win; a chain of three crates merges into one. Zoom selection, merging and `apply_guardrails` all use this cleaned list, so an index always means the same group. Dropped items never come back.
 
 `select_for_zoom(items: list[DetectedItem], *, max_crops: int = 6) -> list[int]` returns indices in priority order. A group qualifies if any of:
 1. `visible_issues` contains mould, slime, rot, leaking or pest_damage
@@ -333,7 +339,7 @@ class InspectorError(Exception): ...           # .reason: short string safe to l
 @lru_cache
 def get_genai_client() -> genai.Client          # vertexai=True, project and location from get_settings()
 
-THINKING_LEVEL = "medium"                       # fixed (D30)
+THINKING_LEVEL = "low"                          # fixed (D30, measured in the smoke check)
 ZOOM_ENABLED = True                             # the eval's --no-zoom flag overrides it
 FORBIDDEN_CONFIG_KEYS = {"temperature", "top_p", "top_k", "seed", "candidate_count",
                          "presence_penalty", "frequency_penalty"}
@@ -379,7 +385,7 @@ One private helper does every Gemini call: `_call(client, image_jpeg, text, conf
   - **D30 guard:** `build_config()` dumped with `model_dump(exclude_none=True)` contains none of `FORBIDDEN_CONFIG_KEYS`, and a scan of `services/api/lastcall_api/inspector/*.py` finds none of those names except in the `FORBIDDEN_CONFIG_KEYS` line
 
 ### Step 5: 🛑 Smoke check (`scripts/smoke_inspector.py`, results in `plans/module-1/results/smoke.md`)
-No config comparison: `thinking_level` is fixed at `medium` (Google's default for 3.8 Flash; D30). This step only catches problems that would block the eval. Use 3–4 photos, at least one multi-produce shelf and, if available, the "one mouldy piece among good ones" photo. Real model, through `inspect_photo`.
+Done 2026-10-09: the smoke check compared `medium` and `low` and fixed `thinking_level` at `low` (D30). This step only catches problems that would block the eval. Use 3–4 photos, at least one multi-produce shelf and, if available, the "one mouldy piece among good ones" photo. Real model, through `inspect_photo`.
 1. **Schema accepted:** report the exact error if Vertex rejects `InspectorOutput`. The likely fix is replacing `box_2d: list[int]` with four int fields.
 2. **Boxes:** draw boxes plus `name · stage/worst` labels with Pillow (mark zoomed groups with a `Z`); save `data/probe/inspector_boxes_<n>.jpg` for the user to check. Once zoom is built, also save the crops of one photo as `data/probe/inspector_crop_<n>_<i>.jpg` to check the margins.
 3. **Numbers per photo:** latency, calls, tokens (including cached and thinking), cost (`gemini-3.8-flash`: $0.75/M in, $3.75/M out until 2026-12-31).

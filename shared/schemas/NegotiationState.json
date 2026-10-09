@@ -42,6 +42,11 @@
       ],
       "default": null,
       "title": "Accepted Price"
+    },
+    "quoted": {
+      "default": false,
+      "title": "Quoted",
+      "type": "boolean"
     }
   },
   "required": [

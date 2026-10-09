@@ -876,16 +876,22 @@ version = "0.1.0"
 source = { editable = "services/api" }
 dependencies = [
     { name = "fastapi" },
+    { name = "google-genai" },
     { name = "lastcall-shared" },
+    { name = "pillow" },
     { name = "pydantic-settings" },
+    { name = "python-multipart" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.110.0" },
+    { name = "google-genai", specifier = ">=1.0" },
     { name = "lastcall-shared", editable = "shared" },
+    { name = "pillow", specifier = ">=10.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0" },
+    { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.29.0" },
 ]
 

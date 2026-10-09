@@ -1,0 +1,29 @@
+{
+  "properties": {
+    "method": {
+      "enum": [
+        "count",
+        "fill_level"
+      ],
+      "title": "Method",
+      "type": "string"
+    },
+    "min": {
+      "minimum": 0,
+      "title": "Min",
+      "type": "integer"
+    },
+    "max": {
+      "minimum": 0,
+      "title": "Max",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "method",
+    "min",
+    "max"
+  ],
+  "title": "ObservedQuantity",
+  "type": "object"
+}

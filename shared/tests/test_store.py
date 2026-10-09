@@ -9,6 +9,7 @@ import pytest
 from lastcall_shared.models import (
     CallResult,
     DealRecord,
+    FreshnessResult,
     OutboxMessage,
     StaffTask,
     TranscriptEntry,
@@ -198,3 +199,55 @@ async def test_daily_sessions_cap(store):
     assert await store.incr_daily_sessions(date_str, 2) is True
     assert await store.incr_daily_sessions(date_str, 2) is True
     assert await store.incr_daily_sessions(date_str, 2) is False  # Reached cap of 2
+
+
+@pytest.mark.asyncio
+async def test_inspection_lifecycle(store):
+    # Unknown shelf and inspection id return None
+    assert await store.get_inspection("nonexistent_id") is None
+    assert await store.get_latest_inspection("mart_1", "unknown_shelf") is None
+
+    # 1. Save and get inspection
+    insp_1 = FreshnessResult(
+        mart_id="mart_1",
+        shelf_id="shelf_1",
+        inspection_id="insp_1",
+        photo_uri="gs://test/photo1.jpg",
+        taken_at=NOW,
+        photo_status="no_produce",
+        photo_note="Empty shelf",
+        items=[],
+    )
+    await store.save_inspection(insp_1)
+    fetched_1 = await store.get_inspection("insp_1")
+    assert fetched_1 is not None
+    assert fetched_1.inspection_id == "insp_1"
+    assert fetched_1.photo_note == "Empty shelf"
+
+    # Latest inspection on shelf_1 returns insp_1
+    latest = await store.get_latest_inspection("mart_1", "shelf_1")
+    assert latest is not None
+    assert latest.inspection_id == "insp_1"
+
+    # 2. Save a newer inspection to the same shelf
+    insp_2 = FreshnessResult(
+        mart_id="mart_1",
+        shelf_id="shelf_1",
+        inspection_id="insp_2",
+        previous_inspection_id="insp_1",
+        photo_uri="gs://test/photo2.jpg",
+        taken_at=NOW + timedelta(hours=1),
+        photo_status="no_produce",
+        photo_note="Still empty",
+        items=[],
+    )
+    await store.save_inspection(insp_2)
+
+    # get_latest_inspection now returns the newer one
+    latest_2 = await store.get_latest_inspection("mart_1", "shelf_1")
+    assert latest_2 is not None
+    assert latest_2.inspection_id == "insp_2"
+    assert latest_2.previous_inspection_id == "insp_1"
+
+    # Other shelf still returns None
+    assert await store.get_latest_inspection("mart_1", "shelf_2") is None

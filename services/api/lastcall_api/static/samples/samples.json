@@ -1,0 +1,14 @@
+[
+  {
+    "id": "smoke2",
+    "label": "Bananas & Apples (Shelf B)",
+    "url": "/static/samples/sample_smoke2.jpg",
+    "series": false
+  },
+  {
+    "id": "smoke3",
+    "label": "Tomatoes, Cucumbers & Guavas (Shelf C)",
+    "url": "/static/samples/sample_smoke3.jpg",
+    "series": false
+  }
+]

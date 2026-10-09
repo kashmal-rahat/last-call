@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     APP_SIGNING_KEY: SecretStr
     DEMO_ACCESS_CODE: str | None = None
     DEMO_DAILY_SESSION_CAP: int = 50
+    DEMO_DAILY_INSPECT_CAP: int = 100
+    MAX_UPLOAD_MB: int = 8
     IP_RATE_LIMIT_PER_HOUR: int = 20
     VOICE_WS_URL: str | None = None
 

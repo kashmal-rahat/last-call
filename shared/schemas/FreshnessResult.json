@@ -36,6 +36,79 @@
       "title": "BoundingBox",
       "type": "object"
     },
+    "InspectorMeta": {
+      "properties": {
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "prompt_version": {
+          "title": "Prompt Version",
+          "type": "string"
+        },
+        "thinking_level": {
+          "title": "Thinking Level",
+          "type": "string"
+        },
+        "latency_ms": {
+          "title": "Latency Ms",
+          "type": "integer"
+        },
+        "calls": {
+          "default": 1,
+          "title": "Calls",
+          "type": "integer"
+        },
+        "hedges": {
+          "default": 0,
+          "title": "Hedges",
+          "type": "integer"
+        },
+        "zoomed_groups": {
+          "default": 0,
+          "title": "Zoomed Groups",
+          "type": "integer"
+        },
+        "zoom_failures": {
+          "default": 0,
+          "title": "Zoom Failures",
+          "type": "integer"
+        },
+        "input_tokens": {
+          "default": 0,
+          "title": "Input Tokens",
+          "type": "integer"
+        },
+        "output_tokens": {
+          "default": 0,
+          "title": "Output Tokens",
+          "type": "integer"
+        },
+        "cached_tokens": {
+          "default": 0,
+          "title": "Cached Tokens",
+          "type": "integer"
+        },
+        "thoughts_tokens": {
+          "default": 0,
+          "title": "Thoughts Tokens",
+          "type": "integer"
+        },
+        "candidates_tokens": {
+          "default": 0,
+          "title": "Candidates Tokens",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "model",
+        "prompt_version",
+        "thinking_level",
+        "latency_ms"
+      ],
+      "title": "InspectorMeta",
+      "type": "object"
+    },
     "ItemAssessment": {
       "properties": {
         "item_key": {
@@ -49,6 +122,42 @@
         "position": {
           "$ref": "#/$defs/BoundingBox"
         },
+        "grid": {
+          "title": "Grid",
+          "type": "string"
+        },
+        "in_mixed_crate": {
+          "default": false,
+          "title": "In Mixed Crate",
+          "type": "boolean"
+        },
+        "issues": {
+          "items": {
+            "enum": [
+              "bruising",
+              "browning",
+              "dark_spots",
+              "yellowing",
+              "wilting",
+              "shrivelling",
+              "soft_spots",
+              "splitting",
+              "leaking",
+              "pest_damage",
+              "rot",
+              "slime",
+              "mould"
+            ],
+            "type": "string"
+          },
+          "title": "Issues",
+          "type": "array"
+        },
+        "evidence": {
+          "default": "",
+          "title": "Evidence",
+          "type": "string"
+        },
         "stage": {
           "enum": [
             "fresh",
@@ -58,6 +167,26 @@
             "unsafe"
           ],
           "title": "Stage",
+          "type": "string"
+        },
+        "stage_level": {
+          "enum": [
+            "early",
+            "mid",
+            "late"
+          ],
+          "title": "Stage Level",
+          "type": "string"
+        },
+        "worst_stage": {
+          "enum": [
+            "fresh",
+            "ripening",
+            "overripe",
+            "spoiled",
+            "unsafe"
+          ],
+          "title": "Worst Stage",
           "type": "string"
         },
         "score": {
@@ -90,20 +219,8 @@
           "default": null,
           "title": "Change Note"
         },
-        "issues": {
-          "items": {
-            "enum": [
-              "bruising",
-              "browning",
-              "mould",
-              "rot",
-              "wilting",
-              "other"
-            ],
-            "type": "string"
-          },
-          "title": "Issues",
-          "type": "array"
+        "observed": {
+          "$ref": "#/$defs/ObservedQuantity"
         },
         "quantity": {
           "$ref": "#/$defs/QuantityEstimate"
@@ -114,9 +231,45 @@
           "title": "Confidence",
           "type": "number"
         },
+        "confidence_level": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence Level",
+          "type": "string"
+        },
         "needs_staff_check": {
           "default": false,
           "title": "Needs Staff Check",
+          "type": "boolean"
+        },
+        "staff_check_reasons": {
+          "items": {
+            "enum": [
+              "spoiled_or_unsafe",
+              "bad_pieces_in_group",
+              "low_confidence",
+              "unknown_produce",
+              "mixed_crate",
+              "safety_override",
+              "model_flagged",
+              "zoom_disagreement"
+            ],
+            "type": "string"
+          },
+          "title": "Staff Check Reasons",
+          "type": "array"
+        },
+        "check_reason": {
+          "default": "",
+          "title": "Check Reason",
+          "type": "string"
+        },
+        "zoomed": {
+          "default": false,
+          "title": "Zoomed",
           "type": "boolean"
         }
       },
@@ -124,12 +277,46 @@
         "item_key",
         "name",
         "position",
+        "grid",
         "stage",
+        "stage_level",
+        "worst_stage",
         "score",
+        "observed",
         "quantity",
-        "confidence"
+        "confidence",
+        "confidence_level"
       ],
       "title": "ItemAssessment",
+      "type": "object"
+    },
+    "ObservedQuantity": {
+      "properties": {
+        "method": {
+          "enum": [
+            "count",
+            "fill_level"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "min": {
+          "minimum": 0,
+          "title": "Min",
+          "type": "integer"
+        },
+        "max": {
+          "minimum": 0,
+          "title": "Max",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "method",
+        "min",
+        "max"
+      ],
+      "title": "ObservedQuantity",
       "type": "object"
     },
     "QuantityEstimate": {
@@ -164,7 +351,7 @@
   },
   "properties": {
     "schema_version": {
-      "default": "2.0.0",
+      "default": "3.0.0",
       "title": "Schema Version",
       "type": "string"
     },
@@ -201,6 +388,37 @@
       "title": "Taken At",
       "type": "string"
     },
+    "photo_status": {
+      "default": "ok",
+      "enum": [
+        "ok",
+        "no_produce",
+        "unreadable"
+      ],
+      "title": "Photo Status",
+      "type": "string"
+    },
+    "photo_note": {
+      "default": "",
+      "title": "Photo Note",
+      "type": "string"
+    },
+    "photo_issues": {
+      "items": {
+        "enum": [
+          "blurry",
+          "too_dark",
+          "overexposed",
+          "glare",
+          "partly_blocked",
+          "too_far",
+          "instruction_text"
+        ],
+        "type": "string"
+      },
+      "title": "Photo Issues",
+      "type": "array"
+    },
     "items": {
       "items": {
         "$ref": "#/$defs/ItemAssessment"
@@ -208,12 +426,16 @@
       "title": "Items",
       "type": "array"
     },
-    "photo_issues": {
-      "items": {
-        "type": "string"
-      },
-      "title": "Photo Issues",
-      "type": "array"
+    "inspector": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/InspectorMeta"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [

@@ -1,0 +1,73 @@
+{
+  "properties": {
+    "model": {
+      "title": "Model",
+      "type": "string"
+    },
+    "prompt_version": {
+      "title": "Prompt Version",
+      "type": "string"
+    },
+    "thinking_level": {
+      "title": "Thinking Level",
+      "type": "string"
+    },
+    "latency_ms": {
+      "title": "Latency Ms",
+      "type": "integer"
+    },
+    "calls": {
+      "default": 1,
+      "title": "Calls",
+      "type": "integer"
+    },
+    "hedges": {
+      "default": 0,
+      "title": "Hedges",
+      "type": "integer"
+    },
+    "zoomed_groups": {
+      "default": 0,
+      "title": "Zoomed Groups",
+      "type": "integer"
+    },
+    "zoom_failures": {
+      "default": 0,
+      "title": "Zoom Failures",
+      "type": "integer"
+    },
+    "input_tokens": {
+      "default": 0,
+      "title": "Input Tokens",
+      "type": "integer"
+    },
+    "output_tokens": {
+      "default": 0,
+      "title": "Output Tokens",
+      "type": "integer"
+    },
+    "cached_tokens": {
+      "default": 0,
+      "title": "Cached Tokens",
+      "type": "integer"
+    },
+    "thoughts_tokens": {
+      "default": 0,
+      "title": "Thoughts Tokens",
+      "type": "integer"
+    },
+    "candidates_tokens": {
+      "default": 0,
+      "title": "Candidates Tokens",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "model",
+    "prompt_version",
+    "thinking_level",
+    "latency_ms"
+  ],
+  "title": "InspectorMeta",
+  "type": "object"
+}

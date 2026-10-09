@@ -10,6 +10,7 @@ from lastcall_shared.models import (
     CallRecord,
     CallResult,
     DealRecord,
+    FreshnessResult,
     NegotiationState,
     OutboxMessage,
     StaffTask,
@@ -39,6 +40,9 @@ class CallStore(Protocol):
     async def get_staff_tasks(self, call_id: str | None = None) -> list[StaffTask]: ...
     async def finish_call(self, call_id: str, result: CallResult) -> None: ...
     async def incr_daily_sessions(self, date: str, cap: int) -> bool: ...
+    async def save_inspection(self, result: FreshnessResult) -> None: ...
+    async def get_inspection(self, inspection_id: str) -> FreshnessResult | None: ...
+    async def get_latest_inspection(self, mart_id: str, shelf_id: str) -> FreshnessResult | None: ...
 
 
 class InMemoryStore:
@@ -54,6 +58,8 @@ class InMemoryStore:
         self.outbox: list[OutboxMessage] = []
         self.staff_tasks: list[StaffTask] = []
         self.daily_sessions: dict[str, int] = {}  # date_str -> count
+        self.inspections: dict[str, FreshnessResult] = {}
+        self.shelves: dict[tuple[str, str], str] = {}  # (mart_id, shelf_id) -> latest_inspection_id
 
     def _now(self) -> datetime:
         if self.clock:
@@ -220,3 +226,19 @@ class InMemoryStore:
                 return False
             self.daily_sessions[date] = current + 1
             return True
+
+    async def save_inspection(self, result: FreshnessResult) -> None:
+        async with self._lock:
+            self.inspections[result.inspection_id] = result
+            self.shelves[(result.mart_id, result.shelf_id)] = result.inspection_id
+
+    async def get_inspection(self, inspection_id: str) -> FreshnessResult | None:
+        async with self._lock:
+            return self.inspections.get(inspection_id)
+
+    async def get_latest_inspection(self, mart_id: str, shelf_id: str) -> FreshnessResult | None:
+        async with self._lock:
+            latest_id = self.shelves.get((mart_id, shelf_id))
+            if not latest_id:
+                return None
+            return self.inspections.get(latest_id)

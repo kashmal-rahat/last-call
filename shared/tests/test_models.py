@@ -16,8 +16,10 @@ from lastcall_shared.models import (
     ConfirmedQuantity,
     DealBrief,
     FreshnessResult,
+    InspectorMeta,
     ItemAssessment,
     MartInfo,
+    ObservedQuantity,
     QuantityEstimate,
 )
 from lastcall_shared.logging_utils import (
@@ -34,14 +36,116 @@ def test_valid_freshness_from_fixture():
     with open(FIXTURES_DIR / "valid_freshness.json") as f:
         data = json.load(f)
     result = FreshnessResult.model_validate(data)
+    assert result.schema_version == "3.0.0"
     assert result.mart_id == "mart_khi_001"
     assert result.inspection_id == "insp_20261006_01"
     assert result.shelf_id == "shelf_produce_01"
+    assert result.photo_status == "ok"
     assert result.previous_inspection_id is None
     assert len(result.items) == 1
-    assert result.items[0].item_key == "crate_mangoes_top"
+    assert result.items[0].item_key == "mango_top_left"
+    assert result.items[0].grid == "top-left"
+    assert result.items[0].stage_level == "mid"
     assert result.items[0].quantity.unit == "kg"
+    assert result.items[0].observed.method == "count"
     assert result.items[0].issues == ["bruising"]
+    assert result.inspector is not None
+    assert result.inspector.model == "gemini-3.8-flash"
+
+
+def test_item_assessment_worst_stage_cannot_be_better():
+    # Valid: worst_stage == stage or worse
+    item = ItemAssessment(
+        item_key="k1",
+        name="banana",
+        position=BoundingBox(ymin=0, xmin=0, ymax=0.5, xmax=0.5),
+        grid="top-left",
+        stage="ripening",
+        stage_level="mid",
+        worst_stage="spoiled",
+        score=69.0,
+        observed=ObservedQuantity(method="count", min=10, max=12),
+        quantity=QuantityEstimate(unit="dozen", low=1.0, high=1.0),
+        confidence=0.9,
+        confidence_level="high",
+    )
+    assert item.worst_stage == "spoiled"
+
+    # Invalid: worst_stage (fresh) is better than stage (ripening)
+    with pytest.raises(ValidationError, match="worst_stage .* cannot be better than stage"):
+        ItemAssessment(
+            item_key="k1",
+            name="banana",
+            position=BoundingBox(ymin=0, xmin=0, ymax=0.5, xmax=0.5),
+            grid="top-left",
+            stage="ripening",
+            stage_level="mid",
+            worst_stage="fresh",
+            score=69.0,
+            observed=ObservedQuantity(method="count", min=10, max=12),
+            quantity=QuantityEstimate(unit="dozen", low=1.0, high=1.0),
+            confidence=0.9,
+            confidence_level="high",
+        )
+
+
+def test_freshness_result_photo_status_no_produce_items_empty():
+    # Invalid: photo_status != 'ok' with items
+    item = ItemAssessment(
+        item_key="k1",
+        name="banana",
+        position=BoundingBox(ymin=0, xmin=0, ymax=0.5, xmax=0.5),
+        grid="top-left",
+        stage="fresh",
+        stage_level="early",
+        worst_stage="fresh",
+        score=95.0,
+        observed=ObservedQuantity(method="count", min=10, max=12),
+        quantity=QuantityEstimate(unit="dozen", low=1.0, high=1.0),
+        confidence=0.9,
+        confidence_level="high",
+    )
+    with pytest.raises(ValidationError, match="items must be empty when photo_status is"):
+        FreshnessResult(
+            mart_id="m1",
+            shelf_id="s1",
+            inspection_id="i1",
+            photo_uri="upload:sha256:abc",
+            taken_at="2026-10-09T10:00:00Z",
+            photo_status="no_produce",
+            items=[item],
+        )
+
+    # Valid: photo_status="no_produce" with empty items
+    res = FreshnessResult(
+        mart_id="m1",
+        shelf_id="s1",
+        inspection_id="i1",
+        photo_uri="upload:sha256:abc",
+        taken_at="2026-10-09T10:00:00Z",
+        photo_status="no_produce",
+        items=[],
+    )
+    assert res.photo_status == "no_produce"
+
+
+def test_observed_quantity_validation():
+    # Valid count
+    oq = ObservedQuantity(method="count", min=5, max=10)
+    assert oq.min == 5
+
+    # Invalid: min > max
+    with pytest.raises(ValidationError, match="min .* cannot exceed max"):
+        ObservedQuantity(method="count", min=15, max=10)
+
+    # Valid fill level
+    oq_fill = ObservedQuantity(method="fill_level", min=20, max=80)
+    assert oq_fill.max == 80
+
+    # Invalid: fill level max > 100
+    with pytest.raises(ValidationError, match="fill_level max .* cannot exceed 100"):
+        ObservedQuantity(method="fill_level", min=20, max=110)
+
 
 
 def test_bounding_box_validation():

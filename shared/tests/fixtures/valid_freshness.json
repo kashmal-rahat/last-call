@@ -1,34 +1,64 @@
 {
-  "schema_version": "2.0.0",
+  "schema_version": "3.0.0",
   "mart_id": "mart_khi_001",
-  "inspection_id": "insp_20261006_01",
   "shelf_id": "shelf_produce_01",
+  "inspection_id": "insp_20261006_01",
   "previous_inspection_id": null,
-  "photo_uri": "gs://kayrox-last-call-photos/mart_khi_001/batch_01.jpg",
+  "photo_uri": "upload:sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "taken_at": "2026-10-06T10:00:00Z",
+  "photo_status": "ok",
+  "photo_note": "",
+  "photo_issues": [],
   "items": [
     {
-      "item_key": "crate_mangoes_top",
-      "name": "Sindhri Mangoes",
+      "item_key": "mango_top_left",
+      "name": "mango",
       "position": {
         "ymin": 0.1,
         "xmin": 0.15,
         "ymax": 0.85,
         "xmax": 0.9
       },
+      "grid": "top-left",
+      "in_mixed_crate": false,
+      "issues": [
+        "bruising"
+      ],
+      "evidence": "Yellow mangoes with minor superficial bruising.",
       "stage": "ripening",
-      "score": 75.0,
+      "stage_level": "mid",
+      "worst_stage": "ripening",
+      "score": 69.0,
       "change_since_last": -5.0,
-      "change_note": "Slight yellowing and softening over last 12h",
-      "issues": ["bruising"],
+      "change_note": "dropped 5 points since yesterday 18:00",
+      "observed": {
+        "method": "count",
+        "min": 40,
+        "max": 50
+      },
       "quantity": {
         "unit": "kg",
         "low": 40.0,
         "high": 50.0
       },
-      "confidence": 0.92,
-      "needs_staff_check": false
+      "confidence": 0.9,
+      "confidence_level": "high",
+      "needs_staff_check": false,
+      "staff_check_reasons": [],
+      "check_reason": "",
+      "zoomed": false
     }
   ],
-  "photo_issues": []
+  "inspector": {
+    "model": "gemini-3.8-flash",
+    "prompt_version": "1.0",
+    "thinking_level": "medium",
+    "latency_ms": 3200,
+    "calls": 1,
+    "zoomed_groups": 0,
+    "zoom_failures": 0,
+    "input_tokens": 1200,
+    "output_tokens": 450,
+    "cached_tokens": 0
+  }
 }
