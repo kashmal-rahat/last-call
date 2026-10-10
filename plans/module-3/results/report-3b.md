@@ -314,3 +314,113 @@ Existing `produce_knowledge/` collection contained zero legacy single-call docum
    - `produce_knowledge/`: Confirmed 5 consensus profile documents (`apple__v1`, `banana__v1`, `cucumber__v1`, `guava__v1`, `tomato__v1`).
    - `decisions/`: Confirmed stored inspection decision documents (`insp_20261010_215024_d05fb5`, `insp_20261010_215038_de3647`, etc.).
 
+---
+
+## 9. Round 5: timing rules v2 (D44)
+
+### Items 1–7: Implementation Status
+
+| # | Item | Status | How It Was Done |
+|---|---|---|---|
+| **1** | **Engine (`ladder/engine.py`)** | **Done** | Implemented `plan.md` Step 4 v2 timing rules: `allowed_steps` for ripening produce restricted to `["keep", "discount"]` (never leaves shelf). Fresh and ripening produce kept if sellable time $\ge H + O$ (fine at tomorrow's opening); kept for now if $H > W$ (before evening window); inside evening window, discounted 10% + 5% per hour towards closing, or 40% if life $< H$ (stops selling before closing). Overripe produce sent to `bulk_sale` if business buyer fits and $H \ge 2\text{ h}$ (pickup time), otherwise discounted at 40%. Spoiled produce directed to `animal_feed` if cattle-safe without mould or slime, else `compost`. Old Case A/B/C logic, overripe min-discount branch, and fresh off-shelf fallback completely removed. |
+| **2** | **`MartRules` and `demo_mart.json`** | **Done** | Replaced `overnight_hours` with `opening_time` (`09:00`, default 09:00) and added `bulk_pickup_hours` (`2.0`, default 2.0). Added model validators: `opening_time != closing_time` and `0 <= bulk_pickup_hours <= 6`. Added dynamic `@property overnight_hours` calculating hours from closing to next opening modulo 24 hours. Regenerated all JSON schemas via `scripts/export_schemas.py`. |
+| **3** | **Reason Text with Clock Times** | **Done** | Reason strings formatted with exact clock times calculated from `closing_time - H` ("today" / "tomorrow"): e.g. "sells until 20:30; closes 23:00, not fine at tomorrow's 09:00 opening → 20% off", "still fine at tomorrow's 09:00 opening → keep", "too late for pickup before 23:00 closing → 40% off". |
+| **4** | **Document "Sells for" Calculation** | **Done** | Added explanatory documentation comment above `BAND_HOURS` and `LEVEL_FACTOR` in `engine.py` detailing how nominal band hours scale with `stage_level` progress. Added a dedicated "How decisions are made" subsection under Module 3 in `README.md`. |
+| **5** | **Tests (`test_ladder_engine.py`, `test_ladder.py`)** | **Done** | Created table-driven test `test_twenty_four_scenarios_table_driven` encoding all 24 scenarios from `review.md` round 5 (24/24 passed). Updated exhaustive engine loop to test $H \in \{0.5, 1, 1.9, 2, 3, 5, 6, 8, 14, 23\}$ with assertion that fresh and ripening never receive off-shelf steps (2,880 combinations verified with 0 violations). Added `test_monotonic_discount_inside_window` confirming discounts deepen monotonically as $H$ decreases. Updated `test_ladder.py` to reflect D44 overripe clearance without commercial buyers. |
+| **6** | **`scripts/check_profiles.py`** | **Done** | Replaced previous worked examples with scenario table rows 2, 3, 4, 12, 14, and 17. |
+| **7** | **R2 Error Handling (`index.html`)** | **Done** | Updated `triggerDecide()` in `static/index.html` to verify `typeof errData.detail === "string"` before display, falling back to "Decision failed, please try again." if detail is missing or non-string. |
+
+### Pytest Suite Summary
+
+```
+============================== test session starts ==============================
+platform darwin -- Python 3.12.15, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/kashmalrahat/AI-Builder-Cup/last-call
+configfile: pyproject.toml
+testpaths: shared/tests, services/api/tests, services/voice/tests
+plugins: hypothesis-6.168.5, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.AUTO, debug=False
+
+collected 273 items
+
+shared/tests/test_model_policy.py .......                                [  2%]
+shared/tests/test_models.py .............................                [ 13%]
+shared/tests/test_session_tokens.py ........                             [ 16%]
+shared/tests/test_store.py ..s.s.s.s.s.s.s..s                            [ 22%]
+services/api/tests/test_api_health.py .                                  [ 23%]
+services/api/tests/test_check_profiles.py ...                            [ 24%]
+services/api/tests/test_demo_decide.py .....                             [ 26%]
+services/api/tests/test_demo_inspect.py ............                     [ 30%]
+services/api/tests/test_demo_routes.py .....                             [ 32%]
+services/api/tests/test_eval_inspector.py ..                             [ 32%]
+services/api/tests/test_gemini_call.py ...                               [ 34%]
+services/api/tests/test_inspector.py ............                        [ 38%]
+services/api/tests/test_inspector_eval_metrics.py .........              [ 41%]
+services/api/tests/test_inspector_guardrails.py ........................ [ 50%]
+....                                                                     [ 52%]
+services/api/tests/test_inspector_images.py .......                      [ 54%]
+services/api/tests/test_inspector_matching.py ......                     [ 56%]
+services/api/tests/test_inspector_prompt.py ....                         [ 58%]
+services/api/tests/test_inspector_zoom.py .........                      [ 61%]
+services/api/tests/test_ladder.py ...                                    [ 62%]
+services/api/tests/test_ladder_engine.py ............................... [ 73%]
+..                                                                       [ 74%]
+services/api/tests/test_ladder_profiles.py ...................           [ 81%]
+services/api/tests/test_produce_profiles_script.py ..                    [ 82%]
+services/voice/tests/test_live_session.py ........                       [ 85%]
+services/voice/tests/test_pure_logic.py ................................ [ 97%]
+.....                                                                    [ 98%]
+services/voice/tests/test_text_session.py ..                             [ 99%]
+services/voice/tests/test_voice_health.py .                              [100%]
+
+================== 265 passed, 8 skipped, 1 warning in 16.87s ==================
+```
+- **Scenario Table-Driven Test:** 24 of 24 scenarios passed (`test_twenty_four_scenarios_table_driven`).
+- **Module 1 & Module 2 Tests:** All 100% passed without modification.
+
+### Deployed Revision & Live Step 10 Verification
+
+- **Service Revision:** `api-00022-rj5`
+- **Service URL:** `https://api-cujkm3kt5q-ew.a.run.app`
+
+#### Live Selector Results on Deployed Service
+
+1. **"Bananas & Apples" (`sample_smoke2.jpg`) — Inspection ID: `insp_20261010_230435_7d3047`**
+   - **Inspector Stage Readings:**
+     - Apple: `fresh (mid)` (score 88.0)
+     - Banana: `overripe (mid)` (score 46.0)
+   - **Morning (12 h left, H = 12.0):**
+     - Apple: Step = `keep` | Discount = None | Reason = *"Apple, fresh: sells until 06:12 in 3 days; still fine at tomorrow's 09:00 opening → keep"*
+     - Banana: Step = `bulk_sale` | Discount = None | Opening = Rs 110, Floor = Rs 65 | Reason = *"Banana, overripe: juice shops and bakeries can use it → bulk sale"*
+   - **Evening (4 h left, H = 4.0):**
+     - Apple: Step = `keep` | Discount = None | Reason = *"Apple, fresh: sells until 14:12 in 3 days; still fine at tomorrow's 09:00 opening → keep"*
+     - Banana: Step = `bulk_sale` | Discount = None | Opening = Rs 110, Floor = Rs 65 | Reason = *"Banana, overripe: juice shops and bakeries can use it → bulk sale"*
+   - **Last hour (1 h left, H = 1.0):**
+     - Apple: Step = `keep` | Discount = None | Reason = *"Apple, fresh: sells until 17:12 in 3 days; still fine at tomorrow's 09:00 opening → keep"*
+     - Banana: Step = `discount` | Discount = 40% (Rs 180 $\rightarrow$ Rs 110) | Reason = *"Banana, overripe: too late for pickup before 23:00 closing → 40% off"*
+
+2. **Simulated Tray (`sample_overripe_banana_simulated.jpg`) — Inspection ID: `insp_20261010_230447_5e5392`**
+   - **Inspector Stage Reading:**
+     - Banana: `spoiled (mid)` (score 21.0)
+   - **Morning (12 h left, H = 12.0):**
+     - Banana: Step = `compost` | Discount = None | Flags = `approve_compost`, `needs_approval` | Reason = *"Banana, spoiled: not suitable for food or feed → compost"*
+   - **Last hour (1 h left, H = 1.0):**
+     - Banana: Step = `compost` | Discount = None | Flags = `approve_compost`, `needs_approval` | Reason = *"Banana, spoiled: not suitable for food or feed → compost"*
+
+### Deviations From the Plan
+None. All logic, validation constraints, timing math, and scenario mappings follow D44 exactly.
+
+### Files Changed
+- `services/api/lastcall_api/ladder/engine.py` (Step 4 v2 D44 engine, clock times, constants documentation)
+- `shared/lastcall_shared/models.py` (`MartRules` opening_time, bulk_pickup_hours, overnight_hours property, validators)
+- `shared/lastcall_shared/marts/demo_mart.json` (replaced overnight_hours with opening_time and bulk_pickup_hours)
+- `shared/schemas/MartRules.json` (regenerated schema)
+- `services/api/lastcall_api/static/index.html` (R2 non-string error detail check in triggerDecide)
+- `scripts/check_profiles.py` (replaced worked examples with scenario rows 2–4, 12, 14, 17)
+- `services/api/tests/test_ladder_engine.py` (24-scenario table test, D44 exhaustive loop, monotonic discount test)
+- `services/api/tests/test_ladder.py` (updated overripe without business buyers assertion)
+- `shared/tests/test_models.py` (added MartRules opening_time, bulk_pickup_hours, and overnight_hours tests)
+- `README.md` (added "How decisions are made" subsection)
+- `plans/module-3/results/report-3b.md` (appended Round 5 report)
+
+
