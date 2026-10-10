@@ -83,6 +83,7 @@ If any of these conflict, **ask the user. Don't choose silently.**
 | D42 | 2026-10-10 | Ladder decisions are saved as one `LadderResult` in `decisions/{inspection_id}`, overwritten on re-decide. No batches until Module 6 | Keeps `FreshnessResult` v3 untouched |
 | D43 | 2026-10-10 | A new produce profile is the consensus of 5 Gemini answers sent in parallel, merged in code (majority for uses, median for shelf life, 4 of 5 for cattle). It stores the vote count and uncertain fields; fewer than 3 answers → fallback profile | Raw answers varied for 9 of 12 produce between runs; voting makes the stored answer stable and shows the manager where to check. Gemini's consensus is accepted as the answer; the manager can overwrite it |
 | D44 | 2026-10-10 | Ladder timing rules v2: ripening produce never leaves the shelf; fresh and ripening are kept unless they won't sell until tomorrow's opening, then discounted only in the evening window (10% → 40%, deeper towards closing, or 40% if they stop selling before closing); overripe → bulk sale while ≥ 2 h remain for pickup, else 40% off. Overnight hours come from the mart's opening and closing times | Manual testing showed ripe bananas sent to juice shops in the morning and smaller discounts nearer closing; the new rules follow the Inspector's stage definitions and normal markdown practice, and were checked against 24 scenarios |
+| D45 | 2026-10-10 | The demo endpoint caches the Inspector's reading per exact photo (`inspector_readings/{key}`; key = hash of the prepared image's SHA-256, model, prompt version, thinking level, zoom, bin capacity and `READING_CACHE_VERSION`). A repeated photo reuses the reading; guardrails, keys and change notes are recomputed. Only complete readings are stored. Scripts and evals never use the cache | The same photo must give the same answer in the demo, with no effect on new photos and no change to the measured consistency |
 
 ## Module status
 
@@ -90,5 +91,5 @@ If any of these conflict, **ask the user. Don't choose silently.**
 |---|---|---|
 | 0: Foundations | [module-0/plan.md](module-0/plan.md) | Completed |
 | 2: Negotiator | [module-2/plan.md](module-2/plan.md) | Implemented and deployed (2B). Pending: user's native-speaker test, then lower the demo limits |
-| 1: Freshness Inspector | [module-1/plan.md](module-1/plan.md) | Implemented and deployed (cleanup 2026-10-10). Pending: eval once labels and home decay photos arrive. |
+| 1: Freshness Inspector | [module-1/plan.md](module-1/plan.md) | Implemented and deployed (cleanup 2026-10-10). Pending: eval once labels and home decay photos arrive. Follow-up F1 (same-photo reading cache, D45) planned: [module-1/followup-reading-cache.md](module-1/followup-reading-cache.md). |
 | 3: Ladder | [module-3/plan.md](module-3/plan.md) | Implemented and deployed (3B, 2026-10-10) |

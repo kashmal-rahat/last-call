@@ -2,6 +2,7 @@
 
 import asyncio
 import hmac
+import inspect
 import json
 import logging
 import os
@@ -303,16 +304,22 @@ async def demo_inspect(
 
     # 8. Call inspection function with concurrency limit
     inspect_fn = getattr(app.state, "inspect_fn", inspect_photo)
+    inspect_kwargs: dict[str, object] = {
+        "mart_id": "demo_mart",
+        "shelf_id": shelf_id,
+        "previous": previous,
+        "now": now_pkt,
+        "bin_capacity_kg": bin_capacity_kg,
+    }
+    sig = inspect.signature(inspect_fn)
+    if "reading_cache" in sig.parameters or any(
+        p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
+    ):
+        inspect_kwargs["reading_cache"] = store
+
     try:
         async with _INSPECT_SEMAPHORE:
-            result = await inspect_fn(
-                contents,
-                mart_id="demo_mart",
-                shelf_id=shelf_id,
-                previous=previous,
-                now=now_pkt,
-                bin_capacity_kg=bin_capacity_kg,
-            )
+            result = await inspect_fn(contents, **inspect_kwargs)
     except ImageError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

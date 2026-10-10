@@ -1,6 +1,7 @@
 """Store layer protocol and thread-safe in-memory store for Last Call."""
 
 import asyncio
+import copy
 from datetime import datetime, timezone
 from typing import Any, Protocol
 from pydantic import AwareDatetime
@@ -51,6 +52,8 @@ class CallStore(Protocol):
     async def delete_profile(self, key: str) -> None: ...
     async def save_decisions(self, result: LadderResult) -> None: ...
     async def get_decisions(self, inspection_id: str) -> LadderResult | None: ...
+    async def get_reading(self, key: str) -> dict[str, Any] | None: ...
+    async def create_reading(self, key: str, data: dict[str, Any]) -> bool: ...
 
 
 class InMemoryStore:
@@ -70,6 +73,7 @@ class InMemoryStore:
         self.shelves: dict[tuple[str, str], str] = {}  # (mart_id, shelf_id) -> latest_inspection_id
         self.produce_knowledge: dict[str, ProduceProfile] = {}
         self.decisions: dict[str, LadderResult] = {}
+        self.inspector_readings: dict[str, dict[str, Any]] = {}
 
     def _now(self) -> datetime:
         if self.clock:
@@ -279,4 +283,18 @@ class InMemoryStore:
     async def get_decisions(self, inspection_id: str) -> LadderResult | None:
         async with self._lock:
             return self.decisions.get(inspection_id)
+
+    async def get_reading(self, key: str) -> dict[str, Any] | None:
+        async with self._lock:
+            data = self.inspector_readings.get(key)
+            if data is None:
+                return None
+            return copy.deepcopy(data)
+
+    async def create_reading(self, key: str, data: dict[str, Any]) -> bool:
+        async with self._lock:
+            if key in self.inspector_readings:
+                return False
+            self.inspector_readings[key] = copy.deepcopy(data)
+            return True
 

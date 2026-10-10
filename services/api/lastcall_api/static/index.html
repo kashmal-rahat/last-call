@@ -1882,12 +1882,15 @@
       if (data.inspector) {
         inspectFooter.replaceChildren();
         const meta = data.inspector;
+        const callsOrCached = meta.from_cache
+          ? 'Same photo as before: stored reading reused (no new Gemini call)'
+          : `Gemini Calls: ${meta.calls}`;
         const metaItems = [
           `Model: ${meta.model}`,
           `Thinking: ${meta.thinking_level}`,
           `Prompt: v${meta.prompt_version}`,
           `Inspect Latency: ${meta.latency_ms} ms`,
-          `Gemini Calls: ${meta.calls}`,
+          callsOrCached,
           `Hedges: ${meta.hedges || 0}`,
           `Zoomed Groups: ${meta.zoomed_groups}`
         ];

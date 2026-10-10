@@ -385,6 +385,21 @@ class FirestoreStore:
         data = snap.to_dict()
         return LadderResult.model_validate(data) if data else None
 
+    async def get_reading(self, key: str) -> dict[str, Any] | None:
+        doc_ref = self._col("inspector_readings").document(key)
+        snap = await doc_ref.get()
+        if not snap.exists:
+            return None
+        return snap.to_dict()
+
+    async def create_reading(self, key: str, data: dict[str, Any]) -> bool:
+        doc_ref = self._col("inspector_readings").document(key)
+        try:
+            await doc_ref.create(data)
+            return True
+        except AlreadyExists:
+            return False
+
     async def clean_prefix(self) -> None:
         """Deletes all test documents created under collection_prefix."""
         if not self.collection_prefix:
@@ -401,6 +416,7 @@ class FirestoreStore:
             "shelves",
             "produce_knowledge",
             "decisions",
+            "inspector_readings",
         ]
         for col_name in collections:
             col_ref = self._col(col_name)

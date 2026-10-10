@@ -74,6 +74,11 @@
           "title": "Zoom Failures",
           "type": "integer"
         },
+        "from_cache": {
+          "default": false,
+          "title": "From Cache",
+          "type": "boolean"
+        },
         "input_tokens": {
           "default": 0,
           "title": "Input Tokens",

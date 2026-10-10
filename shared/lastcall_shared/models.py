@@ -188,6 +188,7 @@ class InspectorMeta(BaseModel):
     hedges: int = 0  # Number of hedged calls spawned
     zoomed_groups: int = 0
     zoom_failures: int = 0  # crops whose call failed (pass 1 reading kept)
+    from_cache: bool = False
     input_tokens: int = 0  # summed over all calls
     output_tokens: int = 0  # candidates + thoughts, summed
     cached_tokens: int = 0

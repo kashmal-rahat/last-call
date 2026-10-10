@@ -394,3 +394,31 @@ async def test_decisions_lifecycle(store):
     assert fetched_2.decisions[0].step == "discount"
     assert fetched_2.decisions[0].discount_pct == 20
 
+
+@pytest.mark.asyncio
+async def test_readings_lifecycle(store):
+    # 1. Unknown key -> None
+    assert await store.get_reading("r_unknown_999") is None
+
+    # 2. Create then get
+    data = {"output": {"items": [{"name": "banana"}]}, "zoomed_groups": 1, "test_num": 42}
+    created = await store.create_reading("r_test_001", data)
+    assert created is True
+
+    fetched = await store.get_reading("r_test_001")
+    assert fetched is not None
+    assert fetched["zoomed_groups"] == 1
+    assert fetched["test_num"] == 42
+    assert fetched["output"]["items"][0]["name"] == "banana"
+
+    # 3. Second create with same key fails and does not overwrite
+    second_data = {"output": {"items": [{"name": "apple"}]}, "zoomed_groups": 2, "test_num": 99}
+    second_created = await store.create_reading("r_test_001", second_data)
+    assert second_created is False
+
+    fetched_again = await store.get_reading("r_test_001")
+    assert fetched_again is not None
+    assert fetched_again["zoomed_groups"] == 1
+    assert fetched_again["test_num"] == 42
+
+

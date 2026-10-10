@@ -1,15 +1,16 @@
 """Produce freshness inspection engine using Gemini 3.8 Flash (Module 1)."""
 
 import asyncio
+import hashlib
 import json
 import logging
 import random
 import secrets
 import time
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import lru_cache
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, Protocol
 
 import pydantic
 from google import genai
@@ -37,6 +38,28 @@ logger = setup_structured_logging(service_name="inspector")
 
 THINKING_LEVEL = "low"
 ZOOM_ENABLED = True
+READING_CACHE_VERSION = "1"
+
+
+class ReadingCache(Protocol):
+    """Protocol for inspector reading cache (D45). Satisfied by CallStore."""
+
+    async def get_reading(self, key: str) -> dict[str, Any] | None: ...
+    async def create_reading(self, key: str, data: dict[str, Any]) -> bool: ...
+
+
+def reading_key(
+    image_sha256: str,
+    *,
+    model: str,
+    prompt_version: str,
+    thinking_level: str,
+    zoom: bool,
+    bin_capacity_kg: float | None,
+) -> str:
+    """Generates cache key for an inspector reading (D45)."""
+    raw = f"{image_sha256}|{model}|{prompt_version}|{thinking_level}|{int(zoom)}|{bin_capacity_kg or ''}|{READING_CACHE_VERSION}"
+    return f"r_{hashlib.sha256(raw.encode('utf-8')).hexdigest()}"
 
 # Gemini 3.8 Flash pricing constants (per 1M tokens)
 FLASH_INPUT_PRICE_PER_M = 0.75
@@ -122,6 +145,7 @@ async def inspect_photo(
     client: genai.Client | None = None,
     zoom: bool | None = None,
     thinking_level: str | None = None,
+    reading_cache: ReadingCache | None = None,
 ) -> FreshnessResult:
     """Inspects a shelf photo and returns a structured FreshnessResult."""
     t0 = time.monotonic()
@@ -132,97 +156,174 @@ async def inspect_photo(
 
     active_client = client or get_genai_client()
     active_thinking = thinking_level or THINKING_LEVEL
-    cfg = build_config(thinking_level=active_thinking)
-
-    # 2. Pass 1
-    pass1_prompt = user_text(bin_capacity_kg)
-    pass1_out, pass1_usage, p1_calls, p1_hedged = await _call(
-        active_client,
-        prep.jpeg,
-        pass1_prompt,
-        cfg,
-        deadline,
-    )
-
-    total_calls = p1_calls
-    total_hedges = 1 if p1_hedged else 0
-    total_in_tokens = pass1_usage.input_tokens
-    total_out_tokens = pass1_usage.output_tokens
-    total_cached_tokens = pass1_usage.cached_tokens
-    total_thought_tokens = pass1_usage.thought_tokens
-    zoomed_count = 0
-    zoom_failures = 0
-
-    zoom_results: dict[int, tuple[list[Any], bool]] = {}
-    final_output = pass1_out
-
     should_zoom = ZOOM_ENABLED if zoom is None else zoom
+    settings = get_settings()
+    model_name = settings.GEMINI_FLASH_MODEL
 
-    # 3. Clean pass-1 items ONCE right after pass 1
-    # Both zoom (if enabled) and guardrails operate on this one list
-    cleaned_pass1 = [c for c in (clean_item(i) for i in pass1_out.items) if c is not None]
-    cleaned_pass1 = merge_neighbours(cleaned_pass1)
-    final_output = pass1_out.model_copy(update={"items": cleaned_pass1})
+    from_cache = False
+    cached_data: dict[str, Any] | None = None
+    cache_key: str | None = None
 
-    # Pass 2 zoom branch (executed when zoom is enabled and photo_status == "ok")
-    if pass1_out.photo_status == "ok" and should_zoom and (deadline - time.monotonic()) >= 10.0:
-        selected_indices = select_for_zoom(cleaned_pass1, max_crops=6)
-        if selected_indices:
-            # Crop and call in parallel
-            async def _run_crop(idx: int):
-                base_item = cleaned_pass1[idx]
-                try:
-                    crop_bytes = crop_group(prep.full, base_item.box_2d)
-                    crop_out, crop_usage, calls, crop_hedged = await _call(
-                        active_client,
-                        crop_bytes,
-                        zoom_text(base_item.name),
-                        cfg,
-                        deadline,
-                    )
-                    return idx, crop_out, crop_usage, calls, crop_hedged
-                except Exception:
-                    return idx, None, CallUsage(0, 0, 0, 0, 0), 1, False
+    if reading_cache is not None:
+        cache_key = reading_key(
+            prep.sha256,
+            model=model_name,
+            prompt_version=PROMPT_VERSION,
+            thinking_level=active_thinking,
+            zoom=should_zoom,
+            bin_capacity_kg=bin_capacity_kg,
+        )
+        try:
+            cached_data = await reading_cache.get_reading(cache_key)
+        except Exception as exc:
+            logger.warning(
+                "reading_cache_get_error",
+                extra={"extra_fields": {"error_type": type(exc).__name__}},
+            )
+            cached_data = None
 
-            crop_tasks = [_run_crop(idx) for idx in selected_indices]
-            crop_results = await asyncio.gather(*crop_tasks, return_exceptions=True)
+    if cached_data is not None:
+        try:
+            final_output = InspectorOutput.model_validate(cached_data["output"])
+            raw_zoom = cached_data.get("zoom", {})
+            zoom_results: dict[int, tuple[list[Any], bool]] = {
+                int(idx): (entry["reasons"], entry["zoomed"])
+                for idx, entry in raw_zoom.items()
+            }
+            zoomed_count = int(cached_data.get("zoomed_groups", 0))
+            zoom_failures = 0
+            total_calls = 0
+            total_hedges = 0
+            total_in_tokens = 0
+            total_out_tokens = 0
+            total_cached_tokens = 0
+            total_thought_tokens = 0
+            from_cache = True
+        except Exception as exc:
+            logger.warning(
+                "reading_cache_validate_error",
+                extra={"extra_fields": {"error_type": type(exc).__name__}},
+            )
+            from_cache = False
+            cached_data = None
 
-            merged_items = list(cleaned_pass1)
-            for res in crop_results:
-                if isinstance(res, Exception):
-                    continue
+    if not from_cache:
+        cfg = build_config(thinking_level=active_thinking)
 
-                idx, crop_out, crop_usage, calls, crop_hedged = res
-                total_calls += calls
-                if crop_hedged:
-                    total_hedges += 1
-                total_in_tokens += crop_usage.input_tokens
-                total_out_tokens += crop_usage.output_tokens
-                total_cached_tokens += crop_usage.cached_tokens
-                total_thought_tokens += crop_usage.thought_tokens
+        # 2. Pass 1
+        pass1_prompt = user_text(bin_capacity_kg)
+        pass1_out, pass1_usage, p1_calls, p1_hedged = await _call(
+            active_client,
+            prep.jpeg,
+            pass1_prompt,
+            cfg,
+            deadline,
+        )
 
-                base_item = cleaned_pass1[idx]
-                if crop_out is None:
-                    zoom_failures += 1
-                    merged_item, extra_reasons = merge_zoom(base_item, None)
-                    merged_items[idx] = merged_item
-                else:
-                    merged_item, extra_reasons = merge_zoom(base_item, crop_out)
-                    merged_items[idx] = merged_item
-                    zoom_results[idx] = (extra_reasons, True)
-                    zoomed_count += 1
+        total_calls = p1_calls
+        total_hedges = 1 if p1_hedged else 0
+        total_in_tokens = pass1_usage.input_tokens
+        total_out_tokens = pass1_usage.output_tokens
+        total_cached_tokens = pass1_usage.cached_tokens
+        total_thought_tokens = pass1_usage.thought_tokens
+        zoomed_count = 0
+        zoom_failures = 0
+        zoom_results = {}
+        zoom_skipped_for_time = False
 
-            final_output = pass1_out.model_copy(update={"items": merged_items})
+        # 3. Clean pass-1 items ONCE right after pass 1
+        # Both zoom (if enabled) and guardrails operate on this one list
+        cleaned_pass1 = [c for c in (clean_item(i) for i in pass1_out.items) if c is not None]
+        cleaned_pass1 = merge_neighbours(cleaned_pass1)
+        final_output = pass1_out.model_copy(update={"items": cleaned_pass1})
+
+        # Pass 2 zoom branch (executed when zoom is enabled and photo_status == "ok")
+        if pass1_out.photo_status == "ok" and should_zoom:
+            if (deadline - time.monotonic()) < 10.0:
+                zoom_skipped_for_time = True
+            else:
+                selected_indices = select_for_zoom(cleaned_pass1, max_crops=6)
+                if selected_indices:
+                    # Crop and call in parallel
+                    async def _run_crop(idx: int):
+                        base_item = cleaned_pass1[idx]
+                        try:
+                            crop_bytes = crop_group(prep.full, base_item.box_2d)
+                            crop_out, crop_usage, calls, crop_hedged = await _call(
+                                active_client,
+                                crop_bytes,
+                                zoom_text(base_item.name),
+                                cfg,
+                                deadline,
+                            )
+                            return idx, crop_out, crop_usage, calls, crop_hedged
+                        except Exception:
+                            return idx, None, CallUsage(0, 0, 0, 0, 0), 1, False
+
+                    crop_tasks = [_run_crop(idx) for idx in selected_indices]
+                    crop_results = await asyncio.gather(*crop_tasks, return_exceptions=True)
+
+                    merged_items = list(cleaned_pass1)
+                    for res in crop_results:
+                        if isinstance(res, Exception):
+                            continue
+
+                        idx, crop_out, crop_usage, calls, crop_hedged = res
+                        total_calls += calls
+                        if crop_hedged:
+                            total_hedges += 1
+                        total_in_tokens += crop_usage.input_tokens
+                        total_out_tokens += crop_usage.output_tokens
+                        total_cached_tokens += crop_usage.cached_tokens
+                        total_thought_tokens += crop_usage.thought_tokens
+
+                        base_item = cleaned_pass1[idx]
+                        if crop_out is None:
+                            zoom_failures += 1
+                            merged_item, extra_reasons = merge_zoom(base_item, None)
+                            merged_items[idx] = merged_item
+                        else:
+                            merged_item, extra_reasons = merge_zoom(base_item, crop_out)
+                            merged_items[idx] = merged_item
+                            zoom_results[idx] = (extra_reasons, True)
+                            zoomed_count += 1
+
+                    final_output = pass1_out.model_copy(update={"items": merged_items})
+
+        # Store complete readings after a miss
+        if (
+            reading_cache is not None
+            and cache_key is not None
+            and zoom_failures == 0
+            and not zoom_skipped_for_time
+        ):
+            try:
+                await reading_cache.create_reading(
+                    cache_key,
+                    {
+                        "output": final_output.model_dump(mode="json"),
+                        "zoom": {
+                            str(idx): {"reasons": reasons, "zoomed": zoomed}
+                            for idx, (reasons, zoomed) in zoom_results.items()
+                        },
+                        "zoomed_groups": zoomed_count,
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                )
+            except Exception as exc:
+                logger.warning(
+                    "reading_cache_create_error",
+                    extra={"extra_fields": {"error_type": type(exc).__name__}},
+                )
 
     # 6. Apply guardrails and assign keys
     photo_status, photo_note, photo_issues, drafts = apply_guardrails(final_output, zoom=zoom_results)
     items = assign_keys(drafts, previous, now=now)
 
     latency_ms = int(round((time.monotonic() - t0) * 1000))
-    settings = get_settings()
 
     meta = InspectorMeta(
-        model=settings.GEMINI_FLASH_MODEL,
+        model=model_name,
         prompt_version=PROMPT_VERSION,
         thinking_level=active_thinking,
         latency_ms=latency_ms,
@@ -234,6 +335,7 @@ async def inspect_photo(
         output_tokens=total_out_tokens,
         cached_tokens=total_cached_tokens,
         thoughts_tokens=total_thought_tokens,
+        from_cache=from_cache,
     )
 
     inspection_id = f"insp_{now:%Y%m%d_%H%M%S}_{secrets.token_hex(3)}"
@@ -275,6 +377,7 @@ async def inspect_photo(
                 "output_tokens": total_out_tokens,
                 "cached_tokens": total_cached_tokens,
                 "calls": total_calls,
+                "from_cache": from_cache,
             }
         },
     )
