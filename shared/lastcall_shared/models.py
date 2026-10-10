@@ -563,3 +563,176 @@ class CallRecord(BaseModel):
         if self.expire_at is None:
             self.expire_at = self.created_at + timedelta(days=30)
         return self
+
+
+# Module 3 (Ladder) models and types
+LadderStep = Literal["keep", "discount", "bulk_sale", "donate", "animal_feed", "compost"]
+ShelfLifeBand = Literal["under_6h", "6_to_24h", "1_to_3_days", "over_3_days"]
+StaffAction = Literal[
+    "remove_bad_pieces",
+    "check_before_off_shelf",
+    "identify_item",
+    "enter_shelf_price",
+    "approve_compost",
+]
+
+
+class StageProfile(BaseModel):
+    sellable_for: ShelfLifeBand  # how long produce at this stage still sells to shoppers
+    juice_shop: bool
+    restaurant: bool
+    bakery: bool
+    charity: bool  # still good for people to eat
+
+
+class ProduceProfile(BaseModel):
+    key: str  # gemini: f"{produce_key(name)}__v{PROFILE_PROMPT_VERSION}"; manager: f"{produce_key(name)}__manager"
+    name: str
+    note: str  # one line, e.g. "Leafy green; wilts within hours in heat"
+    fresh: StageProfile
+    ripening: StageProfile
+    overripe: StageProfile
+    spoiled_ok_for_cattle: bool  # spoiled but not mouldy: safe as cattle feed?
+    overripe_ok_for_cattle: bool
+    source: Literal["gemini", "manager", "fallback"]
+    model: str = ""
+    prompt_version: str
+    created_at: AwareDatetime
+
+
+class PriceEntry(BaseModel):
+    names: list[str]  # aliases, e.g. ["okra", "bhindi"]
+    prices: dict[Unit, int]  # PKR per unit, each > 0
+
+    @field_validator("prices")
+    @classmethod
+    def validate_prices(cls, v: dict[Unit, int]) -> dict[Unit, int]:
+        for unit, price in v.items():
+            if price <= 0:
+                raise ValueError(f"Price for unit '{unit}' must be > 0, got {price}")
+        return v
+
+
+class MartRules(BaseModel):
+    mart_id: str
+    mart: MartInfo
+    timezone: str = "Asia/Karachi"
+    closing_time: time  # 23:00
+    overnight_hours: float = 12  # keep only if it still sells this long after closing
+    discount_window_hours: float = 6  # discounts start at most this many hours before closing
+    max_discount_pct: int = 40
+    min_discount_pct: int = 10
+    bulk_open_pct: int = 60  # opening = shelf × 60%
+    bulk_floor_pct: int = 35
+    feed_open_pct: int = 15
+    feed_floor_pct: int = 5
+    price_round_to: int = 5
+    note: str = ""  # e.g. "Demo prices, not live market rates"
+    prices: list[PriceEntry]
+
+    @model_validator(mode="after")
+    def validate_rules(self) -> "MartRules":
+        try:
+            ZoneInfo(self.timezone)
+        except Exception as e:
+            raise ValueError(f"Invalid timezone: '{self.timezone}'") from e
+
+        for name, val in [
+            ("max_discount_pct", self.max_discount_pct),
+            ("min_discount_pct", self.min_discount_pct),
+            ("bulk_open_pct", self.bulk_open_pct),
+            ("bulk_floor_pct", self.bulk_floor_pct),
+            ("feed_open_pct", self.feed_open_pct),
+            ("feed_floor_pct", self.feed_floor_pct),
+        ]:
+            if val < 1 or val > 100:
+                raise ValueError(f"{name} must be between 1 and 100, got {val}")
+
+        if self.min_discount_pct > self.max_discount_pct:
+            raise ValueError(
+                f"min_discount_pct ({self.min_discount_pct}) cannot exceed max_discount_pct ({self.max_discount_pct})"
+            )
+
+        if self.bulk_floor_pct >= self.bulk_open_pct:
+            raise ValueError(
+                f"bulk_floor_pct ({self.bulk_floor_pct}) must be less than bulk_open_pct ({self.bulk_open_pct})"
+            )
+
+        if self.feed_floor_pct >= self.feed_open_pct:
+            raise ValueError(
+                f"feed_floor_pct ({self.feed_floor_pct}) must be less than feed_open_pct ({self.feed_open_pct})"
+            )
+
+        return self
+
+
+class LadderDecision(BaseModel):
+    item_key: str
+    name: str
+    step: LadderStep
+    allowed_steps: list[LadderStep]
+    next_steps: list[LadderStep] = []
+    unit: Unit
+    sellable_hours: float | None = None
+    shelf_price: int | None = None
+    discount_pct: int | None = None
+    discounted_price: int | None = None
+    opening_price: int | None = None  # bulk_sale, animal_feed
+    floor_price: int | None = None  # internal; never given to buyer-facing agents
+    buyer_types: list[BuyerType] = []
+    buyer_condition: str = ""  # becomes DealBrief.condition in Module 6
+    reason: str
+    staff_actions: list[StaffAction] = []
+    on_hold: bool = False
+    needs_approval: bool = False
+    needs_price: bool = False
+    recheck_next_photo: bool = False
+    profile_key: str | None = None
+    profile_source: Literal["gemini", "manager", "fallback"] | None = None
+
+    @model_validator(mode="after")
+    def validate_decision(self) -> "LadderDecision":
+        if self.step not in self.allowed_steps:
+            raise ValueError(f"step '{self.step}' is not in allowed_steps {self.allowed_steps}")
+
+        if self.opening_price is not None and self.floor_price is not None:
+            if self.opening_price < self.floor_price:
+                raise ValueError(
+                    f"opening_price ({self.opening_price}) cannot be below floor_price ({self.floor_price})"
+                )
+
+        if self.step != "discount":
+            if self.discount_pct is not None or self.discounted_price is not None:
+                raise ValueError(
+                    f"discount_pct and discounted_price only allowed when step == 'discount', got step '{self.step}'"
+                )
+
+        if self.step == "donate":
+            if any(
+                p is not None
+                for p in [self.discount_pct, self.discounted_price, self.opening_price, self.floor_price]
+            ):
+                raise ValueError("donate step has no prices")
+
+        return self
+
+
+class LadderMeta(BaseModel):
+    latency_ms: int
+    profiles_used: int
+    profiles_generated: int = 0
+    profile_calls: int = 0
+    fallback_profiles: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
+class LadderResult(BaseModel):
+    schema_version: str = "1.0.0"
+    mart_id: str
+    inspection_id: str
+    decided_at: AwareDatetime
+    hours_until_closing: float
+    decisions: list[LadderDecision]
+    meta: LadderMeta
+

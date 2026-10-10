@@ -531,3 +531,175 @@ def test_uvicorn_error_masking(capsys):
     assert parsed["serviceContext"]["service"] == "voice-test"
     assert "+923001234567" not in parsed["exception"]
     assert "+9230******67" in parsed["exception"]
+
+
+def test_ladder_models_valid():
+    from datetime import datetime, time, timezone
+    from lastcall_shared.models import (
+        LadderDecision,
+        LadderMeta,
+        LadderResult,
+        MartRules,
+        PriceEntry,
+        ProduceProfile,
+        StageProfile,
+    )
+    from lastcall_shared.marts.loader import load_mart_rules
+
+    # Load demo_mart rules
+    rules = load_mart_rules("demo_mart")
+    assert rules.mart_id == "demo_mart"
+    assert rules.closing_time == time(23, 0)
+    assert len(rules.prices) >= 20
+
+    # Stage profile and produce profile
+    fresh_sp = StageProfile(sellable_for="1_to_3_days", juice_shop=True, restaurant=True, bakery=False, charity=True)
+    rip_sp = StageProfile(sellable_for="6_to_24h", juice_shop=True, restaurant=True, bakery=True, charity=True)
+    over_sp = StageProfile(sellable_for="under_6h", juice_shop=True, restaurant=False, bakery=True, charity=True)
+
+    prof = ProduceProfile(
+        key="banana__v1",
+        name="banana",
+        note="Tropical fruit; ripens quickly at room temp",
+        fresh=fresh_sp,
+        ripening=rip_sp,
+        overripe=over_sp,
+        spoiled_ok_for_cattle=False,
+        overripe_ok_for_cattle=True,
+        source="gemini",
+        prompt_version="1",
+        created_at=datetime.now(timezone.utc),
+    )
+    assert prof.key == "banana__v1"
+
+    # Valid LadderDecision (discount)
+    dec = LadderDecision(
+        item_key="banana_1",
+        name="banana",
+        step="discount",
+        allowed_steps=["keep", "discount"],
+        unit="dozen",
+        shelf_price=180,
+        discount_pct=25,
+        discounted_price=135,
+        reason="Ripening banana 3h to closing",
+    )
+    assert dec.step == "discount"
+
+    # Valid LadderResult
+    res = LadderResult(
+        mart_id="demo_mart",
+        inspection_id="insp_123",
+        decided_at=datetime.now(timezone.utc),
+        hours_until_closing=3.0,
+        decisions=[dec],
+        meta=LadderMeta(latency_ms=15, profiles_used=1),
+    )
+    assert res.decisions[0].discounted_price == 135
+
+
+def test_ladder_decision_step_outside_allowed_fails():
+    from lastcall_shared.models import LadderDecision
+
+    with pytest.raises(ValidationError, match="not in allowed_steps"):
+        LadderDecision(
+            item_key="item_1",
+            name="spinach",
+            step="bulk_sale",
+            allowed_steps=["keep", "discount"],  # bulk_sale not allowed
+            unit="kg",
+            reason="test",
+        )
+
+
+def test_ladder_decision_opening_below_floor_fails():
+    from lastcall_shared.models import LadderDecision
+
+    with pytest.raises(ValidationError, match="opening_price .* cannot be below floor_price"):
+        LadderDecision(
+            item_key="item_1",
+            name="guava",
+            step="bulk_sale",
+            allowed_steps=["bulk_sale", "donate"],
+            unit="kg",
+            opening_price=30,
+            floor_price=50,  # floor > opening
+            reason="test",
+        )
+
+
+def test_ladder_decision_donate_has_no_prices():
+    from lastcall_shared.models import LadderDecision
+
+    with pytest.raises(ValidationError, match="donate step has no prices"):
+        LadderDecision(
+            item_key="item_1",
+            name="guava",
+            step="donate",
+            allowed_steps=["donate", "compost"],
+            unit="kg",
+            opening_price=50,  # prices not allowed on donate
+            reason="test",
+        )
+
+
+def test_ladder_decision_discount_fields_only_on_discount():
+    from lastcall_shared.models import LadderDecision
+
+    with pytest.raises(ValidationError, match="discount_pct and discounted_price only allowed when step == 'discount'"):
+        LadderDecision(
+            item_key="item_1",
+            name="apple",
+            step="keep",
+            allowed_steps=["keep", "discount"],
+            unit="kg",
+            discount_pct=20,
+            reason="test",
+        )
+
+
+def test_mart_rules_invalid_percentages():
+    from datetime import time
+    from lastcall_shared.models import MartInfo, MartRules
+
+    mart = MartInfo(name="Test Mart", location="Karachi")
+
+    # min_discount > max_discount
+    with pytest.raises(ValidationError, match="min_discount_pct .* cannot exceed max_discount_pct"):
+        MartRules(
+            mart_id="test",
+            mart=mart,
+            closing_time=time(23, 0),
+            min_discount_pct=50,
+            max_discount_pct=40,
+            prices=[],
+        )
+
+    # bulk_floor >= bulk_open
+    with pytest.raises(ValidationError, match="bulk_floor_pct .* must be less than bulk_open_pct"):
+        MartRules(
+            mart_id="test",
+            mart=mart,
+            closing_time=time(23, 0),
+            bulk_open_pct=30,
+            bulk_floor_pct=35,
+            prices=[],
+        )
+
+    # percentage > 100
+    with pytest.raises(ValidationError, match="must be between 1 and 100"):
+        MartRules(
+            mart_id="test",
+            mart=mart,
+            closing_time=time(23, 0),
+            max_discount_pct=150,
+            prices=[],
+        )
+
+
+def test_loader_unknown_mart_raises_key_error():
+    from lastcall_shared.marts.loader import load_mart_rules
+
+    with pytest.raises(KeyError, match="Unknown mart"):
+        load_mart_rules("non_existent_mart_999")
+

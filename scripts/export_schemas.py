@@ -25,6 +25,13 @@ from lastcall_shared.models import (
     OutboxMessage,
     QuantityEstimate,
     StaffTask,
+    LadderDecision,
+    LadderMeta,
+    LadderResult,
+    MartRules,
+    PriceEntry,
+    ProduceProfile,
+    StageProfile,
 )
 
 MODELS = {
@@ -45,6 +52,13 @@ MODELS = {
     "DealRecord": DealRecord,
     "OutboxMessage": OutboxMessage,
     "StaffTask": StaffTask,
+    "ProduceProfile": ProduceProfile,
+    "StageProfile": StageProfile,
+    "PriceEntry": PriceEntry,
+    "MartRules": MartRules,
+    "LadderDecision": LadderDecision,
+    "LadderMeta": LadderMeta,
+    "LadderResult": LadderResult,
 }
 
 

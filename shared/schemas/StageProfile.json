@@ -1,0 +1,39 @@
+{
+  "properties": {
+    "sellable_for": {
+      "enum": [
+        "under_6h",
+        "6_to_24h",
+        "1_to_3_days",
+        "over_3_days"
+      ],
+      "title": "Sellable For",
+      "type": "string"
+    },
+    "juice_shop": {
+      "title": "Juice Shop",
+      "type": "boolean"
+    },
+    "restaurant": {
+      "title": "Restaurant",
+      "type": "boolean"
+    },
+    "bakery": {
+      "title": "Bakery",
+      "type": "boolean"
+    },
+    "charity": {
+      "title": "Charity",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "sellable_for",
+    "juice_shop",
+    "restaurant",
+    "bakery",
+    "charity"
+  ],
+  "title": "StageProfile",
+  "type": "object"
+}

@@ -1,0 +1,30 @@
+{
+  "properties": {
+    "names": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Names",
+      "type": "array"
+    },
+    "prices": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "propertyNames": {
+        "enum": [
+          "kg",
+          "dozen"
+        ]
+      },
+      "title": "Prices",
+      "type": "object"
+    }
+  },
+  "required": [
+    "names",
+    "prices"
+  ],
+  "title": "PriceEntry",
+  "type": "object"
+}

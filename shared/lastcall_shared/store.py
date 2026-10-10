@@ -15,6 +15,7 @@ from lastcall_shared.models import (
     OutboxMessage,
     StaffTask,
     TranscriptEntry,
+    ProduceProfile,
 )
 
 
@@ -43,6 +44,10 @@ class CallStore(Protocol):
     async def save_inspection(self, result: FreshnessResult) -> None: ...
     async def get_inspection(self, inspection_id: str) -> FreshnessResult | None: ...
     async def get_latest_inspection(self, mart_id: str, shelf_id: str) -> FreshnessResult | None: ...
+    async def get_profiles(self, keys: list[str]) -> dict[str, ProduceProfile]: ...
+    async def create_profile(self, profile: ProduceProfile) -> bool: ...
+    async def set_profile(self, profile: ProduceProfile) -> None: ...
+    async def delete_profile(self, key: str) -> None: ...
 
 
 class InMemoryStore:
@@ -60,6 +65,7 @@ class InMemoryStore:
         self.daily_sessions: dict[str, int] = {}  # date_str -> count
         self.inspections: dict[str, FreshnessResult] = {}
         self.shelves: dict[tuple[str, str], str] = {}  # (mart_id, shelf_id) -> latest_inspection_id
+        self.produce_knowledge: dict[str, ProduceProfile] = {}
 
     def _now(self) -> datetime:
         if self.clock:
@@ -242,3 +248,23 @@ class InMemoryStore:
             if not latest_id:
                 return None
             return self.inspections.get(latest_id)
+
+    async def get_profiles(self, keys: list[str]) -> dict[str, ProduceProfile]:
+        async with self._lock:
+            return {k: self.produce_knowledge[k] for k in keys if k in self.produce_knowledge}
+
+    async def create_profile(self, profile: ProduceProfile) -> bool:
+        async with self._lock:
+            if profile.key in self.produce_knowledge:
+                return False
+            self.produce_knowledge[profile.key] = profile
+            return True
+
+    async def set_profile(self, profile: ProduceProfile) -> None:
+        async with self._lock:
+            self.produce_knowledge[profile.key] = profile
+
+    async def delete_profile(self, key: str) -> None:
+        async with self._lock:
+            self.produce_knowledge.pop(key, None)
+

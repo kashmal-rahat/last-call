@@ -1,0 +1,234 @@
+{
+  "properties": {
+    "item_key": {
+      "title": "Item Key",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "step": {
+      "enum": [
+        "keep",
+        "discount",
+        "bulk_sale",
+        "donate",
+        "animal_feed",
+        "compost"
+      ],
+      "title": "Step",
+      "type": "string"
+    },
+    "allowed_steps": {
+      "items": {
+        "enum": [
+          "keep",
+          "discount",
+          "bulk_sale",
+          "donate",
+          "animal_feed",
+          "compost"
+        ],
+        "type": "string"
+      },
+      "title": "Allowed Steps",
+      "type": "array"
+    },
+    "next_steps": {
+      "default": [],
+      "items": {
+        "enum": [
+          "keep",
+          "discount",
+          "bulk_sale",
+          "donate",
+          "animal_feed",
+          "compost"
+        ],
+        "type": "string"
+      },
+      "title": "Next Steps",
+      "type": "array"
+    },
+    "unit": {
+      "enum": [
+        "kg",
+        "dozen"
+      ],
+      "title": "Unit",
+      "type": "string"
+    },
+    "sellable_hours": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sellable Hours"
+    },
+    "shelf_price": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Shelf Price"
+    },
+    "discount_pct": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Discount Pct"
+    },
+    "discounted_price": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Discounted Price"
+    },
+    "opening_price": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Opening Price"
+    },
+    "floor_price": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Floor Price"
+    },
+    "buyer_types": {
+      "default": [],
+      "items": {
+        "enum": [
+          "juice_shop",
+          "restaurant",
+          "bakery",
+          "charity",
+          "dairy_farm",
+          "other"
+        ],
+        "type": "string"
+      },
+      "title": "Buyer Types",
+      "type": "array"
+    },
+    "buyer_condition": {
+      "default": "",
+      "title": "Buyer Condition",
+      "type": "string"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    },
+    "staff_actions": {
+      "default": [],
+      "items": {
+        "enum": [
+          "remove_bad_pieces",
+          "check_before_off_shelf",
+          "identify_item",
+          "enter_shelf_price",
+          "approve_compost"
+        ],
+        "type": "string"
+      },
+      "title": "Staff Actions",
+      "type": "array"
+    },
+    "on_hold": {
+      "default": false,
+      "title": "On Hold",
+      "type": "boolean"
+    },
+    "needs_approval": {
+      "default": false,
+      "title": "Needs Approval",
+      "type": "boolean"
+    },
+    "needs_price": {
+      "default": false,
+      "title": "Needs Price",
+      "type": "boolean"
+    },
+    "recheck_next_photo": {
+      "default": false,
+      "title": "Recheck Next Photo",
+      "type": "boolean"
+    },
+    "profile_key": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Profile Key"
+    },
+    "profile_source": {
+      "anyOf": [
+        {
+          "enum": [
+            "gemini",
+            "manager",
+            "fallback"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Profile Source"
+    }
+  },
+  "required": [
+    "item_key",
+    "name",
+    "step",
+    "allowed_steps",
+    "unit",
+    "reason"
+  ],
+  "title": "LadderDecision",
+  "type": "object"
+}

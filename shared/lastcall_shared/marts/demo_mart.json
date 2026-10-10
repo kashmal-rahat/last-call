@@ -1,0 +1,101 @@
+{
+  "mart_id": "demo_mart",
+  "mart": {
+    "name": "Demo Mart Clifton",
+    "location": "Karachi, Pakistan"
+  },
+  "timezone": "Asia/Karachi",
+  "closing_time": "23:00",
+  "overnight_hours": 12.0,
+  "discount_window_hours": 6.0,
+  "max_discount_pct": 40,
+  "min_discount_pct": 10,
+  "bulk_open_pct": 60,
+  "bulk_floor_pct": 35,
+  "feed_open_pct": 15,
+  "feed_floor_pct": 5,
+  "price_round_to": 5,
+  "note": "Demo prices, not live market rates",
+  "prices": [
+    {
+      "names": ["tomato", "tamatar"],
+      "prices": { "kg": 120 }
+    },
+    {
+      "names": ["onion", "pyaz"],
+      "prices": { "kg": 100 }
+    },
+    {
+      "names": ["potato", "aloo"],
+      "prices": { "kg": 80 }
+    },
+    {
+      "names": ["banana", "kela"],
+      "prices": { "dozen": 180, "kg": 150 }
+    },
+    {
+      "names": ["apple", "seb", "green apple", "red apple"],
+      "prices": { "kg": 250 }
+    },
+    {
+      "names": ["guava", "amrood"],
+      "prices": { "kg": 140, "dozen": 100 }
+    },
+    {
+      "names": ["kinnow", "orange", "malta"],
+      "prices": { "dozen": 200, "kg": 140 }
+    },
+    {
+      "names": ["cucumber", "kheera"],
+      "prices": { "kg": 90 }
+    },
+    {
+      "names": ["okra", "bhindi"],
+      "prices": { "kg": 120 }
+    },
+    {
+      "names": ["bottle gourd", "lauki", "ghia"],
+      "prices": { "kg": 80 }
+    },
+    {
+      "names": ["spinach", "palak"],
+      "prices": { "kg": 70 }
+    },
+    {
+      "names": ["coriander", "dhania"],
+      "prices": { "kg": 150 }
+    },
+    {
+      "names": ["mint", "podina"],
+      "prices": { "kg": 120 }
+    },
+    {
+      "names": ["green chilli", "hari mirch", "chilli"],
+      "prices": { "kg": 160 }
+    },
+    {
+      "names": ["carrot", "gajar"],
+      "prices": { "kg": 90 }
+    },
+    {
+      "names": ["cauliflower", "gobhi", "phool gobhi"],
+      "prices": { "kg": 100 }
+    },
+    {
+      "names": ["lemon", "leemo", "limu"],
+      "prices": { "kg": 220, "dozen": 120 }
+    },
+    {
+      "names": ["papaya", "papeeta"],
+      "prices": { "kg": 180 }
+    },
+    {
+      "names": ["pomegranate", "anar"],
+      "prices": { "kg": 350 }
+    },
+    {
+      "names": ["grapes", "angoor"],
+      "prices": { "kg": 300 }
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "$defs": {
+    "StageProfile": {
+      "properties": {
+        "sellable_for": {
+          "enum": [
+            "under_6h",
+            "6_to_24h",
+            "1_to_3_days",
+            "over_3_days"
+          ],
+          "title": "Sellable For",
+          "type": "string"
+        },
+        "juice_shop": {
+          "title": "Juice Shop",
+          "type": "boolean"
+        },
+        "restaurant": {
+          "title": "Restaurant",
+          "type": "boolean"
+        },
+        "bakery": {
+          "title": "Bakery",
+          "type": "boolean"
+        },
+        "charity": {
+          "title": "Charity",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "sellable_for",
+        "juice_shop",
+        "restaurant",
+        "bakery",
+        "charity"
+      ],
+      "title": "StageProfile",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "key": {
+      "title": "Key",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "note": {
+      "title": "Note",
+      "type": "string"
+    },
+    "fresh": {
+      "$ref": "#/$defs/StageProfile"
+    },
+    "ripening": {
+      "$ref": "#/$defs/StageProfile"
+    },
+    "overripe": {
+      "$ref": "#/$defs/StageProfile"
+    },
+    "spoiled_ok_for_cattle": {
+      "title": "Spoiled Ok For Cattle",
+      "type": "boolean"
+    },
+    "overripe_ok_for_cattle": {
+      "title": "Overripe Ok For Cattle",
+      "type": "boolean"
+    },
+    "source": {
+      "enum": [
+        "gemini",
+        "manager",
+        "fallback"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "model": {
+      "default": "",
+      "title": "Model",
+      "type": "string"
+    },
+    "prompt_version": {
+      "title": "Prompt Version",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "key",
+    "name",
+    "note",
+    "fresh",
+    "ripening",
+    "overripe",
+    "spoiled_ok_for_cattle",
+    "overripe_ok_for_cattle",
+    "source",
+    "prompt_version",
+    "created_at"
+  ],
+  "title": "ProduceProfile",
+  "type": "object"
+}

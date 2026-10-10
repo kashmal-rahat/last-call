@@ -1,0 +1,325 @@
+{
+  "$defs": {
+    "LadderDecision": {
+      "properties": {
+        "item_key": {
+          "title": "Item Key",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "step": {
+          "enum": [
+            "keep",
+            "discount",
+            "bulk_sale",
+            "donate",
+            "animal_feed",
+            "compost"
+          ],
+          "title": "Step",
+          "type": "string"
+        },
+        "allowed_steps": {
+          "items": {
+            "enum": [
+              "keep",
+              "discount",
+              "bulk_sale",
+              "donate",
+              "animal_feed",
+              "compost"
+            ],
+            "type": "string"
+          },
+          "title": "Allowed Steps",
+          "type": "array"
+        },
+        "next_steps": {
+          "default": [],
+          "items": {
+            "enum": [
+              "keep",
+              "discount",
+              "bulk_sale",
+              "donate",
+              "animal_feed",
+              "compost"
+            ],
+            "type": "string"
+          },
+          "title": "Next Steps",
+          "type": "array"
+        },
+        "unit": {
+          "enum": [
+            "kg",
+            "dozen"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "sellable_hours": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sellable Hours"
+        },
+        "shelf_price": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shelf Price"
+        },
+        "discount_pct": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Discount Pct"
+        },
+        "discounted_price": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Discounted Price"
+        },
+        "opening_price": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Opening Price"
+        },
+        "floor_price": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Floor Price"
+        },
+        "buyer_types": {
+          "default": [],
+          "items": {
+            "enum": [
+              "juice_shop",
+              "restaurant",
+              "bakery",
+              "charity",
+              "dairy_farm",
+              "other"
+            ],
+            "type": "string"
+          },
+          "title": "Buyer Types",
+          "type": "array"
+        },
+        "buyer_condition": {
+          "default": "",
+          "title": "Buyer Condition",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "staff_actions": {
+          "default": [],
+          "items": {
+            "enum": [
+              "remove_bad_pieces",
+              "check_before_off_shelf",
+              "identify_item",
+              "enter_shelf_price",
+              "approve_compost"
+            ],
+            "type": "string"
+          },
+          "title": "Staff Actions",
+          "type": "array"
+        },
+        "on_hold": {
+          "default": false,
+          "title": "On Hold",
+          "type": "boolean"
+        },
+        "needs_approval": {
+          "default": false,
+          "title": "Needs Approval",
+          "type": "boolean"
+        },
+        "needs_price": {
+          "default": false,
+          "title": "Needs Price",
+          "type": "boolean"
+        },
+        "recheck_next_photo": {
+          "default": false,
+          "title": "Recheck Next Photo",
+          "type": "boolean"
+        },
+        "profile_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Profile Key"
+        },
+        "profile_source": {
+          "anyOf": [
+            {
+              "enum": [
+                "gemini",
+                "manager",
+                "fallback"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Profile Source"
+        }
+      },
+      "required": [
+        "item_key",
+        "name",
+        "step",
+        "allowed_steps",
+        "unit",
+        "reason"
+      ],
+      "title": "LadderDecision",
+      "type": "object"
+    },
+    "LadderMeta": {
+      "properties": {
+        "latency_ms": {
+          "title": "Latency Ms",
+          "type": "integer"
+        },
+        "profiles_used": {
+          "title": "Profiles Used",
+          "type": "integer"
+        },
+        "profiles_generated": {
+          "default": 0,
+          "title": "Profiles Generated",
+          "type": "integer"
+        },
+        "profile_calls": {
+          "default": 0,
+          "title": "Profile Calls",
+          "type": "integer"
+        },
+        "fallback_profiles": {
+          "default": 0,
+          "title": "Fallback Profiles",
+          "type": "integer"
+        },
+        "input_tokens": {
+          "default": 0,
+          "title": "Input Tokens",
+          "type": "integer"
+        },
+        "output_tokens": {
+          "default": 0,
+          "title": "Output Tokens",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "latency_ms",
+        "profiles_used"
+      ],
+      "title": "LadderMeta",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "mart_id": {
+      "title": "Mart Id",
+      "type": "string"
+    },
+    "inspection_id": {
+      "title": "Inspection Id",
+      "type": "string"
+    },
+    "decided_at": {
+      "format": "date-time",
+      "title": "Decided At",
+      "type": "string"
+    },
+    "hours_until_closing": {
+      "title": "Hours Until Closing",
+      "type": "number"
+    },
+    "decisions": {
+      "items": {
+        "$ref": "#/$defs/LadderDecision"
+      },
+      "title": "Decisions",
+      "type": "array"
+    },
+    "meta": {
+      "$ref": "#/$defs/LadderMeta"
+    }
+  },
+  "required": [
+    "mart_id",
+    "inspection_id",
+    "decided_at",
+    "hours_until_closing",
+    "decisions",
+    "meta"
+  ],
+  "title": "LadderResult",
+  "type": "object"
+}

@@ -1,0 +1,43 @@
+{
+  "properties": {
+    "latency_ms": {
+      "title": "Latency Ms",
+      "type": "integer"
+    },
+    "profiles_used": {
+      "title": "Profiles Used",
+      "type": "integer"
+    },
+    "profiles_generated": {
+      "default": 0,
+      "title": "Profiles Generated",
+      "type": "integer"
+    },
+    "profile_calls": {
+      "default": 0,
+      "title": "Profile Calls",
+      "type": "integer"
+    },
+    "fallback_profiles": {
+      "default": 0,
+      "title": "Fallback Profiles",
+      "type": "integer"
+    },
+    "input_tokens": {
+      "default": 0,
+      "title": "Input Tokens",
+      "type": "integer"
+    },
+    "output_tokens": {
+      "default": 0,
+      "title": "Output Tokens",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "latency_ms",
+    "profiles_used"
+  ],
+  "title": "LadderMeta",
+  "type": "object"
+}

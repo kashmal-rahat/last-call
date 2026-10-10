@@ -1,0 +1,136 @@
+{
+  "$defs": {
+    "MartInfo": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "location": {
+          "title": "Location",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "location"
+      ],
+      "title": "MartInfo",
+      "type": "object"
+    },
+    "PriceEntry": {
+      "properties": {
+        "names": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Names",
+          "type": "array"
+        },
+        "prices": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "propertyNames": {
+            "enum": [
+              "kg",
+              "dozen"
+            ]
+          },
+          "title": "Prices",
+          "type": "object"
+        }
+      },
+      "required": [
+        "names",
+        "prices"
+      ],
+      "title": "PriceEntry",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "mart_id": {
+      "title": "Mart Id",
+      "type": "string"
+    },
+    "mart": {
+      "$ref": "#/$defs/MartInfo"
+    },
+    "timezone": {
+      "default": "Asia/Karachi",
+      "title": "Timezone",
+      "type": "string"
+    },
+    "closing_time": {
+      "format": "time",
+      "title": "Closing Time",
+      "type": "string"
+    },
+    "overnight_hours": {
+      "default": 12,
+      "title": "Overnight Hours",
+      "type": "number"
+    },
+    "discount_window_hours": {
+      "default": 6,
+      "title": "Discount Window Hours",
+      "type": "number"
+    },
+    "max_discount_pct": {
+      "default": 40,
+      "title": "Max Discount Pct",
+      "type": "integer"
+    },
+    "min_discount_pct": {
+      "default": 10,
+      "title": "Min Discount Pct",
+      "type": "integer"
+    },
+    "bulk_open_pct": {
+      "default": 60,
+      "title": "Bulk Open Pct",
+      "type": "integer"
+    },
+    "bulk_floor_pct": {
+      "default": 35,
+      "title": "Bulk Floor Pct",
+      "type": "integer"
+    },
+    "feed_open_pct": {
+      "default": 15,
+      "title": "Feed Open Pct",
+      "type": "integer"
+    },
+    "feed_floor_pct": {
+      "default": 5,
+      "title": "Feed Floor Pct",
+      "type": "integer"
+    },
+    "price_round_to": {
+      "default": 5,
+      "title": "Price Round To",
+      "type": "integer"
+    },
+    "note": {
+      "default": "",
+      "title": "Note",
+      "type": "string"
+    },
+    "prices": {
+      "items": {
+        "$ref": "#/$defs/PriceEntry"
+      },
+      "title": "Prices",
+      "type": "array"
+    }
+  },
+  "required": [
+    "mart_id",
+    "mart",
+    "closing_time",
+    "prices"
+  ],
+  "title": "MartRules",
+  "type": "object"
+}

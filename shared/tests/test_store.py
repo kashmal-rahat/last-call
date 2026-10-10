@@ -251,3 +251,98 @@ async def test_inspection_lifecycle(store):
 
     # Other shelf still returns None
     assert await store.get_latest_inspection("mart_1", "shelf_2") is None
+
+
+@pytest.mark.asyncio
+async def test_produce_profile_lifecycle(store):
+    from lastcall_shared.models import ProduceProfile, StageProfile
+
+    sp = StageProfile(sellable_for="6_to_24h", juice_shop=True, restaurant=True, bakery=False, charity=True)
+    p1 = ProduceProfile(
+        key="banana__v1",
+        name="banana",
+        note="Initial v1 note",
+        fresh=sp,
+        ripening=sp,
+        overripe=sp,
+        spoiled_ok_for_cattle=False,
+        overripe_ok_for_cattle=True,
+        source="gemini",
+        prompt_version="1",
+        created_at=NOW,
+    )
+
+    # 1. create_profile creates-if-absent
+    created = await store.create_profile(p1)
+    assert created is True
+
+    # 2. create doesn't overwrite
+    p1_dup = p1.model_copy(update={"note": "Different note"})
+    created_again = await store.create_profile(p1_dup)
+    assert created_again is False
+
+    # Check profile was not overwritten
+    profiles = await store.get_profiles(["banana__v1"])
+    assert "banana__v1" in profiles
+    assert profiles["banana__v1"].note == "Initial v1 note"
+
+    # 3. get_profiles with missing keys returns only found keys
+    multi = await store.get_profiles(["banana__v1", "missing_key_xyz"])
+    assert set(multi.keys()) == {"banana__v1"}
+
+    # 4. set_profile overwrites
+    p1_updated = p1.model_copy(update={"note": "Updated manager note", "source": "manager"})
+    await store.set_profile(p1_updated)
+    profiles_after_set = await store.get_profiles(["banana__v1"])
+    assert profiles_after_set["banana__v1"].note == "Updated manager note"
+    assert profiles_after_set["banana__v1"].source == "manager"
+
+    # 5. delete_profile
+    await store.delete_profile("banana__v1")
+    profiles_after_delete = await store.get_profiles(["banana__v1"])
+    assert "banana__v1" not in profiles_after_delete
+
+
+@pytest.mark.asyncio
+async def test_firestore_store_get_profiles_async_generator():
+    """C1: FirestoreStore.get_profiles must iterate self.client.get_all(...) with async for, not await."""
+    from unittest.mock import MagicMock
+    from lastcall_shared.models import ProduceProfile, StageProfile
+
+    sp = StageProfile(sellable_for="6_to_24h", juice_shop=True, restaurant=True, bakery=False, charity=True)
+    p1 = ProduceProfile(
+        key="banana__v1",
+        name="banana",
+        note="Banana note",
+        fresh=sp,
+        ripening=sp,
+        overripe=sp,
+        spoiled_ok_for_cattle=False,
+        overripe_ok_for_cattle=True,
+        source="gemini",
+        prompt_version="1",
+        created_at=NOW,
+    )
+
+    fs = FirestoreStore(collection_prefix="mock_")
+
+    snap_found = MagicMock()
+    snap_found.id = "banana__v1"
+    snap_found.exists = True
+    snap_found.to_dict.return_value = p1.model_dump(mode="json")
+
+    snap_missing = MagicMock()
+    snap_missing.id = "missing__v1"
+    snap_missing.exists = False
+
+    async def fake_get_all(doc_refs):
+        for snap in [snap_found, snap_missing]:
+            yield snap
+
+    fs.client.get_all = fake_get_all
+
+    res = await fs.get_profiles(["banana__v1", "missing__v1"])
+    assert "banana__v1" in res
+    assert res["banana__v1"].name == "banana"
+    assert "missing__v1" not in res
+

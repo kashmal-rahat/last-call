@@ -42,7 +42,7 @@ Without storing, Gemini would still make mistakes, just randomly and invisibly. 
 **For judges:** AI does what it's good at (world knowledge, language in the Inspector and Negotiator); code does what it's good at (repeatable, auditable decisions about money and safety). "Agents decide, code enforces" taken one step further: the AI supplies knowledge, and the money decisions are code.
 
 ## Scope
-**In:** produce profiles (generate, check, store, fix); the decision engine; demo-mart rules with a price list; `POST /demo/decide`; decisions on the demo cards; the **closing-time selector**; manual shelf price for unlisted items; a small profile accuracy check.
+**In:** produce profiles (generate, check, store, fix); the decision engine; demo-mart rules with a price list; `POST /demo/decide`; decisions on the demo cards; the **closing-time selector**; manual shelf price for unlisted items; a profile sense check (variation and a review table, no labels).
 **Out:** batches, the call handoff and Cloud Tasks (Module 6); the Scout (Module 4); the manager rules screen and editing profiles in the UI (Module 5); `pricing_stats` (Module 7). The decision already carries everything Modules 4 and 6 need (`buyer_types`, `buyer_condition`, `opening_price`, `floor_price`, `next_steps`).
 
 ## Decisions (already in `plans/README.md`; D38 supersedes D32)
@@ -288,10 +288,14 @@ async def decide_inspection(result: FreshnessResult, *, rules: MartRules, store,
 - Structured log: inspection_id, count by step, profiles generated, fallbacks, latency, tokens. Never names, evidence or reasons.
 - Tests: end to end with a fake client; second run makes zero Gemini calls and gives an identical result (**the consistency guarantee**); overrides used; no-produce → empty.
 
-### Step 6: 🛑 Profile accuracy check (`scripts/check_profiles.py`, results in `plans/module-3/results/profiles.md`)
-- The user fills `data/produce_profiles_labels.csv` with ~12 produce (mix of fast and slow: spinach, coriander, banana, mango, guava, tomato, okra, onion, potato, kinnow, apple, bottle gourd): `name, stage, expected_band (one or two acceptable), juice_shop, restaurant, bakery, charity, cattle`. **Label before looking at Gemini's answers.**
-- The script generates profiles **without saving** (twice, to show raw variation) and reports: band agreement, use agreement, how often the two raw runs differ (this is the evidence for storing profiles), latency and cost.
+### Step 6: 🛑 Profile check (`scripts/check_profiles.py`, results in `plans/module-3/results/profiles.md`)
+- **No labels CSV** (user decision, 2026-10-10): shelf life and buyer fit have no ground truth, so user-written labels would be a second guess, not a measure of accuracy.
+- The script generates profiles for ~12 produce (a mix of fast and slow: spinach, coriander, banana, mango, guava, tomato, okra, onion, potato, kinnow, apple, bottle gourd) **without saving**, twice, and reports:
+  - one table of the run-1 profiles, with a blank **"Sense check (user)"** column
+  - how often the two raw runs differed (the evidence for storing profiles)
+  - latency and cost
 - Also print engine decisions for the Step 4 worked examples using the generated profiles.
+- The user sense-checks the table and fixes any clear error later with `scripts/produce_profiles.py set` (Step 7). Optional real evidence: the banana time-lapse (daily photos of one tray) compared with the banana profile's bands.
 - 🛑 Report. At most 3 prompt changes; bump `PROFILE_PROMPT_VERSION` each time.
 
 ---
@@ -344,7 +348,7 @@ Tests (`test_demo_decide.py`, fake `decide_fn`): 401, each 400, 404, 429, 200 sa
    - `plans/README.md` and `README.md`: Module 3 status → implemented and deployed, with anything still pending
    - `README.md`: a short Module 3 section (what it does, the `/demo` decision panel, `scripts/produce_profiles.py` and `scripts/check_profiles.py` commands), like the Module 1 section
    - If anything was built differently from this plan, update `docs/last-call-architecture.md` §4 Ladder to match and report the difference
-5. 🛑 Final report: what works, what doesn't, what couldn't be verified; the `profiles.md` headline numbers.
+5. 🛑 Final report: what works, what doesn't, what couldn't be verified; the `profiles.md` variation numbers.
 
 ## Future: learning loop (documented only, not built for the hackathon)
 - **"Correct this" (manager):** on a decision card, the manager sees the facts the decision used ("Banana · ripening · sells 6–24 h · juice shops ✓") and corrects the wrong one. The fix saves the profile as `source: "manager"`; it applies at once to every future decision for that produce, in every mart, and Gemini never overwrites it. Learning from one explicit correction, not statistics from many ratings (a rating can't say *what* was wrong: the photo reading, the profile or the price rules). Natural home: the Module 5 manager screen. Until then, `scripts/produce_profiles.py set` does the same.
@@ -361,7 +365,7 @@ Tests (`test_demo_decide.py`, fake `decide_fn`): 401, each 400, 404, 429, 200 sa
 - **3A:**
   - [ ] Pytest green, including unchanged inspector tests and the exhaustive engine loop (0 violations).
   - [ ] Second decide run makes 0 Gemini calls and gives identical output.
-  - [ ] `profiles.md` with agreement numbers.
+  - [ ] `profiles.md` with the profiles table, run-to-run variation, and worked examples.
 - **3B:**
   - [ ] Deployed `/demo` shows decisions.
   - [ ] The selector changes decisions.

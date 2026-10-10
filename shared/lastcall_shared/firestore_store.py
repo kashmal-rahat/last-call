@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from pydantic import AwareDatetime
 from google.cloud import firestore
+from google.api_core.exceptions import AlreadyExists
 
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import (
@@ -17,6 +18,7 @@ from lastcall_shared.models import (
     OutboxMessage,
     StaffTask,
     TranscriptEntry,
+    ProduceProfile,
 )
 
 
@@ -342,6 +344,34 @@ class FirestoreStore:
             return None
         return await self.get_inspection(latest_id)
 
+    async def get_profiles(self, keys: list[str]) -> dict[str, ProduceProfile]:
+        if not keys:
+            return {}
+        doc_refs = [self._col("produce_knowledge").document(k) for k in keys]
+        out: dict[str, ProduceProfile] = {}
+        async for snap in self.client.get_all(doc_refs):
+            if snap.exists:
+                data = snap.to_dict()
+                if data:
+                    out[snap.id] = ProduceProfile.model_validate(data)
+        return out
+
+    async def create_profile(self, profile: ProduceProfile) -> bool:
+        doc_ref = self._col("produce_knowledge").document(profile.key)
+        try:
+            await doc_ref.create(profile.model_dump(mode="json"))
+            return True
+        except AlreadyExists:
+            return False
+
+    async def set_profile(self, profile: ProduceProfile) -> None:
+        doc_ref = self._col("produce_knowledge").document(profile.key)
+        await doc_ref.set(profile.model_dump(mode="json"))
+
+    async def delete_profile(self, key: str) -> None:
+        doc_ref = self._col("produce_knowledge").document(key)
+        await doc_ref.delete()
+
     async def clean_prefix(self) -> None:
         """Deletes all test documents created under collection_prefix."""
         if not self.collection_prefix:
@@ -356,6 +386,7 @@ class FirestoreStore:
             "daily_sessions",
             "inspections",
             "shelves",
+            "produce_knowledge",
         ]
         for col_name in collections:
             col_ref = self._col(col_name)
