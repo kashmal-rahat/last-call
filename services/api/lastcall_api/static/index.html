@@ -507,9 +507,6 @@
     }
 
     .worst-warning-chip {
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      color: #fca5a5;
       font-size: 0.76rem;
       font-weight: 600;
       padding: 0.2rem 0.5rem;
@@ -517,6 +514,24 @@
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
+    }
+
+    .worst-warning-chip.worst-neutral {
+      background: rgba(156, 163, 175, 0.15);
+      border: 1px solid rgba(156, 163, 175, 0.4);
+      color: #d1d5db;
+    }
+
+    .worst-warning-chip.worst-amber {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fcd34d;
+    }
+
+    .worst-warning-chip.worst-red {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
     }
 
     .evidence-text {
@@ -585,6 +600,23 @@
       text-transform: uppercase;
       font-size: 0.72rem;
       letter-spacing: 0.03em;
+    }
+
+    .staff-reasons-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.35rem;
+    }
+
+    .staff-reason-chip {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: #fef3c7;
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
     }
 
     .change-note-banner {
@@ -1205,6 +1237,17 @@
       return qty.low === qty.high ? `${qty.low} ${unit}` : `${qty.low}–${qty.high} ${unit}`;
     }
 
+    const STAFF_REASON_LABELS = {
+      'spoiled_or_unsafe': 'spoiled or unsafe',
+      'bad_pieces_in_group': 'some pieces bad',
+      'low_confidence': 'low confidence',
+      'unknown_produce': 'unknown produce',
+      'mixed_crate': 'mixed crate',
+      'model_flagged': 'flagged by AI',
+      'safety_override': 'safety rule applied',
+      'zoom_disagreement': 'close-up disagreed',
+    };
+
     // Safe card builder using textContent exclusively
     function createItemCard(item) {
       const card = document.createElement('div');
@@ -1240,10 +1283,18 @@
       topRow.appendChild(titleGroup);
 
       // Worst stage warning badge
-      if (item.worst_stage !== item.stage) {
+      if (item.worst_stage && item.worst_stage !== item.stage) {
         const worstBadge = document.createElement('div');
-        worstBadge.className = 'worst-warning-chip';
-        worstBadge.textContent = `Worst: ${item.worst_stage}`;
+        let severityClass = 'worst-red';
+        if (item.worst_stage === 'ripening') {
+          severityClass = 'worst-neutral';
+        } else if (item.worst_stage === 'overripe') {
+          severityClass = 'worst-amber';
+        } else if (item.worst_stage === 'spoiled' || item.worst_stage === 'unsafe') {
+          severityClass = 'worst-red';
+        }
+        worstBadge.className = `worst-warning-chip ${severityClass}`;
+        worstBadge.textContent = `Some pieces: ${item.worst_stage}`;
         topRow.appendChild(worstBadge);
       }
 
@@ -1332,6 +1383,19 @@
         stReason.textContent = item.check_reason || 'Staff review recommended';
         staffBox.appendChild(stTitle);
         staffBox.appendChild(stReason);
+
+        if (item.staff_check_reasons && item.staff_check_reasons.length > 0) {
+          const reasonsContainer = document.createElement('div');
+          reasonsContainer.className = 'staff-reasons-container';
+          item.staff_check_reasons.forEach(r => {
+            const chip = document.createElement('span');
+            chip.className = 'staff-reason-chip';
+            chip.textContent = STAFF_REASON_LABELS[r] || r.replace(/_/g, ' ');
+            reasonsContainer.appendChild(chip);
+          });
+          staffBox.appendChild(reasonsContainer);
+        }
+
         card.appendChild(staffBox);
       }
 
