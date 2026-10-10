@@ -1,6 +1,6 @@
 # Module 3: Ladder, plan (v2: "Gemini knows, code decides")
 
-> Approved 2026-10-10 (final for implementation). Claude plans and reviews; Gemini Flash in Antigravity implements. Follow the steps in order and stop at every 🛑.
+> Approved 2026-10-10. **Updated 2026-10-10 (D44):** Step 4's timing rules were rewritten after manual testing on the deployed demo; see `review.md` round 5. Claude plans and reviews; Gemini Flash in Antigravity implements. Follow the steps in order and stop at every 🛑.
 >
 > **Rules for the coding agent:**
 > - Don't change Module 1 or Module 2 behaviour. Their existing tests must pass unchanged at every step.
@@ -53,6 +53,7 @@ Without storing, Gemini would still make mistakes, just randomly and invisibly. 
 | D40 | Profiles are checked in code before saving and never expire. Gemini profiles are keyed `{produce}__v{N}` (a prompt fix regenerates them); a manager's fix is keyed `{produce}__manager`, looked up first and never overwritten. A script shows, deletes and sets profiles | Mistakes are rare, visible, contained to one produce, and fixed once |
 | D41 | Prices are percentages of the shelf price from mart rules (demo price list JSON). A missing price, or a unit mismatch with the item's quantity unit, means `needs_price`, and the demo lets the user enter one | Money never depends on a model guess; in production prices come from the POS |
 | D42 | Decisions are saved as one `LadderResult` in `decisions/{inspection_id}` (overwritten on re-decide). No batches until Module 6 | Keeps `FreshnessResult` v3 untouched |
+| D44 | (added 2026-10-10, after manual testing) **Timing rules v2.** Ripe (`ripening`) produce never leaves the shelf. Fresh and ripening produce is kept unless it won't sell until tomorrow's opening; then it is discounted only inside the evening window, deeper as closing nears (10% → 40%, 5% per hour), or 40% if it stops selling before closing. Overripe produce goes to bulk sale while there is time for pickup (≥ 2 h before closing), otherwise 40% off. Overnight hours come from the mart's opening and closing times | The first rules sent sellable ripe bananas to juice shops in the morning and gave smaller discounts nearer closing. Both contradict the Inspector's stage definitions and how marts mark down. The new rules match them, use fewer invented numbers, and were checked against 24 scenarios (`review.md` round 5) |
 | D43 | (added 2026-10-10, after 3A) A new profile is the **consensus of 5 Gemini answers** sent in parallel and merged in code field by field (majority for uses, median for shelf life, 4 of 5 for cattle). The profile stores how many votes it used and which fields were uncertain. At least 3 answers are needed, otherwise the fallback profile is used | Raw answers varied for 9 of 12 produce between two runs; voting makes the stored answer stable, and the uncertain fields show the manager where to check. We accept Gemini's consensus as the answer; the manager can overwrite any profile |
 
 ## Milestones (implement one, report, then 🛑 wait)
@@ -131,8 +132,9 @@ class MartRules(BaseModel):
     mart: MartInfo
     timezone: str = "Asia/Karachi"
     closing_time: time              # 23:00
-    overnight_hours: float = 12     # keep only if it still sells this long after closing
-    discount_window_hours: float = 6  # discounts start at most this many hours before closing
+    opening_time: time              # 09:00 (D44); overnight hours = closing → next opening (23:00 → 09:00 = 10 h)
+    discount_window_hours: float = 6  # evening discounts start this many hours before closing (17:00 for 23:00)
+    bulk_pickup_hours: float = 2    # D44: a bulk sale needs at least this long before closing for pickup
     max_discount_pct: int = 40
     min_discount_pct: int = 10
     bulk_open_pct: int = 60         # opening = shelf × 60%
@@ -222,26 +224,28 @@ class LadderResult(BaseModel):
 | stage | allowed |
 |---|---|
 | fresh | keep, discount |
-| ripening | keep, discount, bulk_sale |
+| ripening | keep, discount (D44: ripe produce is still good to sell, so it never leaves the shelf) |
 | overripe | discount, bulk_sale, donate, animal_feed |
 | spoiled | animal_feed, compost; **compost only** if `mould` or `slime` is in `issues` |
 | unsafe | compost |
 
-**Sellable hours:** `BAND_HOURS = {under_6h: 4, 6_to_24h: 15, 1_to_3_days: 48, over_3_days: 96}` × `LEVEL_FACTOR = {early: 1.0, mid: 0.7, late: 0.4}` for the item's stage. Spoiled and unsafe have no band: `life = 0`, `sellable_hours = None` (keep and discount aren't allowed for them anyway). These constants are generic, not per produce.
+**Sellable hours ("sells for"):** `BAND_HOURS = {under_6h: 4, 6_to_24h: 15, 1_to_3_days: 48, over_3_days: 96}` × `LEVEL_FACTOR = {early: 1.0, mid: 0.7, late: 0.4}` for the item's stage. **Why the factor:** the profile says how long produce keeps selling **from the start** of a stage; the Inspector's `stage_level` says how far into the stage this group already is (late = close to the next stage). The factor is "how much of that time is left": all, most, some. It's approximate on purpose, because the bands are wide and every photo re-decides. Document this in a comment above the constants and in the README's Module 3 section. Spoiled and unsafe have no band: `life = 0`, `sellable_hours = None` (keep and discount aren't allowed for them anyway). These constants are generic, not per produce.
 
 **`decide_item(item, profile, rules, H, price) -> LadderDecision`**, in order (`H` = hours until closing):
-1. `allowed = allowed_steps(item)`; `life = sellable hours`; uses = the profile's stage entry (spoiled: only cattle, from `spoiled_ok_for_cattle`). Exactly one of the three cases below applies.
-2. **Case A: it still sells after tomorrow's opening** (`life >= H + overnight_hours`): **keep** if allowed; otherwise (overripe that lasts, e.g. potatoes) **discount** at `min_discount`.
-3. **Case B: it lasts until closing but not through tomorrow** (`H <= life < H + overnight_hours`):
-   - keep allowed and `H > discount_window_hours` → **keep for now** (`recheck_next_photo`; reason "lasts until closing; discount decided closer to closing"). Most of the day is left to sell at full price, and the next photo re-decides.
-   - otherwise → **discount**: `pct = max_discount × (1 − (life − H) / overnight_hours)`, clamped to `[min_discount, max_discount]`, rounded to 5. The less it outlasts closing, the deeper the discount.
-4. **Case C: it won't last until closing** (`life < H`; always true for spoiled and unsafe, where `life = 0`): **off the shelf**, the first allowed step whose use is true, in ladder order:
-   - `bulk_sale`: any of juice_shop, restaurant or bakery
-   - `donate`: charity
-   - `animal_feed`: cattle ok for this stage
-   - `compost` (always fits)
-5. Case C with no allowed, fitting off-shelf step (e.g. fresh produce that won't last to closing): **discount** at `max_discount` if allowed, else keep; add `check_before_off_shelf`.
-6. `next_steps` = the remaining fitting allowed steps after `step`, in ladder order.
+Definitions: `H` = hours until closing; `O` = overnight hours (closing → next opening, from `MartRules`); `W` = `discount_window_hours`; `life` = sellable hours. In clock terms: "sells until" = photo time + `life`; "tomorrow's opening" = closing + `O`.
+1. `allowed = allowed_steps(item)`; uses = the profile's stage entry (spoiled: only cattle, from `spoiled_ok_for_cattle`).
+2. **Fresh or ripening** (D44; never off the shelf):
+   - `life >= H + O` (still sells at tomorrow's opening) → **keep** (reason: "sells until <time tomorrow>; still fine at tomorrow's opening → keep").
+   - otherwise, `H > W` (before the evening window) → **keep for now**, `recheck_next_photo` (reason: "sells until <time>; discount decided in the evening window from <window start>").
+   - otherwise → **discount**:
+     - `life < H` (stops selling before closing) → `max_discount`
+     - else `pct = min_discount + (max_discount − min_discount) × (1 − H / W)`, rounded half-up to a multiple of 5, clamped to `[min_discount, max_discount]`. With the defaults that is 10% at 17:00, then +5% per hour (35% at 22:00).
+3. **Overripe:**
+   - a business buyer fits (juice_shop, restaurant or bakery true for overripe) **and** `H >= bulk_pickup_hours` → **bulk sale**
+   - otherwise → **discount** at `max_discount` (reason says why: "too late for pickup before closing" or "no business buyer fits")
+4. **Spoiled:** `animal_feed` if allowed and `spoiled_ok_for_cattle`, else **compost**. **Unsafe:** compost.
+5. Remove the old Case A/B/C logic, the `discount at min_discount` branch and the `check_before_off_shelf` fallback for fresh produce; none of them exist in v2.
+6. `next_steps` = the remaining fitting allowed steps after `step`, in ladder order (keep → `discount`; overripe bulk sale → donate, then animal feed if cattle-ok; overripe discount → donate, animal feed if cattle-ok).
 7. **Prices:**
    - helpers: `round_to(x)` = nearest multiple of `price_round_to` (half up); `ceil_to(x)` = next multiple up
    - discount: `discounted = round_to(shelf × (100 − pct)/100)`
@@ -256,27 +260,21 @@ class LadderResult(BaseModel):
    - compost → `approve_compost`, `needs_approval`
    - keep/discount → `recheck_next_photo`
 10. **Text from facts, no model:**
-    - `reason` = e.g. `"Banana, ripening (late): sells for about 6 h; 3 h to closing → 30% off"` (matches the worked example below) or `"… won't last to closing; juice shops and restaurants can use it → bulk sale"`
+    - `reason` uses **clock times**, so a reader can check it: e.g. `"Banana, ripening (mid): about 10 h of selling left, sells until 20:30; closes 23:00, not fine at tomorrow's 09:00 opening → 20% off"`. The photo time is `closing − H` (this also works with the demo's hours override). Write "today" or "tomorrow" next to times on another day.
     - `buyer_condition` (≤ 160 chars; the Negotiator rephrases it in Urdu). It describes what the **buyer will receive**:
       - stage words: fresh → "Fresh", ripening → "Ripe", overripe → "Very ripe", spoiled → "Past its best, for animal feed"; issue words = the issue names with `_` replaced by spaces
       - normally: stage words + issue words + the Inspector's `evidence`, e.g. "Overripe; browning, soft spots. Very soft, brown skin, sweet inside."
       - when `remove_bad_pieces` is set: staff remove the bad pieces before pickup, so **leave out `evidence`** (it describes the bad pieces for staff) and the severe issues (`mould`, `slime`, `rot`, `leaking`, `pest_damage`); use stage words + the remaining issue words + "Sorted; damaged pieces removed."
       - Test: a ripening group whose worst pieces are mouldy → `buyer_condition` mentions neither mould nor the evidence text.
 
-**`hours_until_closing(rules, now, override)`:** the override (0.5–16) if given, else hours from `now` to the **next** closing time in the mart timezone (after closing it counts to tomorrow's closing, so judges in other time zones still get sensible decisions). Always > 0 and ≤ 24.
+**`hours_until_closing(rules, now, override)`:** unchanged: the override (0.5–16) if given, else hours from `now` to the **next** closing time in the mart timezone (after closing it counts to tomorrow's closing, so judges in other time zones still get sensible decisions). Always > 0 and ≤ 24.
 
 **Tests (`test_ladder_engine.py`):**
 - The allowed table, and mould → compost only.
 - **An exhaustive loop over every stage × level × band × use combination × H in {0.5, 3, 8, 14}: the step is always allowed, opening ≥ floor, and the discount is within limits (0 violations; a slide).**
-- Monotonic behaviour: for the same item and time, a longer shelf-life band never gives a *worse* step (keep ≥ discount ≥ off-shelf).
-- Worked examples:
-  - fresh banana in the morning → keep
-  - late-ripening banana (band `6_to_24h` → 15 × 0.4 = 6 h), 3 h to closing → discount 30% (40 × (1 − 3/12))
-  - the same at 14 h to closing → bulk sale (6 h < 14 h)
-  - overripe spinach, 8 h to closing (life ≤ 4 h) → bulk sale to restaurants (if the profile says restaurant)
-  - fresh (early) spinach (band `6_to_24h`, life 15 h), 13 h to closing → keep for now (outside the 6 h window); same at 4 h → discount 10% (40 × (1 − 11/12) = 3, clamped to the 10% minimum)
-  - overripe potatoes (band `over_3_days`, life 96 h) → discount at the 10% minimum (Case A, keep not allowed)
-  - spoiled without mould → animal feed if cattle-ok, else compost
+- Exhaustive loop H values: {0.5, 1, 1.9, 2, 3, 5, 6, 8, 14, 23}, covering the pickup cut-off and the window edges. Also assert: **ripening and fresh never get an off-shelf step**.
+- Monotonic: for the same reading, a longer shelf-life band never gives a worse step; and inside the evening window the discount **never gets smaller as H decreases**.
+- **The 24 scenarios in `review.md` round 5 as one table-driven test** (closing 23:00, opening 09:00, window 6 h, pickup 2 h), each asserting the step and, where given, the discount %.
 - Missing price, holds, `remove_bad_pieces`, reason text.
 
 ### Step 5: `decide_inspection` (`ladder/ladder.py`)

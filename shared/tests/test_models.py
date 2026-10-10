@@ -696,6 +696,36 @@ def test_mart_rules_invalid_percentages():
             prices=[],
         )
 
+    # opening_time == closing_time
+    with pytest.raises(ValidationError, match="opening_time and closing_time cannot be equal"):
+        MartRules(
+            mart_id="test",
+            mart=mart,
+            closing_time=time(23, 0),
+            opening_time=time(23, 0),
+            prices=[],
+        )
+
+    # bulk_pickup_hours < 0 or > 6
+    with pytest.raises(ValidationError, match="bulk_pickup_hours must be between 0 and 6"):
+        MartRules(
+            mart_id="test",
+            mart=mart,
+            closing_time=time(23, 0),
+            bulk_pickup_hours=7.0,
+            prices=[],
+        )
+
+    # overnight_hours property
+    r = MartRules(
+        mart_id="test",
+        mart=mart,
+        closing_time=time(23, 0),
+        opening_time=time(9, 0),
+        prices=[],
+    )
+    assert r.overnight_hours == 10.0
+
 
 def test_loader_unknown_mart_raises_key_error():
     from lastcall_shared.marts.loader import load_mart_rules

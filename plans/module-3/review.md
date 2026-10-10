@@ -215,3 +215,60 @@ Checked in code:
 ## Notes
 - Cattle suitability for spoiled banana, apple and guava came out **uncertain**, so the consensus is "no" (needs 4 of 5 votes) and those produce go to compost when spoiled. That's the cautious outcome by design. If you want spoiled bananas to go to cattle feed, set a manager profile with `scripts/produce_profiles.py set`.
 - The warmed profiles cover the produce in the current samples (banana, apple, tomato, cucumber, guava). Any new produce in an uploaded photo is generated on first sight (5 votes, about 5–8 s for the first decide).
+
+---
+
+# Round 5: Timing rules v2 (D44), after manual testing (2026-10-10)
+
+**Why:** testing the deployed demo with the "Bananas & Apples" sample, ripening (mid) bananas got a **bulk sale at 12 h before closing** and a **smaller discount at 1 h (10%) than at 4 h (20%)**. Both follow the old rules, but the rules were wrong:
+1. Ripe produce was allowed off the shelf, although the Inspector defines `ripening` as "ripe and good to sell".
+2. "Won't last until closing" sent produce away in the morning, losing a day of full-price sales; the next photo would have caught the change.
+3. The discount depth came from an invented "how close to surviving overnight" measure, so it shrank near closing.
+
+**The new rules** are in `plan.md` Step 4 (D44): ripening never leaves the shelf, the evening window discount deepens 5% per hour towards closing, and overripe produce goes to bulk sale while there's time for pickup. Quantity is still ignored (user decision: fine for the demo).
+
+## Scenario table (must become one table-driven test)
+Mart rules: closes 23:00, opens 09:00 (O = 10 h), window W = 6 h (from 17:00), pickup 2 h, discounts 10–40%. "Sells for" = band hours (4 / 15 / 48 / 96) × level factor (early 1.0, mid 0.7, late 0.4). The photo time sets `H` = hours until 23:00.
+
+| # | Produce, stage (level) | Profile used | Sells for | Photo | H | Expected step | Discount / flags |
+|---|---|---|---|---|---|---|---|
+| 1 | onion, fresh (mid) | fresh `over_3_days` | 67.2 h | 10:00 | 13 | keep | |
+| 2 | banana, ripening (mid) | ripening `6_to_24h` | 10.5 h | 10:00 | 13 | keep (for now) | `recheck_next_photo` |
+| 3 | same as 2 | | 10.5 h | 19:00 | 4 | discount | 20% |
+| 4 | same as 2 | | 10.5 h | 22:00 | 1 | discount | 35% |
+| 5 | banana, ripening (mid) | ripening `1_to_3_days` | 33.6 h | 19:00 | 4 | keep | |
+| 6 | tomato, fresh (early) | fresh `1_to_3_days` | 48 h | 19:00 | 4 | keep | |
+| 7 | spinach, fresh (early) | fresh `6_to_24h` | 15 h | 10:00 | 13 | keep (for now) | |
+| 8 | same as 7 | | 15 h | 17:00 | 6 | discount | 10% |
+| 9 | same as 7 | | 15 h | 22:00 | 1 | keep | still fine at 09:00 tomorrow |
+| 10 | spinach, ripening (mid) | ripening `under_6h` | 2.8 h | 19:00 | 4 | discount | 40% (stops before closing) |
+| 11 | same as 10 | | 2.8 h | 10:00 | 13 | keep (for now) | |
+| 12 | banana, overripe (mid) | overripe: juice_shop, bakery | n/a | 10:00 | 13 | bulk_sale | buyers juice_shop, bakery |
+| 13 | same as 12 | | | 20:30 | 2.5 | bulk_sale | |
+| 14 | same as 12 | | | 21:30 | 1.5 | discount | 40% (too late for pickup) |
+| 15 | coriander, overripe (mid) | overripe: no business use, cattle no | | 10:00 | 13 | discount | 40%; next_steps [donate] |
+| 16 | potato, overripe (early) | overripe: restaurant | | 10:00 | 13 | bulk_sale | buyers restaurant |
+| 17 | tomato, spoiled, no mould | spoiled_ok_for_cattle yes | | any | 4 | animal_feed | |
+| 18 | tomato, spoiled, no mould | spoiled_ok_for_cattle no | | any | 4 | compost | needs_approval |
+| 19 | tomato, spoiled, `mould` in issues | spoiled_ok_for_cattle yes | | any | 4 | compost | needs_approval |
+| 20 | apple, fresh (mid), worst_stage spoiled | fresh `over_3_days` | 67.2 h | 10:00 | 13 | keep | remove_bad_pieces |
+| 21 | banana, overripe, staff reason `low_confidence` | as 12 | | 10:00 | 13 | bulk_sale | on_hold, check_before_off_shelf |
+| 22 | "unknown produce", overripe | fallback profile | | 10:00 | 13 | bulk_sale | buyers restaurant; on_hold, identify_item, enter_shelf_price |
+| 23 | produce not in the price list, ripening (mid) | ripening `1_to_3_days` | 33.6 h | 10:00 | 13 | keep | needs_price, enter_shelf_price |
+| 24 | banana, ripening (mid), photo after closing | as 2 | 10.5 h | 00:30 | 22.5 | keep (for now) | |
+
+Expected property, shown by rows 7–9: the same reading can be discounted at 17:00 and kept at 22:00 (at 22:00 it still sells until 13:00 tomorrow). This is correct; the reason text must make it clear with clock times.
+
+## What to change (code)
+1. **Engine (`ladder/engine.py`):** implement `plan.md` Step 4 v2 exactly. Remove the old Case A/B/C logic, the `min_discount` branch for overripe, and the fresh `check_before_off_shelf` fallback. Update the `allowed_steps` table (ripening: keep, discount).
+2. **`MartRules` and `demo_mart.json`:** replace `overnight_hours` with `opening_time` (09:00), so overnight hours = closing → next opening, and add `bulk_pickup_hours = 2`. Validators: opening ≠ closing; `bulk_pickup_hours` in 0–6. Regenerate the schemas.
+3. **Reason text:** clock times as in Step 4 item 10 (photo time = closing − H; "today"/"tomorrow").
+4. **Document the "sells for" calculation:** a comment above `BAND_HOURS` / `LEVEL_FACTOR` in `engine.py`, and a short "How decisions are made" paragraph in the README's Module 3 section: the time rules, the discount schedule, and why level scales the band (profile = time from the start of a stage; level = how far into it; factor = how much is left).
+5. **Tests:** the scenario table above as one table-driven test; the exhaustive loop with the new H values and "fresh/ripening never off-shelf"; the monotonic-discount test. Remove or rewrite tests that encode the old rules.
+6. **`scripts/check_profiles.py`:** replace the old worked examples with rows 2–4, 12, 14 and 17 of the table, run with the generated profiles.
+7. **R2 (from round 4):** in `triggerDecide()`, if `detail` isn't a string, show "Decision failed, please try again."
+
+## Deploy and verify
+- `uv run pytest` green, with the Module 1 and 2 tests unchanged.
+- Deploy `api`. Stored profiles are unaffected (no prompt change), so there's no need to re-warm.
+- On the deployed `/demo`, run the "Bananas & Apples" sample once and switch the selector on the **same inspection**. If the bananas read ripening (mid) again, expect: Morning (12 h) → keep for now; Evening (4 h) → 20%; Last hour (1 h) → 35%. The apples stay keep. Run the simulated tray: Morning → bulk sale; Last hour → 40% off. Report the actual Inspector stage with each result, since the reading can vary between inspections.

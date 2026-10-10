@@ -138,14 +138,12 @@ def run_worked_examples(profiles_map: dict[str, ProduceProfile]) -> list[dict[st
         )
 
     examples = [
-        ("Fresh banana in morning (H=14)", "banana", "fresh", "early", None, None, 14.0, 180),
-        ("Late-ripening banana at 3h to closing (H=3)", "banana", "ripening", "late", None, None, 3.0, 180),
-        ("Late-ripening banana at 14h to closing (H=14)", "banana", "ripening", "late", None, None, 14.0, 180),
-        ("Overripe spinach at 8h to closing (H=8)", "spinach", "overripe", "mid", None, None, 8.0, 70),
-        ("Fresh early spinach at 13h to closing (H=13)", "spinach", "fresh", "early", None, None, 13.0, 70),
-        ("Fresh early spinach at 4h to closing (H=4)", "spinach", "fresh", "early", None, None, 4.0, 70),
-        ("Overripe potato at 8h to closing (H=8)", "potato", "overripe", "early", None, None, 8.0, 80),
-        ("Spoiled tomato without mould (H=4)", "tomato", "spoiled", "early", None, ["rot"], 4.0, 120),
+        ("Row 2: Ripening banana at 10:00 (H=13)", "banana", "ripening", "mid", None, None, 13.0, 180),
+        ("Row 3: Ripening banana at 19:00 (H=4)", "banana", "ripening", "mid", None, None, 4.0, 180),
+        ("Row 4: Ripening banana at 22:00 (H=1)", "banana", "ripening", "mid", None, None, 1.0, 180),
+        ("Row 12: Overripe banana at 10:00 (H=13)", "banana", "overripe", "mid", None, None, 13.0, 180),
+        ("Row 14: Overripe banana at 21:30 (H=1.5)", "banana", "overripe", "mid", None, None, 1.5, 180),
+        ("Row 17: Spoiled tomato without mould (H=4)", "tomato", "spoiled", "mid", None, ["rot"], 4.0, 120),
     ]
 
     results = []

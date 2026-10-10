@@ -141,7 +141,9 @@ async def test_decide_inspection_end_to_end_and_consistency_guarantee():
     assert res1.decisions[0].name == "banana"
     assert res1.decisions[0].step == "discount"
     assert res1.decisions[1].name == "spinach"
-    assert res1.decisions[1].step == "donate"  # charity only -> donate
+    assert res1.decisions[1].step == "discount"  # D44: no business buyers -> 40% discount, next_steps [donate]
+    assert res1.decisions[1].discount_pct == 40
+    assert res1.decisions[1].next_steps == ["donate"]
 
     # Run 2: EXACT SAME INPUT -> ZERO Gemini calls and IDENTICAL result (consistency guarantee)
     res2 = await decide_inspection(

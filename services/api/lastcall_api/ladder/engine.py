@@ -29,6 +29,15 @@ from lastcall_shared.models import (
     Unit,
 )
 
+# "Sells for" calculation (D44):
+# The profile's sellable_for band estimates how long produce remains marketable
+# from the start of a freshness stage. The Inspector's stage_level (early/mid/late)
+# indicates how far into that stage the produce already is.
+# LEVEL_FACTOR scales the nominal band hours to estimate remaining marketable time:
+# - early (1.0): just entered stage, full band remaining
+# - mid (0.7): typical middle of stage, most of band remaining
+# - late (0.4): near transition to next stage, minority of band remaining
+# Spoiled and unsafe produce have life = 0 / sellable_hours = None (never kept or discounted).
 BAND_HOURS: dict[ShelfLifeBand, float] = {
     "under_6h": 4.0,
     "6_to_24h": 15.0,
@@ -60,7 +69,7 @@ def allowed_steps(item: ItemAssessment) -> list[LadderStep]:
     if stage == "fresh":
         return ["keep", "discount"]
     if stage == "ripening":
-        return ["keep", "discount", "bulk_sale"]
+        return ["keep", "discount"]  # D44: ripe produce is still good to sell; never leaves shelf
     if stage == "overripe":
         return ["discount", "bulk_sale", "donate", "animal_feed"]
     if stage == "spoiled":
@@ -162,102 +171,108 @@ def decide_item(
     discount_pct: int | None = None
     reason: str
 
-    # Case A: it still sells after tomorrow's opening
-    if life >= H + rules.overnight_hours:
-        if "keep" in allowed:
-            chosen_step = "keep"
-            recheck_next_photo = True
-            reason = f"{item.name.capitalize()}, {item.stage}: sells for about {life:.0f} h; lasts past tomorrow opening → keep on shelf"
-        else:
-            chosen_step = "discount"
-            discount_pct = rules.min_discount_pct
-            recheck_next_photo = True
-            reason = f"{item.name.capitalize()}, {item.stage}: sells for about {life:.0f} h; lasts past opening but overripe → {discount_pct}% off"
+    O = rules.overnight_hours
+    W = rules.discount_window_hours
 
-    # Case B: it lasts until closing but not through tomorrow
-    elif H <= life < H + rules.overnight_hours:
-        if "keep" in allowed and H > rules.discount_window_hours:
-            chosen_step = "keep"
-            recheck_next_photo = True
-            reason = f"{item.name.capitalize()}, {item.stage}: sells for about {life:.0f} h; lasts until closing; discount decided closer to closing"
-        else:
-            chosen_step = "discount"
-            recheck_next_photo = True
-            raw_pct = rules.max_discount_pct * (1.0 - (life - H) / rules.overnight_hours)
-            clamped_pct = max(rules.min_discount_pct, min(rules.max_discount_pct, raw_pct))
-            discount_pct = round_to(clamped_pct, 5)
-            # Ensure clamped within limits after round_to
-            discount_pct = max(rules.min_discount_pct, min(rules.max_discount_pct, discount_pct))
-            reason = f"{item.name.capitalize()}, {item.stage} ({item.stage_level}): sells for about {life:.0f} h; {H:.0f} h to closing → {discount_pct}% off"
+    ref_date = datetime(2026, 10, 10)
+    close_dt = datetime.combine(ref_date, rules.closing_time)
+    open_str = rules.opening_time.strftime("%H:%M")
+    close_str = rules.closing_time.strftime("%H:%M")
+    window_start_dt = close_dt - timedelta(hours=W)
+    window_start_str = window_start_dt.strftime("%H:%M")
 
-    # Case C: it won't last until closing
+    photo_dt = close_dt - timedelta(hours=H)
+    sells_until_dt = photo_dt + timedelta(hours=life)
+
+    if sells_until_dt.date() == photo_dt.date():
+        sells_until_str = sells_until_dt.strftime("%H:%M")
+    elif sells_until_dt.date() == photo_dt.date() + timedelta(days=1):
+        sells_until_str = f"{sells_until_dt.strftime('%H:%M')} tomorrow"
     else:
-        # Off the shelf, the first allowed step whose use is true, in ladder order
-        off_shelf_candidates: list[LadderStep] = []
-        if uses is not None:
-            if "bulk_sale" in allowed and (uses.juice_shop or uses.restaurant or uses.bakery):
-                off_shelf_candidates.append("bulk_sale")
-            if "donate" in allowed and uses.charity:
-                off_shelf_candidates.append("donate")
-        if "animal_feed" in allowed and cattle_ok:
-            off_shelf_candidates.append("animal_feed")
-        if "compost" in allowed:
-            off_shelf_candidates.append("compost")
+        days_ahead = (sells_until_dt.date() - photo_dt.date()).days
+        sells_until_str = f"{sells_until_dt.strftime('%H:%M')} in {days_ahead} days"
 
-        if off_shelf_candidates:
-            chosen_step = off_shelf_candidates[0]
-            if chosen_step == "bulk_sale":
-                buyer_kinds = []
-                if uses and uses.juice_shop:
-                    buyer_kinds.append("juice shops")
-                if uses and uses.restaurant:
-                    buyer_kinds.append("restaurants")
-                if uses and uses.bakery:
-                    buyer_kinds.append("bakeries")
-                desc = " and ".join(buyer_kinds) if buyer_kinds else "commercial buyers"
-                reason = f"{item.name.capitalize()}, {item.stage}: won't last to closing; {desc} can use it → bulk sale"
-            elif chosen_step == "donate":
-                reason = f"{item.name.capitalize()}, {item.stage}: won't last to closing; charities can use it → donate"
-            elif chosen_step == "animal_feed":
-                reason = f"{item.name.capitalize()}, {item.stage}: safe for cattle feed → animal feed"
-            else:  # compost
-                reason = f"{item.name.capitalize()}, {item.stage}: not suitable for food or feed → compost"
+    # Step 4 v2 (D44) decision branches
+    if item.stage in ("fresh", "ripening"):
+        recheck_next_photo = True
+        if life >= H + O:
+            chosen_step = "keep"
+            reason = f"{item.name.capitalize()}, {item.stage}: sells until {sells_until_str}; still fine at tomorrow's {open_str} opening → keep"
+        elif H > W:
+            chosen_step = "keep"
+            reason = f"{item.name.capitalize()}, {item.stage}: sells until {sells_until_str}; discount decided in the evening window from {window_start_str} → keep for now"
         else:
-            # Case C with no allowed, fitting off-shelf step (e.g. fresh produce that won't last)
-            if "discount" in allowed:
-                chosen_step = "discount"
+            chosen_step = "discount"
+            if life < H:
                 discount_pct = rules.max_discount_pct
-                recheck_next_photo = True
-                reason = f"{item.name.capitalize()}, {item.stage}: won't last to closing; discount to clear quickly"
+                reason = f"{item.name.capitalize()}, {item.stage}: sells until {sells_until_str}; stops selling before {close_str} closing → {discount_pct}% off"
             else:
-                chosen_step = "keep"
-                recheck_next_photo = True
-                reason = f"{item.name.capitalize()}, {item.stage}: keep on shelf under observation"
-            staff_actions.append("check_before_off_shelf")
+                raw_pct = rules.min_discount_pct + (rules.max_discount_pct - rules.min_discount_pct) * (1.0 - H / W)
+                discount_pct = round_to(raw_pct, 5)
+                discount_pct = max(rules.min_discount_pct, min(rules.max_discount_pct, discount_pct))
+                reason = f"{item.name.capitalize()}, {item.stage} ({item.stage_level}): about {life:.0f} h of selling left, sells until {sells_until_str}; closes {close_str}, not fine at tomorrow's {open_str} opening → {discount_pct}% off"
+
+    elif item.stage == "overripe":
+        has_business_buyer = bool(uses and (uses.juice_shop or uses.restaurant or uses.bakery))
+        if has_business_buyer and H >= rules.bulk_pickup_hours:
+            chosen_step = "bulk_sale"
+            buyer_kinds = []
+            if uses and uses.juice_shop:
+                buyer_kinds.append("juice shops")
+            if uses and uses.restaurant:
+                buyer_kinds.append("restaurants")
+            if uses and uses.bakery:
+                buyer_kinds.append("bakeries")
+            desc = " and ".join(buyer_kinds) if buyer_kinds else "commercial buyers"
+            reason = f"{item.name.capitalize()}, {item.stage}: {desc} can use it → bulk sale"
+        else:
+            chosen_step = "discount"
+            discount_pct = rules.max_discount_pct
+            recheck_next_photo = True
+            if not has_business_buyer:
+                reason = f"{item.name.capitalize()}, {item.stage}: no commercial buyer fits → {discount_pct}% off"
+            else:
+                reason = f"{item.name.capitalize()}, {item.stage}: too late for pickup before {close_str} closing → {discount_pct}% off"
+
+    elif item.stage == "spoiled":
+        if "animal_feed" in allowed and cattle_ok:
+            chosen_step = "animal_feed"
+            reason = f"{item.name.capitalize()}, {item.stage}: safe for cattle feed → animal feed"
+        else:
+            chosen_step = "compost"
+            if "mould" in item.issues:
+                reason = f"{item.name.capitalize()}, {item.stage}: mould present → compost"
+            elif "slime" in item.issues:
+                reason = f"{item.name.capitalize()}, {item.stage}: slime present → compost"
+            else:
+                reason = f"{item.name.capitalize()}, {item.stage}: not suitable for food or feed → compost"
+
+    else:  # unsafe
+        chosen_step = "compost"
+        reason = f"{item.name.capitalize()}, {item.stage}: unsafe for consumption or feed → compost"
 
     # Step 6: next_steps = remaining fitting allowed steps after chosen_step, in ladder order
-    fitting_steps: list[LadderStep] = []
-    if uses is not None:
-        if "bulk_sale" in allowed and (uses.juice_shop or uses.restaurant or uses.bakery):
-            fitting_steps.append("bulk_sale")
-        if "donate" in allowed and uses.charity:
-            fitting_steps.append("donate")
-    if "animal_feed" in allowed and cattle_ok:
-        fitting_steps.append("animal_feed")
-    if "compost" in allowed:
-        fitting_steps.append("compost")
-
     next_steps: list[LadderStep] = []
-    if chosen_step in fitting_steps:
-        idx = fitting_steps.index(chosen_step)
-        next_steps = fitting_steps[idx + 1 :]
-    elif chosen_step == "keep":
+    if chosen_step == "keep":
         if "discount" in allowed:
-            next_steps = ["discount"] + [s for s in fitting_steps if s != "discount"]
-        else:
-            next_steps = fitting_steps
+            next_steps = ["discount"]
     elif chosen_step == "discount":
-        next_steps = fitting_steps
+        if item.stage == "overripe":
+            if "donate" in allowed and (uses and uses.charity):
+                next_steps.append("donate")
+            if "animal_feed" in allowed and cattle_ok:
+                next_steps.append("animal_feed")
+    elif chosen_step == "bulk_sale":
+        if "donate" in allowed and (uses and uses.charity):
+            next_steps.append("donate")
+        if "animal_feed" in allowed and cattle_ok:
+            next_steps.append("animal_feed")
+    elif chosen_step == "donate":
+        if "animal_feed" in allowed and cattle_ok:
+            next_steps.append("animal_feed")
+    elif chosen_step == "animal_feed":
+        if "compost" in allowed:
+            next_steps.append("compost")
 
     # Step 7: Pricing
     needs_price = price is None

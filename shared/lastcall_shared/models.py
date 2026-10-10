@@ -620,7 +620,8 @@ class MartRules(BaseModel):
     mart: MartInfo
     timezone: str = "Asia/Karachi"
     closing_time: time  # 23:00
-    overnight_hours: float = 12  # keep only if it still sells this long after closing
+    opening_time: time = time(9, 0)  # 09:00
+    bulk_pickup_hours: float = 2.0  # hours needed for buyer pickup before closing
     discount_window_hours: float = 6  # discounts start at most this many hours before closing
     max_discount_pct: int = 40
     min_discount_pct: int = 10
@@ -632,12 +633,25 @@ class MartRules(BaseModel):
     note: str = ""  # e.g. "Demo prices, not live market rates"
     prices: list[PriceEntry]
 
+    @property
+    def overnight_hours(self) -> float:
+        """Hours from closing_time to next opening_time."""
+        close_m = self.closing_time.hour * 60 + self.closing_time.minute
+        open_m = self.opening_time.hour * 60 + self.opening_time.minute
+        return ((open_m - close_m) % (24 * 60)) / 60.0
+
     @model_validator(mode="after")
     def validate_rules(self) -> "MartRules":
         try:
             ZoneInfo(self.timezone)
         except Exception as e:
             raise ValueError(f"Invalid timezone: '{self.timezone}'") from e
+
+        if self.opening_time == self.closing_time:
+            raise ValueError("opening_time and closing_time cannot be equal")
+
+        if not (0.0 <= self.bulk_pickup_hours <= 6.0):
+            raise ValueError(f"bulk_pickup_hours must be between 0 and 6, got {self.bulk_pickup_hours}")
 
         for name, val in [
             ("max_discount_pct", self.max_discount_pct),

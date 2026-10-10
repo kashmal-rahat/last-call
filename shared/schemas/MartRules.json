@@ -67,9 +67,15 @@
       "title": "Closing Time",
       "type": "string"
     },
-    "overnight_hours": {
-      "default": 12,
-      "title": "Overnight Hours",
+    "opening_time": {
+      "default": "09:00:00",
+      "format": "time",
+      "title": "Opening Time",
+      "type": "string"
+    },
+    "bulk_pickup_hours": {
+      "default": 2.0,
+      "title": "Bulk Pickup Hours",
       "type": "number"
     },
     "discount_window_hours": {

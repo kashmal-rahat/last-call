@@ -1951,7 +1951,10 @@
         } else {
           currentLadderResult = null;
           const errData = await res.json().catch(() => ({}));
-          const detail = errData.detail || (res.status === 429 ? 'Hourly limit reached. Please try again later.' : 'Decision failed, please try again.');
+          const rawDetail = errData.detail;
+          const detail = (typeof rawDetail === 'string' && rawDetail.trim())
+            ? rawDetail.trim()
+            : (res.status === 429 ? 'Hourly limit reached. Please try again later.' : 'Decision failed, please try again.');
           decideError.textContent = detail;
           decideError.style.display = 'block';
         }

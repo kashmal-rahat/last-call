@@ -86,7 +86,7 @@ def _make_profile(
 
 def test_allowed_steps_table():
     assert allowed_steps(_make_item(stage="fresh")) == ["keep", "discount"]
-    assert allowed_steps(_make_item(stage="ripening")) == ["keep", "discount", "bulk_sale"]
+    assert allowed_steps(_make_item(stage="ripening")) == ["keep", "discount"]
     assert allowed_steps(_make_item(stage="overripe")) == ["discount", "bulk_sale", "donate", "animal_feed"]
     # Spoiled without mould/slime
     assert allowed_steps(_make_item(stage="spoiled", issues=["rot"])) == ["animal_feed", "compost"]
@@ -133,10 +133,10 @@ def test_i4_keep_decision_next_steps_starts_with_discount():
     assert len(dec.next_steps) > 0
     assert dec.next_steps[0] == "discount"
 
-    # Ripening banana where life > H (e.g. fresh_band 1_to_3_days, life 36h, H=4) -> keep
+    # Ripening banana where life > H + O (e.g. rip_band 1_to_3_days, life 33.6h, H=4 -> 4+10=14h) -> keep
     prof_rip = _make_profile("banana", rip_band="1_to_3_days")
     item_rip = _make_item("banana", stage="ripening", stage_level="early")
-    # Ripening has allowed_steps: ["keep", "discount", "bulk_sale"]
+    # Ripening has allowed_steps: ["keep", "discount"]
     dec_rip = decide_item(item_rip, prof_rip, rules, H=4.0, price=180)
     assert dec_rip.step == "keep"
     assert "discount" in dec_rip.allowed_steps
@@ -150,8 +150,7 @@ def test_hours_until_closing():
     assert hours_until_closing(rules, NOW, override=4.5) == 4.5
 
     # Fixed time in PKT: 20:00 PKT with closing 23:00 -> 3.0 hours
-    dt = datetime(2026, 10, 10, 20, 0, 0, tzinfo=timezone.utc)  # in PKT this is 01:00 next day
-    # Test with timezone-aware Karachi time
+    dt = datetime(2026, 10, 10, 20, 0, 0, tzinfo=timezone.utc)
     from zoneinfo import ZoneInfo
     tz = ZoneInfo("Asia/Karachi")
     t1 = datetime(2026, 10, 10, 19, 0, 0, tzinfo=tz)  # 19:00 PKT -> 4 hours until 23:00
@@ -162,79 +161,301 @@ def test_hours_until_closing():
     assert abs(hours_until_closing(rules, t2) - 23.5) < 0.01
 
 
-def test_worked_examples():
+@pytest.mark.parametrize(
+    "scenario_id,item_args,profile_args,H,expected_step,expected_discount,flags_to_check",
+    [
+        # 1: onion, fresh (mid), fresh over_3_days (67.2h), 10:00 (H=13) -> keep
+        (
+            1,
+            {"name": "onion", "stage": "fresh", "stage_level": "mid"},
+            {"fresh_band": "over_3_days"},
+            13.0,
+            "keep",
+            None,
+            [],
+        ),
+        # 2: banana, ripening (mid), ripening 6_to_24h (10.5h), 10:00 (H=13) -> keep (for now), recheck_next_photo
+        (
+            2,
+            {"name": "banana", "stage": "ripening", "stage_level": "mid"},
+            {"rip_band": "6_to_24h"},
+            13.0,
+            "keep",
+            None,
+            ["recheck_next_photo"],
+        ),
+        # 3: same as 2, 19:00 (H=4) -> discount 20%
+        (
+            3,
+            {"name": "banana", "stage": "ripening", "stage_level": "mid"},
+            {"rip_band": "6_to_24h"},
+            4.0,
+            "discount",
+            20,
+            [],
+        ),
+        # 4: same as 2, 22:00 (H=1) -> discount 35%
+        (
+            4,
+            {"name": "banana", "stage": "ripening", "stage_level": "mid"},
+            {"rip_band": "6_to_24h"},
+            1.0,
+            "discount",
+            35,
+            [],
+        ),
+        # 5: banana, ripening (mid), ripening 1_to_3_days (33.6h), 19:00 (H=4) -> keep
+        (
+            5,
+            {"name": "banana", "stage": "ripening", "stage_level": "mid"},
+            {"rip_band": "1_to_3_days"},
+            4.0,
+            "keep",
+            None,
+            [],
+        ),
+        # 6: tomato, fresh (early), fresh 1_to_3_days (48h), 19:00 (H=4) -> keep
+        (
+            6,
+            {"name": "tomato", "stage": "fresh", "stage_level": "early"},
+            {"fresh_band": "1_to_3_days"},
+            4.0,
+            "keep",
+            None,
+            [],
+        ),
+        # 7: spinach, fresh (early), fresh 6_to_24h (15h), 10:00 (H=13) -> keep (for now)
+        (
+            7,
+            {"name": "spinach", "stage": "fresh", "stage_level": "early"},
+            {"fresh_band": "6_to_24h"},
+            13.0,
+            "keep",
+            None,
+            [],
+        ),
+        # 8: same as 7, 17:00 (H=6) -> discount 10%
+        (
+            8,
+            {"name": "spinach", "stage": "fresh", "stage_level": "early"},
+            {"fresh_band": "6_to_24h"},
+            6.0,
+            "discount",
+            10,
+            [],
+        ),
+        # 9: same as 7, 22:00 (H=1) -> keep (still fine at 09:00 tomorrow)
+        (
+            9,
+            {"name": "spinach", "stage": "fresh", "stage_level": "early"},
+            {"fresh_band": "6_to_24h"},
+            1.0,
+            "keep",
+            None,
+            ["fine_tomorrow"],
+        ),
+        # 10: spinach, ripening (mid), ripening under_6h (2.8h), 19:00 (H=4) -> discount 40% (stops before closing)
+        (
+            10,
+            {"name": "spinach", "stage": "ripening", "stage_level": "mid"},
+            {"rip_band": "under_6h"},
+            4.0,
+            "discount",
+            40,
+            ["stops_before_closing"],
+        ),
+        # 11: same as 10, 10:00 (H=13) -> keep (for now)
+        (
+            11,
+            {"name": "spinach", "stage": "ripening", "stage_level": "mid"},
+            {"rip_band": "under_6h"},
+            13.0,
+            "keep",
+            None,
+            [],
+        ),
+        # 12: banana, overripe (mid), overripe: juice_shop, bakery, 10:00 (H=13) -> bulk_sale
+        (
+            12,
+            {"name": "banana", "stage": "overripe", "stage_level": "mid"},
+            {"over_uses": {"juice_shop": True, "restaurant": False, "bakery": True, "charity": True}},
+            13.0,
+            "bulk_sale",
+            None,
+            ["buyers:juice_shop,bakery"],
+        ),
+        # 13: same as 12, 20:30 (H=2.5) -> bulk_sale
+        (
+            13,
+            {"name": "banana", "stage": "overripe", "stage_level": "mid"},
+            {"over_uses": {"juice_shop": True, "restaurant": False, "bakery": True, "charity": True}},
+            2.5,
+            "bulk_sale",
+            None,
+            [],
+        ),
+        # 14: same as 12, 21:30 (H=1.5) -> discount 40% (too late for pickup)
+        (
+            14,
+            {"name": "banana", "stage": "overripe", "stage_level": "mid"},
+            {"over_uses": {"juice_shop": True, "restaurant": False, "bakery": True, "charity": True}},
+            1.5,
+            "discount",
+            40,
+            ["too_late_for_pickup"],
+        ),
+        # 15: coriander, overripe (mid), no business use, cattle no, 10:00 (H=13) -> discount 40%; next_steps [donate]
+        (
+            15,
+            {"name": "coriander", "stage": "overripe", "stage_level": "mid"},
+            {"over_uses": {"juice_shop": False, "restaurant": False, "bakery": False, "charity": True}, "overripe_ok_for_cattle": False},
+            13.0,
+            "discount",
+            40,
+            ["next_steps:donate"],
+        ),
+        # 16: potato, overripe (early), overripe: restaurant, 10:00 (H=13) -> bulk_sale
+        (
+            16,
+            {"name": "potato", "stage": "overripe", "stage_level": "early"},
+            {"over_uses": {"juice_shop": False, "restaurant": True, "bakery": False, "charity": True}},
+            13.0,
+            "bulk_sale",
+            None,
+            ["buyers:restaurant"],
+        ),
+        # 17: tomato, spoiled, no mould, spoiled_ok_for_cattle yes, any (H=4) -> animal_feed
+        (
+            17,
+            {"name": "tomato", "stage": "spoiled", "stage_level": "mid", "issues": ["rot"]},
+            {"spoiled_ok_for_cattle": True},
+            4.0,
+            "animal_feed",
+            None,
+            [],
+        ),
+        # 18: tomato, spoiled, no mould, spoiled_ok_for_cattle no, any (H=4) -> compost, needs_approval
+        (
+            18,
+            {"name": "tomato", "stage": "spoiled", "stage_level": "mid", "issues": ["rot"]},
+            {"spoiled_ok_for_cattle": False},
+            4.0,
+            "compost",
+            None,
+            ["needs_approval"],
+        ),
+        # 19: tomato, spoiled, mould in issues, spoiled_ok_for_cattle yes, any (H=4) -> compost, needs_approval
+        (
+            19,
+            {"name": "tomato", "stage": "spoiled", "stage_level": "mid", "issues": ["mould"]},
+            {"spoiled_ok_for_cattle": True},
+            4.0,
+            "compost",
+            None,
+            ["needs_approval"],
+        ),
+        # 20: apple, fresh (mid), worst_stage spoiled, fresh over_3_days (67.2h), 10:00 (H=13) -> keep, remove_bad_pieces
+        (
+            20,
+            {"name": "apple", "stage": "fresh", "stage_level": "mid", "worst_stage": "spoiled"},
+            {"fresh_band": "over_3_days"},
+            13.0,
+            "keep",
+            None,
+            ["remove_bad_pieces"],
+        ),
+        # 21: banana, overripe, staff reason low_confidence, as 12, 10:00 (H=13) -> bulk_sale, on_hold, check_before_off_shelf
+        (
+            21,
+            {"name": "banana", "stage": "overripe", "stage_level": "mid", "staff_check_reasons": ["low_confidence"]},
+            {"over_uses": {"juice_shop": True, "restaurant": False, "bakery": True, "charity": True}},
+            13.0,
+            "bulk_sale",
+            None,
+            ["on_hold", "check_before_off_shelf"],
+        ),
+        # 22: unknown produce, overripe, fallback profile, 10:00 (H=13) -> bulk_sale, buyers restaurant; on_hold, identify_item, enter_shelf_price
+        (
+            22,
+            {"name": "unknown produce", "stage": "overripe", "stage_level": "mid", "staff_check_reasons": ["unknown_produce"]},
+            {"over_uses": {"juice_shop": False, "restaurant": True, "bakery": False, "charity": True}},
+            13.0,
+            "bulk_sale",
+            None,
+            ["buyers:restaurant", "on_hold", "identify_item", "needs_price", "enter_shelf_price"],
+        ),
+        # 23: produce not in price list, ripening (mid), ripening 1_to_3_days (33.6h), 10:00 (H=13) -> keep, needs_price, enter_shelf_price
+        (
+            23,
+            {"name": "dragonfruit", "stage": "ripening", "stage_level": "mid"},
+            {"rip_band": "1_to_3_days"},
+            13.0,
+            "keep",
+            None,
+            ["needs_price", "enter_shelf_price"],
+        ),
+        # 24: banana, ripening (mid), as 2 (10.5h), 00:30 (H=22.5) -> keep (for now)
+        (
+            24,
+            {"name": "banana", "stage": "ripening", "stage_level": "mid"},
+            {"rip_band": "6_to_24h"},
+            22.5,
+            "keep",
+            None,
+            [],
+        ),
+    ],
+)
+def test_twenty_four_scenarios_table_driven(
+    scenario_id,
+    item_args,
+    profile_args,
+    H,
+    expected_step,
+    expected_discount,
+    flags_to_check,
+):
     rules = load_mart_rules("demo_mart")
+    item = _make_item(**item_args)
+    prof = _make_profile(name=item.name, **profile_args)
 
-    # 1. Fresh banana in the morning (H=14) -> keep
-    # Banana shelf price: 180 / dozen
-    prof_banana = _make_profile("banana", fresh_band="over_3_days", rip_band="6_to_24h", over_band="under_6h")
-    item_fresh_banana = _make_item("banana", stage="fresh", stage_level="early")
-    dec1 = decide_item(item_fresh_banana, prof_banana, rules, H=14.0, price=180)
-    assert dec1.step == "keep"
-    assert dec1.shelf_price == 180
-    assert dec1.discount_pct is None
+    price = find_price(rules, item.name, item.quantity.unit)
+    dec = decide_item(item, prof, rules, H=H, price=price)
 
-    # 2. Late-ripening banana (band 6_to_24h -> 15 * 0.4 = 6 h), 3 h to closing -> discount 30%
-    item_rip_banana = _make_item("banana", stage="ripening", stage_level="late")
-    dec2 = decide_item(item_rip_banana, prof_banana, rules, H=3.0, price=180)
-    assert dec2.step == "discount"
-    assert dec2.discount_pct == 30
-    assert dec2.discounted_price == 125  # 180 * 0.70 = 126, rounded to 5 -> 125
-    assert "30% off" in dec2.reason
+    assert dec.step == expected_step, f"Scenario {scenario_id} expected step {expected_step}, got {dec.step}"
+    if expected_discount is not None:
+        assert dec.discount_pct == expected_discount, f"Scenario {scenario_id} expected discount {expected_discount}%, got {dec.discount_pct}%"
 
-    # 3. Same late-ripening banana at 14 h to closing -> bulk sale (6 h < 14 h)
-    dec3 = decide_item(item_rip_banana, prof_banana, rules, H=14.0, price=180)
-    assert dec3.step == "bulk_sale"
-    assert "juice_shop" in dec3.buyer_types
-    assert dec3.opening_price is not None
-    assert dec3.floor_price is not None
-    assert dec3.opening_price >= dec3.floor_price
-
-    # 4. Overripe spinach, 8 h to closing (life <= 4 h) -> bulk sale to restaurants
-    prof_spinach = _make_profile(
-        "spinach",
-        fresh_band="6_to_24h",
-        rip_band="under_6h",
-        over_band="under_6h",
-        over_uses={"juice_shop": False, "restaurant": True, "bakery": False, "charity": True},
-    )
-    item_over_spinach = _make_item("spinach", stage="overripe", stage_level="mid", unit="kg")
-    dec4 = decide_item(item_over_spinach, prof_spinach, rules, H=8.0, price=70)
-    assert dec4.step == "bulk_sale"
-    assert dec4.buyer_types == ["restaurant"]
-
-    # 5. Fresh (early) spinach (band 6_to_24h, life 15 h), 13 h to closing -> keep for now
-    item_fresh_early_spinach = _make_item("spinach", stage="fresh", stage_level="early", unit="kg")
-    dec5a = decide_item(item_fresh_early_spinach, prof_spinach, rules, H=13.0, price=70)
-    assert dec5a.step == "keep"
-    assert dec5a.recheck_next_photo is True
-    assert "closer to closing" in dec5a.reason
-
-    # Same spinach at 4 h to closing -> discount 10%
-    dec5b = decide_item(item_fresh_early_spinach, prof_spinach, rules, H=4.0, price=70)
-    assert dec5b.step == "discount"
-    assert dec5b.discount_pct == 10  # clamped to min_discount
-
-    # 6. Overripe potatoes (band over_3_days, life 96 h) -> discount 10% (Case A, keep not allowed)
-    prof_potato = _make_profile("potato", over_band="over_3_days")
-    item_over_potato = _make_item("potato", stage="overripe", stage_level="early", unit="kg")
-    dec6 = decide_item(item_over_potato, prof_potato, rules, H=8.0, price=80)
-    assert dec6.step == "discount"
-    assert dec6.discount_pct == 10
-
-    # 7. Spoiled without mould -> animal feed if cattle-ok, else compost
-    prof_cattle_ok = _make_profile("pumpkin", spoiled_ok_for_cattle=True)
-    item_sp_cattle = _make_item("pumpkin", stage="spoiled", issues=["rot"], unit="kg")
-    dec7a = decide_item(item_sp_cattle, prof_cattle_ok, rules, H=4.0, price=100)
-    assert dec7a.step == "animal_feed"
-    assert dec7a.buyer_types == ["dairy_farm"]
-
-    prof_cattle_no = _make_profile("onion", spoiled_ok_for_cattle=False)
-    item_sp_onion = _make_item("onion", stage="spoiled", issues=["rot"], unit="kg")
-    dec7b = decide_item(item_sp_onion, prof_cattle_no, rules, H=4.0, price=100)
-    assert dec7b.step == "compost"
-    assert dec7b.needs_approval is True
-    assert "approve_compost" in dec7b.staff_actions
+    for flag in flags_to_check:
+        if flag == "recheck_next_photo":
+            assert dec.recheck_next_photo is True
+        elif flag == "fine_tomorrow":
+            assert "09:00" in dec.reason and "tomorrow" in dec.reason
+        elif flag == "stops_before_closing":
+            assert "stops selling before" in dec.reason
+        elif flag == "too_late_for_pickup":
+            assert "too late for pickup" in dec.reason
+        elif flag == "next_steps:donate":
+            assert dec.next_steps == ["donate"]
+        elif flag.startswith("buyers:"):
+            expected_buyers = flag.split(":", 1)[1].split(",")
+            for b in expected_buyers:
+                assert b in dec.buyer_types
+        elif flag == "remove_bad_pieces":
+            assert "remove_bad_pieces" in dec.staff_actions
+        elif flag == "on_hold":
+            assert dec.on_hold is True
+        elif flag == "check_before_off_shelf":
+            assert "check_before_off_shelf" in dec.staff_actions
+        elif flag == "identify_item":
+            assert "identify_item" in dec.staff_actions
+        elif flag == "needs_price":
+            assert dec.needs_price is True
+        elif flag == "enter_shelf_price":
+            assert "enter_shelf_price" in dec.staff_actions
+        elif flag == "needs_approval":
+            assert dec.needs_approval is True
+            assert "approve_compost" in dec.staff_actions
 
 
 def test_remove_bad_pieces_and_buyer_condition_filtering():
@@ -270,11 +491,11 @@ def test_missing_price_and_holds():
     assert "enter_shelf_price" in dec.staff_actions
     assert dec.discounted_price is None
 
-    # Holds on off-shelf step with staff_check_reasons
+    # Holds on off-shelf step with staff_check_reasons (overripe bulk_sale)
     item_hold = _make_item(
         name="banana",
-        stage="ripening",
-        stage_level="late",
+        stage="overripe",
+        stage_level="mid",
         staff_check_reasons=["low_confidence"],
     )
     # H=14 -> off-shelf bulk_sale
@@ -285,14 +506,13 @@ def test_missing_price_and_holds():
 
 
 def test_exhaustive_engine_loop_zero_violations():
-    """Exhaustive check across all stage x level x band x use combinations x H in {0.5, 3, 8, 14}."""
+    """Exhaustive check across all stage x level x band x use combinations x H in {0.5, 1, 1.9, 2, 3, 5, 6, 8, 14, 23}."""
     rules = load_mart_rules("demo_mart")
     stages = ["fresh", "ripening", "overripe", "spoiled", "unsafe"]
     levels = ["early", "mid", "late"]
     bands = ["under_6h", "6_to_24h", "1_to_3_days", "over_3_days"]
-    h_values = [0.5, 3.0, 8.0, 14.0]
+    h_values = [0.5, 1.0, 1.9, 2.0, 3.0, 5.0, 6.0, 8.0, 14.0, 23.0]
 
-    # Sample boolean combinations for uses
     use_combos = [
         {"juice_shop": True, "restaurant": True, "bakery": True, "charity": True},
         {"juice_shop": False, "restaurant": True, "bakery": False, "charity": False},
@@ -333,12 +553,16 @@ def test_exhaustive_engine_loop_zero_violations():
                             if dec.step not in dec.allowed_steps:
                                 violations.append(f"Step {dec.step} not in allowed {dec.allowed_steps} for stage {stage}")
 
-                            # 2. Opening >= Floor when both set
+                            # 2. D44: fresh and ripening never get an off-shelf step
+                            if stage in ("fresh", "ripening") and dec.step not in ("keep", "discount"):
+                                violations.append(f"Stage {stage} got off-shelf step {dec.step}")
+
+                            # 3. Opening >= Floor when both set
                             if dec.opening_price is not None and dec.floor_price is not None:
                                 if dec.opening_price < dec.floor_price:
                                     violations.append(f"Opening {dec.opening_price} < floor {dec.floor_price}")
 
-                            # 3. Discount within limits
+                            # 4. Discount within limits
                             if dec.step == "discount":
                                 if dec.discount_pct is None:
                                     violations.append("Discount step missing discount_pct")
@@ -346,7 +570,7 @@ def test_exhaustive_engine_loop_zero_violations():
                                     violations.append(f"Discount {dec.discount_pct} outside [{rules.min_discount_pct}, {rules.max_discount_pct}]")
 
     assert not violations, f"Exhaustive test found {len(violations)} violations:\n" + "\n".join(violations[:10])
-    assert total_checked > 1000
+    assert total_checked > 2000
     print(f"\nExhaustive check verified {total_checked} combinations with 0 violations.")
 
 
@@ -370,3 +594,22 @@ def test_monotonic_shelf_life_behavior():
         if prev_rank != 999:
             assert curr_rank <= prev_rank, f"Band {band} gave rank {curr_rank} which is worse than previous {prev_rank}"
         prev_rank = curr_rank
+
+
+def test_monotonic_discount_inside_window():
+    """Inside evening window, discount never gets smaller as H decreases."""
+    rules = load_mart_rules("demo_mart")
+    item = _make_item(name="banana", stage="ripening", stage_level="late")
+    prof = _make_profile("banana", rip_band="6_to_24h")
+    # life = 15 * 0.4 = 6.0 h; for H in [6, 5, 4, 3, 2, 1, 0.5], life < H + O always (6.0 < 10 + H)
+    h_values = [6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.5]
+    prev_discount = 0
+
+    for H in h_values:
+        dec = decide_item(item, prof, rules, H=H, price=180)
+        assert dec.step == "discount"
+        assert dec.discount_pct is not None
+        assert dec.discount_pct >= prev_discount, (
+            f"At H={H}, discount {dec.discount_pct}% is smaller than previous {prev_discount}%"
+        )
+        prev_discount = dec.discount_pct
