@@ -77,6 +77,26 @@ Active service URLs:
 
 ---
 
+## Module 1: Freshness Inspector
+
+Module 1 turns raw grocery shelf photos into structured produce assessments using two-pass vision on Gemini 3.8 Flash (`gemini-3.8-flash` on Vertex AI `eu`). It determines produce stages, worst-piece conditions, bounding boxes, quantitative ranges, safety flags, and temporal changes across shelf inspections.
+
+Interactive inspection is available on the deployed demo page at `/demo` under **"1 · Inspect a shelf"** (requires the demo access code).
+
+Run inspector verification scripts (outputs and reports are written to `plans/module-1/results/`):
+```bash
+# Two-pass smoke test on sample shelf photos
+uv run python scripts/smoke_inspector.py --zoom
+
+# 12-call latency benchmark probe
+uv run python scripts/latency_probe.py
+
+# Comparative evaluation against ground-truth labels (needs data/shelf_photos/labels.csv)
+uv run python scripts/eval_inspector.py --split dev --compare-zoom
+```
+
+---
+
 ## Module Status
 
 | Module | Title | Status |

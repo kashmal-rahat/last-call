@@ -9,6 +9,7 @@ import re
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, Response, UploadFile, status
@@ -100,8 +101,13 @@ if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+@lru_cache
+def _default_store() -> CallStore:
+    return FirestoreStore()
+
+
 def _get_store() -> CallStore:
-    return getattr(app.state, "store", None) or FirestoreStore()
+    return getattr(app.state, "store", None) or _default_store()
 
 
 def _verify_access_code(provided_code: str | None) -> bool:
@@ -245,10 +251,10 @@ async def demo_inspect(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid shelf_id: must match ^[a-z0-9_-]{1,40}$",
         )
-    if bin_capacity_kg is not None and not (0 <= bin_capacity_kg <= 500):
+    if bin_capacity_kg is not None and not (0 < bin_capacity_kg <= 500):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid bin_capacity_kg: must be between 0 and 500",
+            detail="Invalid bin_capacity_kg: must be > 0 and <= 500",
         )
 
     # 3. IP limit

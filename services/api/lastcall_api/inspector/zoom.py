@@ -7,6 +7,7 @@ from lastcall_api.inspector.schema import DetectedItem, InspectorOutput
 from lastcall_shared.models import ConfidenceLevel, ProduceIssue, ProduceStage, StaffCheckReason
 
 _DOUBT_ISSUES = {"mould", "slime", "rot", "leaking", "pest_damage"}
+MAX_ZOOM_BOX_AREA = 0.40
 
 
 def _lower_confidence(conf: ConfidenceLevel) -> ConfidenceLevel:
@@ -29,7 +30,7 @@ def _box_area(box_2d: list[int]) -> float:
 def select_for_zoom(items: list[DetectedItem], *, max_crops: int = 6) -> list[int]:
     """Selects and prioritizes groups qualifying for pass-2 zoom inspection.
 
-    A group qualifies if any of:
+    A group qualifies if its box area <= MAX_ZOOM_BOX_AREA (0.40) and any of:
     1. visible_issues contains mould, slime, rot, leaking or pest_damage
     2. worst_stage != stage
     3. confidence is medium or low
@@ -44,9 +45,12 @@ def select_for_zoom(items: list[DetectedItem], *, max_crops: int = 6) -> list[in
     qualified: list[tuple[int, float, int]] = []  # (rule_priority, box_area, item_idx)
 
     for idx, item in enumerate(items):
+        area = _box_area(item.box_2d)
+        if area > MAX_ZOOM_BOX_AREA:
+            continue
+
         rule = None
         issues_set = set(item.visible_issues or [])
-        area = _box_area(item.box_2d)
 
         # Rule 1
         if issues_set & _DOUBT_ISSUES:

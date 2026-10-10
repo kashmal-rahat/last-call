@@ -122,8 +122,8 @@ def test_post_demo_inspect_shelf_id_and_bin_validation():
         assert resp.status_code == 400
         assert "shelf_id" in resp.json()["detail"]
 
-    # Bad bin_capacity_kg: < 0 or > 500
-    for bad_kg in [-1.0, 501.0]:
+    # Bad bin_capacity_kg: <= 0 or > 500
+    for bad_kg in [-1.0, 0.0, 501.0]:
         files = {"photo": ("test.jpg", file_content, "image/jpeg")}
         resp = client.post(
             "/demo/inspect",

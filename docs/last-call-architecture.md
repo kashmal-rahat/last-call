@@ -58,6 +58,10 @@ Request-based CPU, scales to zero, many requests per instance, capped maximum in
 - **Two-pass pipeline (D29):** pass 1 reads the full shelf; code picks doubtful groups (at most 6), crops them from the full-resolution photo, and pass 2 reads crops in parallel. Code merges results with worse `worst_stage` winning.
 - **Output per item:** name, bounding box (`box_2d`), freshness stage (`stage` typical piece, `worst_stage` worst piece, D24), 0–100 score computed deterministically in code, change since the last photo (matched by IoU overlap and produce name in code, D26), visible issues from 13 signs (D25), estimated quantity range in selling units (D31), confidence, staff check flag with plain English reasons.
 - **Quantity in production:** quantity comes from the mart's ERP (stock received − sold); the camera decides the condition, and the remaining stock goes down the ladder (D31).
+- **Neighbour merging (D34):** code merges neighbouring groups of the same produce (same name, boxes touching or within 30 on the 0–1000 scale) to guarantee one group per display.
+- **Zoom area rule (D35):** only doubtful groups whose box covers $\le 40\%$ of the photo are zoomed (`MAX_ZOOM_BOX_AREA = 0.40`), avoiding redundant crops on wide-angle crates.
+- **Hedging & budget (D36):** identical hedge request starts after 12 s; 30 s per attempt, 3 attempts, with a 60 s total deadline per inspection to absorb tail latency.
+- **Concurrency limit (D37):** at most 2 simultaneous inspections per `api` instance via `asyncio.Semaphore` and a shared cached Firestore store to stay safely within Cloud Run 512 MB RAM.
 - Perception only
 
 ### Ladder Agent (ADK agent, structured output)

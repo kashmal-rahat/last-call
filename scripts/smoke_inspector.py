@@ -124,7 +124,7 @@ async def run_smoke(photo_paths: list[Path], zoom: bool = False, thinking: str =
         in_tok = meta.input_tokens if meta else 0
         out_tok = meta.output_tokens if meta else 0
         thought_tok = meta.thoughts_tokens if meta else 0
-        cand_tok = meta.candidates_tokens if meta else 0
+        ans_tok = out_tok - thought_tok
         cached_tok = meta.cached_tokens if meta else 0
         calls = meta.calls if meta else 1
         lat_ms = meta.latency_ms if meta else int(dur * 1000)
@@ -181,7 +181,7 @@ async def run_smoke(photo_paths: list[Path], zoom: bool = False, thinking: str =
             "input_tokens": in_tok,
             "output_tokens": out_tok,
             "thought_tokens": thought_tok,
-            "candidate_tokens": cand_tok,
+            "answer_tokens": ans_tok,
             "cached_tokens": cached_tok,
             "cost_usd": cost,
             "box_image": str(box_path.relative_to(REPO_DIR)),
@@ -189,7 +189,7 @@ async def run_smoke(photo_paths: list[Path], zoom: bool = False, thinking: str =
         }
         results.append(record)
 
-        print(f"  ✓ {res.photo_status}: {len(res.items)} groups | {lat_ms}ms | {calls} call(s) | {in_tok} in / {out_tok} out ({thought_tok} thoughts / {cand_tok} ans) | ${cost:.5f}")
+        print(f"  ✓ {res.photo_status}: {len(res.items)} groups | {lat_ms}ms | {calls} call(s) | {in_tok} in / {out_tok} out ({thought_tok} thoughts / {ans_tok} ans) | ${cost:.5f}")
         for it in res.items:
             chk = f" [CHECK: {it.check_reason}]" if it.needs_staff_check else ""
             z_str = " (zoomed)" if it.zoomed else ""
@@ -222,7 +222,9 @@ def write_smoke_markdown(results: list[dict], zoom: bool, thinking: str = "mediu
 
     for r in results:
         lat_s = f"{r['latency_ms'] / 1000.0:.2f}"
-        out_split = f"{r['output_tokens']} ({r.get('thought_tokens', 0)} / {r.get('candidate_tokens', 0)})"
+        thoughts = r.get("thought_tokens", 0)
+        answers = r.get("answer_tokens", r["output_tokens"] - thoughts)
+        out_split = f"{r['output_tokens']} ({thoughts} / {answers})"
         status_str = r['status']
         if r['status'] == 'error' and r.get('orig_error_type'):
             status_str = f"error ({r['orig_error_type']})"

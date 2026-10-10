@@ -156,12 +156,23 @@ Model: `gemini-3.8-flash` on Vertex AI (`eu`), `media_resolution=HIGH`, `thinkin
 
 | # | Photo | Status | Groups | Zoomed | Latency (s) | Calls | Input Tok | Out (Thoughts / Ans) | Cached Tok | Cost ($) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | `smoke1.png` | ok | 2 | 1 | 10.69 | 2 | 13025 | 470 (0 / 470) | 0 | $0.01153 |
-| 2 | `smoke2.png` | ok | 2 | 2 | 9.63 | 3 | 19551 | 709 (0 / 709) | 0 | $0.01732 |
-| 3 | `smoke3.png` | ok | 3 | 2 | 10.28 | 3 | 19580 | 881 (0 / 881) | 0 | $0.01799 |
-| 4 | `smoke4.png` | ok | 1 | 1 | 7.41 | 2 | 12994 | 519 (0 / 519) | 0 | $0.01169 |
-| 5 | `smoke5.png` | ok | 1 | 0 | 3.28 | 1 | 6485 | 203 (0 / 203) | 0 | $0.00562 |
-| 6 | `smoke6.png` | ok | 1 | 1 | 6.44 | 2 | 13041 | 382 (0 / 382) | 0 | $0.01121 |
+| 1 | `smoke1.png` | ok | 2 | 1 | 11.05 | 2 | 13046 | 470 (0 / 470) | 0 | $0.01155 |
+| 2 | `smoke2.png` | ok | 2 | 1 | 7.53 | 2 | 13024 | 441 (0 / 441) | 0 | $0.01142 |
+| 3 | `smoke3.png` | ok | 2 | 1 | 9.01 | 2 | 13025 | 612 (0 / 612) | 0 | $0.01206 |
+| 4 | `smoke4.png` | ok | 1 | 0 | 4.37 | 1 | 6476 | 254 (0 / 254) | 0 | $0.00581 |
+| 5 | `smoke5.png` | ok | 1 | 0 | 3.99 | 1 | 6485 | 263 (0 / 263) | 0 | $0.00585 |
+| 6 | `smoke6.png` | ok | 1 | 0 | 3.85 | 1 | 6500 | 205 (0 / 205) | 0 | $0.00564 |
+
+### Rule 8 Analysis (Box Area > 40% Filter)
+- **Photos with Zoomed Groups**:
+  - `smoke1.png`: **apple** zoomed (box area <= 0.40). **banana** skipped by Rule 8 (box area > 0.40).
+  - `smoke2.png`: **banana** zoomed (box area <= 0.40). **apple** skipped by Rule 8 (box area > 0.40).
+  - `smoke3.png`: **cucumber** zoomed (box area <= 0.40). **tomato** skipped by Rule 8 (box area > 0.40).
+- **Photos with 0 Zoomed Groups (Skipped by Rule 8)**:
+  - `smoke4.png`: **persimmon** skipped by Rule 8 (single display covering > 0.40 of frame).
+  - `smoke5.png`: **banana** skipped by Rule 8 (single display covering > 0.40 of frame).
+  - `smoke6.png`: **tomato** skipped by Rule 8 (single display covering > 0.40 of frame).
+- **Impact**: Single-display shelf photos (photos 4–6) ran in single pass with ~3.8–4.3 s latency, completely eliminating redundant close-up crops of wide-angle crates.
 
 ### Item Comparisons per Photo
 
@@ -170,34 +181,29 @@ Model: `gemini-3.8-flash` on Vertex AI (`eu`), `media_resolution=HIGH`, `thinkin
 - **Close-up Crops**:
   - `[data/probe/inspector_crop_1_1.jpg](file:///Users/kashmalrahat/AI-Builder-Cup/last-call/data/probe/inspector_crop_1_1.jpg)`
 - **Groups Detected**:
-  - **banana**: stage `overripe` (`mid`), worst stage `overripe`, confidence `high`, score `46.0`, observed `55-75 (count)`, quantity `4.5-6.0 dozen`
-  - **apple**: stage `fresh` (`mid`), worst stage `fresh`, confidence `high`, score `88.0`, observed `25-40 (count)`, quantity `4.5-7.0 kg` **[Zoomed]**
+  - **banana**: stage `overripe` (`early`), worst stage `overripe`, confidence `high`, score `55.0`, observed `55-75 (count)`, quantity `4.5-6.0 dozen`
+  - **apple**: stage `fresh` (`late`), worst stage `ripening`, confidence `high`, score `81.0`, observed `20-30 (count)`, quantity `3.0-4.5 kg` **[Zoomed]**
 
 #### Photo 2: `smoke2.png`
 - **Overlay Box Image**: `[data/probe/inspector_boxes_2.jpg](file:///Users/kashmalrahat/AI-Builder-Cup/last-call/data/probe/inspector_boxes_2.jpg)`
 - **Close-up Crops**:
-  - `[data/probe/inspector_crop_2_0.jpg](file:///Users/kashmalrahat/AI-Builder-Cup/last-call/data/probe/inspector_crop_2_0.jpg)`
   - `[data/probe/inspector_crop_2_1.jpg](file:///Users/kashmalrahat/AI-Builder-Cup/last-call/data/probe/inspector_crop_2_1.jpg)`
 - **Groups Detected**:
-  - **apple**: stage `fresh` (`late`), worst stage `ripening`, confidence `high`, score `81.0`, observed `140-180 (count)`, quantity `21.0-27.0 kg` **[Zoomed]**
-  - **banana**: stage `overripe` (`mid`), worst stage `overripe`, confidence `high`, score `46.0`, observed `12-20 (count)`, quantity `1.0-1.5 dozen` **[Zoomed]**
+  - **apple**: stage `fresh` (`mid`), worst stage `fresh`, confidence `high`, score `88.0`, observed `110-140 (count)`, quantity `16.5-21.0 kg`
+  - **banana**: stage `overripe` (`early`), worst stage `overripe`, confidence `high`, score `55.0`, observed `12-20 (count)`, quantity `1.0-1.5 dozen` **[Zoomed]**
 
 #### Photo 3: `smoke3.png`
 - **Overlay Box Image**: `[data/probe/inspector_boxes_3.jpg](file:///Users/kashmalrahat/AI-Builder-Cup/last-call/data/probe/inspector_boxes_3.jpg)`
 - **Close-up Crops**:
   - `[data/probe/inspector_crop_3_0.jpg](file:///Users/kashmalrahat/AI-Builder-Cup/last-call/data/probe/inspector_crop_3_0.jpg)`
-  - `[data/probe/inspector_crop_3_1.jpg](file:///Users/kashmalrahat/AI-Builder-Cup/last-call/data/probe/inspector_crop_3_1.jpg)`
 - **Groups Detected**:
-  - **cucumber**: stage `fresh` (`late`), worst stage `ripening`, confidence `high`, score `81.0`, observed `60-80 (count)`, quantity `9.0-14.0 kg` **[Zoomed]**
-  - **guava**: stage `ripening` (`mid`), worst stage `ripening`, confidence `medium`, score `69.0`, observed `10-18 (count)`, quantity `1.5-3.0 kg` **[Zoomed]**
-  - **tomato**: stage `fresh` (`mid`), worst stage `fresh`, confidence `high`, score `88.0`, observed `150-200 (count)`, quantity `15.0-20.0 kg` *(Staff check: Foreign non-produce items resting on top of the tomatoes should be removed.)*
+  - **cucumber**: stage `fresh` (`mid`), worst stage `ripening`, confidence `high`, score `88.0`, observed `55-75 (count)`, quantity `10.0-15.0 kg` **[Zoomed]**
+  - **tomato**: stage `fresh` (`mid`), worst stage `fresh`, confidence `high`, score `88.0`, observed `100-140 (count)`, quantity `10.0-14.0 kg` *(Staff check: Foreign packaging/candy wrappers left resting directly on the tomatoes.)*
 
 #### Photo 4: `smoke4.png`
 - **Overlay Box Image**: `[data/probe/inspector_boxes_4.jpg](file:///Users/kashmalrahat/AI-Builder-Cup/last-call/data/probe/inspector_boxes_4.jpg)`
-- **Close-up Crops**:
-  - `[data/probe/inspector_crop_4_0.jpg](file:///Users/kashmalrahat/AI-Builder-Cup/last-call/data/probe/inspector_crop_4_0.jpg)`
 - **Groups Detected**:
-  - **persimmon**: stage `ripening` (`mid`), worst stage `ripening`, confidence `high`, score `69.0`, observed `85-105 (count)`, quantity `14.0-18.0 kg` **[Zoomed]**
+  - **persimmon**: stage `fresh` (`mid`), worst stage `fresh`, confidence `high`, score `88.0`, observed `100-140 (count)`, quantity `15.0-25.0 kg`
 
 #### Photo 5: `smoke5.png`
 - **Overlay Box Image**: `[data/probe/inspector_boxes_5.jpg](file:///Users/kashmalrahat/AI-Builder-Cup/last-call/data/probe/inspector_boxes_5.jpg)`
@@ -206,8 +212,6 @@ Model: `gemini-3.8-flash` on Vertex AI (`eu`), `media_resolution=HIGH`, `thinkin
 
 #### Photo 6: `smoke6.png`
 - **Overlay Box Image**: `[data/probe/inspector_boxes_6.jpg](file:///Users/kashmalrahat/AI-Builder-Cup/last-call/data/probe/inspector_boxes_6.jpg)`
-- **Close-up Crops**:
-  - `[data/probe/inspector_crop_6_0.jpg](file:///Users/kashmalrahat/AI-Builder-Cup/last-call/data/probe/inspector_crop_6_0.jpg)`
 - **Groups Detected**:
-  - **tomato**: stage `fresh` (`late`), worst stage `overripe`, confidence `high`, score `81.0`, observed `100-130 (count)`, quantity `8.0-11.0 kg` **[Zoomed]**
+  - **tomato**: stage `ripening` (`mid`), worst stage `ripening`, confidence `high`, score `69.0`, observed `120-160 (count)`, quantity `10.0-14.0 kg`
 

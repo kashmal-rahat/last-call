@@ -169,3 +169,55 @@ def test_worst_pieces_getting_worse_appended_to_change_note():
     assert len(results) == 1
     assert "worst pieces now spoiled" in results[0].change_note
     assert "yesterday" in results[0].change_note
+
+
+def test_unmatched_draft_does_not_steal_matched_draft_key():
+    """A new draft whose base key equals a matched draft's previous key does not steal it.
+    The matched draft keeps its key and change_note."""
+    now = datetime(2026, 10, 9, 12, 0, 0, tzinfo=timezone.utc)
+    prev_time = datetime(2026, 10, 9, 10, 0, 0, tzinfo=timezone.utc)
+
+    # Previous had a banana in top-left with key "banana_top_left"
+    prev_item = ItemAssessment(
+        item_key="banana_top_left",
+        name="banana",
+        position=BoundingBox(ymin=0.1, xmin=0.1, ymax=0.4, xmax=0.4),
+        grid="top-left",
+        stage="fresh",
+        stage_level="mid",
+        worst_stage="fresh",
+        score=88.0,
+        observed=ObservedQuantity(method="count", min=10, max=10),
+        quantity=QuantityEstimate(unit="dozen", low=1.0, high=1.0),
+        confidence=0.9,
+        confidence_level="high",
+    )
+    prev_res = _make_prev_result([prev_item], prev_time)
+
+    # In the new photo:
+    # draft 0 is UNMATCHED (far away at bottom-right, but grid labeled "top-left" so its base key is banana_top_left)
+    unmatched_draft = _make_draft(
+        name="banana",
+        box=(0.7, 0.7, 0.95, 0.95),
+        grid="top-left",
+        score=88.0,
+    )
+    # draft 1 is MATCHED with prev_item (overlaps IoU >= 0.3)
+    matched_draft = _make_draft(
+        name="banana",
+        box=(0.1, 0.1, 0.4, 0.4),
+        grid="top-left",
+        score=81.0,
+    )
+
+    results = assign_keys([unmatched_draft, matched_draft], prev_res, now=now)
+
+    assert len(results) == 2
+    # draft 1 kept its key and got its change note
+    assert results[1].item_key == "banana_top_left"
+    assert results[1].change_since_last == -7.0
+    assert "dropped 7 points" in (results[1].change_note or "")
+
+    # draft 0 did not steal "banana_top_left"; got "banana_top_left_2"
+    assert results[0].item_key == "banana_top_left_2"
+    assert results[0].change_since_last is None

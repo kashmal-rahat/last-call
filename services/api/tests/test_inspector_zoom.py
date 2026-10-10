@@ -149,3 +149,26 @@ def test_merge_zoom_stages_two_steps_apart_causes_disagreement():
     merged, reasons = merge_zoom(base, crop_out)
     assert merged.confidence == "low"
     assert "zoom_disagreement" in reasons
+
+
+def test_select_for_zoom_box_area_rules():
+    # 1. Single group with box area 0.8 and worst_stage != stage -> not zoomed
+    it_large = _make_item(
+        box_2d=[0, 0, 800, 1000],  # area = 0.8 * 1.0 = 0.8
+        stage="fresh",
+        worst_stage="ripening",
+    )
+    assert select_for_zoom([it_large]) == []
+
+    # 2. Two groups with areas 0.51 and 0.49, both medium confidence -> neither zoomed
+    it_51 = _make_item(box_2d=[0, 0, 510, 1000], confidence="medium")  # 0.51
+    it_49 = _make_item(box_2d=[510, 0, 1000, 1000], confidence="medium")  # 0.49
+    assert select_for_zoom([it_51, it_49]) == []
+
+    # 3. Single group with area 0.2 and medium confidence -> zoomed
+    it_20 = _make_item(box_2d=[0, 0, 400, 500], confidence="medium")  # 0.4 * 0.5 = 0.2
+    assert select_for_zoom([it_20]) == [0]
+
+    # 4. A 900x200 strip (area 0.18) with medium confidence -> zoomed
+    it_strip = _make_item(box_2d=[0, 0, 900, 200], confidence="medium")  # 0.9 * 0.2 = 0.18
+    assert select_for_zoom([it_strip]) == [0]

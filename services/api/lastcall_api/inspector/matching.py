@@ -111,18 +111,16 @@ def assign_keys(
             matched_prevs.add(prev_item.item_key)
             matches[d_idx] = prev_item
 
-    assigned: list[ItemAssessment] = []
+    assigned_keys: dict[int, str] = {}
+    assigned_changes: dict[int, tuple[float | None, str | None]] = {}
     used_keys: set[str] = set()
 
-    for d_idx, draft in enumerate(drafts):
-        prev_match = matches.get(d_idx)
-        change_since_last = None
-        change_note = None
-        item_key = None
-
-        if prev_match and prev_match.item_key not in used_keys:
-            # Re-use previous key
+    # Pass 1: Assign reused keys to ALL matched drafts first
+    for d_idx, prev_match in matches.items():
+        draft = drafts[d_idx]
+        if prev_match.item_key not in used_keys:
             item_key = prev_match.item_key
+            used_keys.add(item_key)
             delta, note = format_change_note(
                 score=draft.score,
                 prev_score=prev_match.score,
@@ -131,41 +129,33 @@ def assign_keys(
                 prev_taken_at=previous.taken_at,
                 now=now,
             )
-            change_since_last = delta
-            change_note = note
-        else:
-            # Generate base key: slug(name) + "_" + slug(grid)
-            base = f"{slug(draft.name)}_{slug(draft.grid)}"
-            item_key = base
-            counter = 2
-            while item_key in used_keys:
-                item_key = f"{base}_{counter}"
-                counter += 1
+            assigned_keys[d_idx] = item_key
+            assigned_changes[d_idx] = (delta, note)
 
+    # Pass 2: Generate base keys for unmatched drafts
+    for d_idx, draft in enumerate(drafts):
+        if d_idx in assigned_keys:
+            continue
+        base = f"{slug(draft.name)}_{slug(draft.grid)}"
+        item_key = base
+        counter = 2
+        while item_key in used_keys:
+            item_key = f"{base}_{counter}"
+            counter += 1
         used_keys.add(item_key)
+        assigned_keys[d_idx] = item_key
+        assigned_changes[d_idx] = (None, None)
 
+    # Build final assessments in original drafts order
+    assigned: list[ItemAssessment] = []
+    for d_idx, draft in enumerate(drafts):
+        item_key = assigned_keys[d_idx]
+        delta, note = assigned_changes[d_idx]
         assessment = ItemAssessment(
+            **draft.model_dump(),
             item_key=item_key,
-            name=draft.name,
-            position=draft.position,
-            grid=draft.grid,
-            in_mixed_crate=draft.in_mixed_crate,
-            issues=draft.issues,
-            evidence=draft.evidence,
-            stage=draft.stage,
-            stage_level=draft.stage_level,
-            worst_stage=draft.worst_stage,
-            score=draft.score,
-            change_since_last=change_since_last,
-            change_note=change_note,
-            observed=draft.observed,
-            quantity=draft.quantity,
-            confidence=draft.confidence,
-            confidence_level=draft.confidence_level,
-            needs_staff_check=draft.needs_staff_check,
-            staff_check_reasons=draft.staff_check_reasons,
-            check_reason=draft.check_reason,
-            zoomed=draft.zoomed,
+            change_since_last=delta,
+            change_note=note,
         )
         assigned.append(assessment)
 

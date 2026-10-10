@@ -2,7 +2,18 @@
 
 > v2 (2026-10-09): merges the partner's inspector prompt (Appendix A is the only copy of the prompt), drops the time boxes, and moves item matching across photos into code.
 > v3 (2026-10-09): adds the zoom pass (close-up crops of doubtful groups) and removes sampling parameters (temperature etc.), which are deprecated and ignored on Gemini 3.6+ ("Gemini 3.8 Flash facts" below).
-> **The implementing agent reads first:** `plans/README.md` (binding rules, D1–D21), this plan, `docs/last-call-architecture.md` §4 (Freshness Inspector) and §6–§9, `docs/last-call-module-plan.md` (Module 1).
+>
+> **Implementation notes (2026-10-10):**
+> Key refinements and hardening introduced during implementation:
+> - **`thinking_level = "low"` (D30):** Measured 3–5× faster than `medium` with equivalent assessment quality (see [results/smoke.md](results/smoke.md)).
+> - **`merge_neighbours` (D34):** Merges contiguous same-produce boxes within distance 30 to prevent split crates and duplicate batches.
+> - **Zoom area threshold (D35):** Capped zoom selection at `MAX_ZOOM_BOX_AREA = 0.40`; full-frame displays skip redundant cropping.
+> - **Hedged requests (D36):** Starts a secondary hedge call if no response within 12 s with a 60 s total inspection deadline to absorb tail latency (see [results/latency.md](results/latency.md)).
+> - **`ImageError` handling:** Explicit domain exception for unreadable uploads returning HTTP 400 without masking Pydantic schema validation failures.
+> - **Per-instance concurrency & cached store (D37):** Max 2 concurrent inspections per Cloud Run container wrapped in `asyncio.Semaphore` with `@lru_cache` `FirestoreStore` to stay safely within 512 MB memory.
+> - **Two-pass key assignment:** Reuses matched previous keys before generating base keys for unmatched items, preventing accidental key theft.
+>
+> **The implementing agent reads first:** `plans/README.md` (binding rules, D1–D21, D34–D37), this plan, `docs/last-call-architecture.md` §4 (Freshness Inspector) and §6–§9, `docs/last-call-module-plan.md` (Module 1).
 > Claude plans and reviews; Gemini Flash in Antigravity implements. Follow the steps in order and stop at every 🛑.
 
 ## Context

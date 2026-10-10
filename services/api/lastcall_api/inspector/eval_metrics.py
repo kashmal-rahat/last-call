@@ -3,6 +3,7 @@
 from typing import NamedTuple
 from pydantic import BaseModel
 
+from lastcall_api.inspector.guardrails import names_match
 from lastcall_shared.models import FreshnessResult, ItemAssessment, ProduceStage
 
 
@@ -36,12 +37,9 @@ def _name_matches(label_item: str, pred_name: str) -> bool:
 
     variants = [v.strip().lower() for v in label_item.split(";") if v.strip()]
     for var in variants:
-        if var == p:
-            return True
         if var in p or p in var:
             return True
-        # Strip trailing 's' for plural match
-        if var.rstrip("s") == p.rstrip("s"):
+        if names_match(var, p):
             return True
     return False
 

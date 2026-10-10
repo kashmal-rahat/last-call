@@ -72,6 +72,10 @@ If any of these conflict, **ask the user. Don't choose silently.**
 | D31 | 2026-10-09 | Quantity is the photo estimate as a range (counts taken from close-ups when zoomed). Staff can edit it, and the final weight is settled at pickup. No ERP in the prototype | An exact count from one photo isn't reliable (hidden layers, piece weight varies); a range plus confirmation is honest and enough for the demo |
 | D32 | 2026-10-09 | The Ladder is a Gemini agent (not code rules), making **one call per inspected item, run in parallel** (at most 4 at a time). Code still enforces the money and safety rules. Details in the Ladder module plan | What a freshness stage means depends on the produce, so hard-coded rules don't fit; per-item parallel calls keep latency flat as items grow and contain failures to one item |
 | D33 | 2026-10-09 | No cap on batches per photo. In the judge demo, the Scout agent (with Places API) runs **only when the judge clicks "Find buyers"** for a batch, and the Negotiator only on "Call". In production, the Scout runs for every off-shelf batch through Cloud Tasks. The screen shows the 3 most actionable items first | Cost is controlled where it is spent (Scout and Negotiator), not by dropping produce; a fixed cap would leave rescuable stock unhandled |
+| D34 | 2026-10-10 | merge_neighbours. Code merges neighbouring groups of the same produce (same name, boxes touching or within 30 on the 0–1000 scale; never "unknown produce" or mixed crates) | Gemini returned 2–5 groups for the same photo across 12 identical calls; one group per display prevents duplicate batches |
+| D35 | 2026-10-10 | Zoom only for doubtful groups whose box covers ≤ 40% of the photo (MAX_ZOOM_BOX_AREA = 0.40) | Every image gets a fixed 1,120 tokens at media_resolution=high, so a crop of a large group adds little detail; full-frame photos now take one call (~4 s) |
+| D36 | 2026-10-10 | Hedged requests. If a Gemini call hasn't answered after 12 s (HEDGE_AFTER_S), start one identical second request and take whichever succeeds first; 30 s per attempt, 3 attempts, 60 s total budget per inspection | Occasional Vertex slow responses (38–60 s seen once) while typical calls are p50 6.7 s, p90 10.8 s, max 12.1 s (plans/module-1/results/latency.md) |
+| D37 | 2026-10-10 | At most 2 inspections at once per api instance (asyncio.Semaphore) and one shared Firestore client | Default Cloud Run memory is 512 MB and a full-size phone photo needs ~150–200 MB while processing; avoids crashes without a Terraform change |
 
 ## Module status
 
@@ -79,4 +83,4 @@ If any of these conflict, **ask the user. Don't choose silently.**
 |---|---|---|
 | 0: Foundations | [module-0/plan.md](module-0/plan.md) | Completed |
 | 2: Negotiator | [module-2/plan.md](module-2/plan.md) | Implemented and deployed (2B). Pending: user's native-speaker test, then lower the demo limits |
-| 1: Freshness Inspector | [module-1/plan.md](module-1/plan.md) | Implemented and deployed (1B). Pending: eval execution once labels and home decay photos arrive |
+| 1: Freshness Inspector | [module-1/plan.md](module-1/plan.md) | Implemented and deployed (cleanup 2026-10-10). Pending: eval once labels and home decay photos arrive. |

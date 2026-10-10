@@ -21,6 +21,7 @@ from lastcall_api.inspector.images import crop_group, prepare_image
 from lastcall_api.inspector.matching import assign_keys
 from lastcall_api.inspector.prompt import PROMPT_VERSION, SYSTEM_PROMPT, user_text, zoom_text
 from lastcall_api.inspector.schema import InspectorOutput
+from lastcall_api.inspector.zoom import merge_zoom, select_for_zoom
 from lastcall_shared.config import get_settings
 from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.models import FreshnessResult, InspectorMeta
@@ -307,7 +308,6 @@ async def inspect_photo(
     total_out_tokens = pass1_usage.output_tokens
     total_cached_tokens = pass1_usage.cached_tokens
     total_thought_tokens = pass1_usage.thought_tokens
-    total_cand_tokens = pass1_usage.candidate_tokens
     zoomed_count = 0
     zoom_failures = 0
 
@@ -324,8 +324,6 @@ async def inspect_photo(
 
     # Pass 2 zoom branch (executed when zoom is enabled and photo_status == "ok")
     if pass1_out.photo_status == "ok" and should_zoom and (deadline - time.monotonic()) >= 10.0:
-        from lastcall_api.inspector.zoom import merge_zoom, select_for_zoom
-
         selected_indices = select_for_zoom(cleaned_pass1, max_crops=6)
         if selected_indices:
             # Crop and call in parallel
@@ -360,7 +358,6 @@ async def inspect_photo(
                 total_out_tokens += crop_usage.output_tokens
                 total_cached_tokens += crop_usage.cached_tokens
                 total_thought_tokens += crop_usage.thought_tokens
-                total_cand_tokens += crop_usage.candidate_tokens
 
                 base_item = cleaned_pass1[idx]
                 if crop_out is None:

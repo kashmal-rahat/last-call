@@ -51,7 +51,7 @@ def prepare_image(raw: bytes) -> PreparedImage:
         full_h = int(round(img.height * scale))
         full = img.resize((full_w, full_h), Image.Resampling.LANCZOS)
     else:
-        full = img.copy()
+        full = img
 
     # jpeg: downscaled so long side <= 1600 px (never upscale)
     full_max = max(full.width, full.height)
@@ -61,7 +61,7 @@ def prepare_image(raw: bytes) -> PreparedImage:
         preview_h = int(round(full.height * scale_preview))
         preview = full.resize((preview_w, preview_h), Image.Resampling.LANCZOS)
     else:
-        preview = full.copy()
+        preview = full
 
     width, height = preview.width, preview.height
     buf = io.BytesIO()
