@@ -1,5 +1,6 @@
 """Deterministic guardrails and post-processing for Freshness Inspector."""
 
+import math
 import re
 from pydantic import BaseModel, Field
 
@@ -73,9 +74,9 @@ class ItemDraft(BaseModel):
     zoomed: bool = False
 
 
-def _round_half(val: float) -> float:
-    """Rounds to nearest 0.5."""
-    return round(val * 2.0) / 2.0
+def _round_tenth(val: float) -> float:
+    """Round half up to 0.1. The 1e-9 guards float error (e.g. 0.35*10 = 3.4999…)."""
+    return math.floor(val * 10 + 0.5 + 1e-9) / 10
 
 
 def compute_grid(ymin: int, xmin: int, ymax: int, xmax: int) -> str:
@@ -387,11 +388,11 @@ def apply_guardrails(
 
         # 9. Sale quantity
         if cleaned.sale_unit == "dozen" and cleaned.observed.method == "count":
-            s_low = _round_half(observed.min / 12.0)
-            s_high = _round_half(observed.max / 12.0)
+            s_low = _round_tenth(observed.min / 12.0)
+            s_high = _round_tenth(observed.max / 12.0)
         else:
-            s_low = _round_half(max(0.0, cleaned.sale_min))
-            s_high = _round_half(max(0.0, cleaned.sale_max))
+            s_low = _round_tenth(max(0.0, cleaned.sale_min))
+            s_high = _round_tenth(max(0.0, cleaned.sale_max))
             if s_low > s_high:
                 s_low, s_high = s_high, s_low
 

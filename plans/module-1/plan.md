@@ -328,8 +328,8 @@ Sort by the first rule each item meets (rule 1 first), then by box area (smaller
      - `needs_staff_check = bool(reasons)`. If the model's `check_reason` is empty but there are reasons, write a plain sentence from them (e.g. "Some pieces look spoiled; please remove them.").
   8. **Observed quantity:** negatives → 0; swap if min > max; fill level capped at 100.
   9. **Sale quantity (`QuantityEstimate`):**
-     - `sale_unit == "dozen"` and method `count` → low = `observed.min / 12`, high = `observed.max / 12`, rounded to 0.5.
-     - otherwise use `sale_min`/`sale_max`: negatives → 0, swap if needed, round to 0.5.
+     - `sale_unit == "dozen"` and method `count` → low = `observed.min / 12`, high = `observed.max / 12`, rounded half-up to 0.1.
+     - otherwise use `sale_min`/`sale_max`: negatives → 0, swap if needed, rounded half-up to 0.1.
   10. **Text:** `evidence` and `check_reason` trimmed to 240 chars.
 - Then sort by box (top-to-bottom, then left-to-right) and cap at 12 items.
 - Tests (one per rule, about 16): mould on a ripening group → `worst_stage` unsafe, `stage` unchanged, `bad_pieces_in_group` and `safety_override`; rot with overripe; worst better than stage gets raised; the score table; a bad box dropped; `no_produce` forces items empty; `ok` with zero items becomes `no_produce`; 30 bananas counted → 2.5 dozen; swapped min/max; unknown produce flagged.

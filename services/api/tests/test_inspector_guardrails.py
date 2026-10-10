@@ -334,3 +334,31 @@ def test_merge_neighbours_unknown_produce_never_merges():
     assert merged[0].name == "unknown produce"
     assert merged[1].name == "unknown produce"
 
+
+@pytest.mark.parametrize(
+    "sale_unit,obs_method,obs_min,obs_max,sale_min,sale_max,expected_low,expected_high",
+    [
+        ("dozen", "count", 1, 1, 0.0, 0.0, 0.1, 0.1),
+        ("dozen", "count", 3, 5, 0.0, 0.0, 0.3, 0.4),
+        ("dozen", "count", 15, 15, 0.0, 0.0, 1.3, 1.3),
+        ("dozen", "count", 30, 30, 0.0, 0.0, 2.5, 2.5),
+        ("kg", "fill_level", 50, 50, 0.35, 0.35, 0.4, 0.4),
+        ("kg", "fill_level", 50, 50, 0.04, 0.04, 0.0, 0.0),
+    ],
+)
+def test_sale_quantity_rounded_half_up_to_tenth(
+    sale_unit, obs_method, obs_min, obs_max, sale_min, sale_max, expected_low, expected_high
+):
+    item = _make_item(
+        observed=ObservedOut(method=obs_method, min=obs_min, max=obs_max),
+        sale_unit=sale_unit,
+        sale_min=sale_min,
+        sale_max=sale_max,
+    )
+    out = InspectorOutput(photo_status="ok", photo_note="", photo_issues=[], items=[item])
+    _, _, _, drafts = apply_guardrails(out)
+    assert len(drafts) == 1
+    assert drafts[0].quantity.low == expected_low
+    assert drafts[0].quantity.high == expected_high
+
+
