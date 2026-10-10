@@ -91,5 +91,5 @@ If any of these conflict, **ask the user. Don't choose silently.**
 |---|---|---|
 | 0: Foundations | [module-0/plan.md](module-0/plan.md) | Completed |
 | 2: Negotiator | [module-2/plan.md](module-2/plan.md) | Implemented and deployed (2B). Pending: user's native-speaker test, then lower the demo limits |
-| 1: Freshness Inspector | [module-1/plan.md](module-1/plan.md) | Implemented and deployed (cleanup 2026-10-10). Pending: eval once labels and home decay photos arrive. Follow-up F1 (same-photo reading cache, D45) planned: [module-1/followup-reading-cache.md](module-1/followup-reading-cache.md). |
+| 1: Freshness Inspector | [module-1/plan.md](module-1/plan.md) | Implemented and deployed (cleanup 2026-10-10). Follow-up F1 (same-photo reading cache, D45) implemented and deployed ([results](module-1/results/followup-reading-cache.md)). Pending: eval once labels and home decay photos arrive. |
 | 3: Ladder | [module-3/plan.md](module-3/plan.md) | Implemented and deployed (3B, 2026-10-10) |

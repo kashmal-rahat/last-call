@@ -81,7 +81,7 @@ Active service URLs:
 
 Module 1 turns raw grocery shelf photos into structured produce assessments using two-pass vision on Gemini 3.8 Flash (`gemini-3.8-flash` on Vertex AI `eu`). It determines produce stages, worst-piece conditions, bounding boxes, quantitative ranges, safety flags, and temporal changes across shelf inspections.
 
-Interactive inspection is available on the deployed demo page at `/demo` under **"1 · Inspect a shelf"** (requires the demo access code).
+Interactive inspection is available on the deployed demo page at `/demo` under **"1 · Inspect a shelf"** (requires the demo access code). To ensure consistent demonstration results when evaluating borderline produce photos multiple times, `/demo/inspect` caches complete inspection readings per exact image hash in Firestore (`inspector_readings/`, decision D45). Repeated inspections of the same photo reuse the stored Gemini reading while re-running deterministic safety guardrails, matching, and change tracking. All evaluation, benchmarking, and smoke scripts bypass this cache entirely to continue measuring raw Gemini model behavior.
 
 Run inspector verification scripts (outputs and reports are written to `plans/module-1/results/`):
 ```bash
