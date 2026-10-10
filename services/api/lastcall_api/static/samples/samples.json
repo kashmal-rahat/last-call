@@ -10,5 +10,11 @@
     "label": "Tomatoes, Cucumbers & Guavas (Shelf C)",
     "url": "/static/samples/sample_smoke3.jpg",
     "series": false
+  },
+  {
+    "id": "simulated_banana",
+    "label": "Simulated overripe tray (AI-generated)",
+    "url": "/static/samples/sample_overripe_banana_simulated.jpg",
+    "series": false
   }
 ]

@@ -221,6 +221,26 @@
           ],
           "default": null,
           "title": "Profile Source"
+        },
+        "profile_votes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Profile Votes"
+        },
+        "profile_uncertain_fields": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Profile Uncertain Fields",
+          "type": "array"
         }
       },
       "required": [

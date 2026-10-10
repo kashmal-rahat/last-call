@@ -662,6 +662,152 @@
       gap: 1.25rem;
     }
 
+    /* Module 3: Decision Panel styles */
+    .decision-block {
+      background: rgba(10, 16, 30, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+
+    .decision-block-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .step-chip {
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .step-chip.step-keep {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .step-chip.step-discount {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .step-chip.step-bulk_sale {
+      background: rgba(56, 189, 248, 0.15);
+      color: #7dd3fc;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    .step-chip.step-donate {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, 0.4);
+    }
+
+    .step-chip.step-animal_feed {
+      background: rgba(217, 119, 6, 0.15);
+      color: #f59e0b;
+      border: 1px solid rgba(217, 119, 6, 0.4);
+    }
+
+    .step-chip.step-compost {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .decision-line {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #f3f4f6;
+      line-height: 1.35;
+    }
+
+    .decision-reason {
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      line-height: 1.35;
+    }
+
+    .hold-warning-chip {
+      background: rgba(239, 68, 68, 0.18);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      color: #fca5a5;
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .staff-actions-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .staff-action-chip {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e2e8f0;
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+    }
+
+    .profile-line {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 0.4rem;
+    }
+
+    .price-override-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+      flex-wrap: wrap;
+    }
+
+    .price-override-input {
+      width: 110px;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.82rem;
+      border-radius: 6px;
+    }
+
+    .btn-redecide {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      padding: 0.35rem 0.7rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      flex: none;
+      transition: all 0.2s;
+    }
+    .btn-redecide:hover {
+      background: rgba(16, 185, 129, 0.35);
+      color: #fff;
+    }
+
     /* Section 2: Voice Negotiator styles */
     .voice-grid {
       display: grid;
@@ -913,6 +1059,16 @@
           </div>
 
           <div class="field">
+            <label for="closingTimeSelect">Closing Time</label>
+            <select id="closingTimeSelect">
+              <option value="">Now (closes 23:00)</option>
+              <option value="12">Morning (12 h left)</option>
+              <option value="4">Evening (4 h left)</option>
+              <option value="1">Last hour (1 h left)</option>
+            </select>
+          </div>
+
+          <div class="field">
             <label for="shelfPhotoInput">Upload Photo (or take camera photo)</label>
             <input type="file" id="shelfPhotoInput" class="file-input" accept="image/jpeg,image/png,image/webp">
           </div>
@@ -943,6 +1099,7 @@
         </div>
 
         <div id="inspectError" class="inspect-error-banner" style="display: none;"></div>
+        <div id="decideError" class="inspect-error-banner" style="display: none;"></div>
 
         <!-- Warning Banners -->
         <div id="inspectStatusBanner" class="inspect-warning-banner" style="display: none;"></div>
@@ -1060,9 +1217,17 @@
     const itemsSummaryCount = document.getElementById('itemsSummaryCount');
     const itemsContainer = document.getElementById('itemsContainer');
     const inspectFooter = document.getElementById('inspectFooter');
+    const closingTimeSelect = document.getElementById('closingTimeSelect');
+    const decideError = document.getElementById('decideError');
 
     let activeSampleBlob = null;
     let activeSampleUrl = null;
+    let currentInspection = null;
+    let currentLadderResult = null;
+    let currentDisplayUrl = null;
+    let priceOverrides = {};
+    let isDeciding = false;
+    let decideRequestCounter = 0;
 
     function getStoredItem(key, defaultVal = '') {
       try {
@@ -1172,8 +1337,8 @@
       }
     });
 
-    // Ranking algorithm per plan Step 10
-    function rankItems(items) {
+    // Ranking algorithm per plan Step 9 & 10
+    function rankItems(items, decisionsMap = null) {
       const stageSeverity = {
         'unsafe': 5,
         'spoiled': 4,
@@ -1183,6 +1348,15 @@
       };
 
       function getTier(item) {
+        if (decisionsMap && decisionsMap[item.item_key]) {
+          const d = decisionsMap[item.item_key];
+          if (d.step === 'compost') return 1;
+          if (['bulk_sale', 'donate', 'animal_feed'].includes(d.step)) return 2;
+          if (d.step === 'discount') return 3;
+          if (d.on_hold || (d.staff_actions && d.staff_actions.length > 0) || item.needs_staff_check) return 4;
+          if (d.step === 'keep') return 5;
+          return 6;
+        }
         if (['overripe', 'spoiled', 'unsafe'].includes(item.stage)) {
           return 1;
         }
@@ -1248,8 +1422,103 @@
       'zoom_disagreement': 'close-up disagreed',
     };
 
+    const STAFF_ACTION_LABELS = {
+      'remove_bad_pieces': 'remove bad pieces',
+      'check_before_off_shelf': 'check before off-shelf',
+      'identify_item': 'identify item',
+      'approve_compost': 'approve compost',
+      'enter_shelf_price': 'enter shelf price',
+      'recheck_next_photo': 'recheck next photo',
+    };
+
+    function formatUncertainFields(fields) {
+      if (!fields || fields.length === 0) return 'all fields agreed';
+      const labelMap = {
+        'fresh.sellable_for': 'fresh shelf life',
+        'ripening.sellable_for': 'ripening shelf life',
+        'overripe.sellable_for': 'overripe shelf life',
+        'fresh.juice_shop': 'fresh juice shop',
+        'ripening.juice_shop': 'ripening juice shop',
+        'overripe.juice_shop': 'overripe juice shop',
+        'fresh.restaurant': 'fresh restaurant',
+        'ripening.restaurant': 'ripening restaurant',
+        'overripe.restaurant': 'overripe restaurant',
+        'fresh.bakery': 'fresh bakery',
+        'ripening.bakery': 'ripening bakery',
+        'overripe.bakery': 'overripe bakery',
+        'fresh.charity': 'fresh charity',
+        'ripening.charity': 'ripening charity',
+        'overripe.charity': 'overripe charity',
+        'overripe_ok_for_cattle': 'cattle overripe',
+        'spoiled_ok_for_cattle': 'cattle spoiled',
+      };
+      const words = fields.map(f => labelMap[f] || f.replace('.', ' ').replace(/_/g, ' '));
+      return 'uncertain: ' + words.join(', ');
+    }
+
+    function formatDecisionLine(decision) {
+      if (decision.step === 'keep') {
+        return 'Stays at full price · re-checked at next photo';
+      }
+      if (decision.step === 'discount') {
+        if (decision.shelf_price != null && decision.discounted_price != null) {
+          return `Rs ${decision.shelf_price} → Rs ${decision.discounted_price} / ${decision.unit} (−${decision.discount_pct}%)`;
+        }
+        return `Needs shelf price (−${decision.discount_pct || 0}%)`;
+      }
+      if (decision.step === 'bulk_sale' || decision.step === 'animal_feed') {
+        const buyerTypeLabels = {
+          'juice_shop': 'juice shops',
+          'restaurant': 'restaurants',
+          'bakery': 'bakeries',
+          'charity': 'charities',
+          'dairy_farm': 'dairy farms'
+        };
+        let buyers = (decision.buyer_types || []).map(b => buyerTypeLabels[b] || b.replace('_', ' ')).join(', ');
+        if (!buyers && decision.step === 'animal_feed') buyers = 'dairy farms';
+        if (buyers) buyers = buyers.charAt(0).toUpperCase() + buyers.slice(1);
+
+        let pricePart = '';
+        if (decision.opening_price != null && decision.floor_price != null) {
+          pricePart = `Opening Rs ${decision.opening_price}/${decision.unit} · floor Rs ${decision.floor_price}/${decision.unit} (never told to buyers)`;
+        } else {
+          pricePart = 'Needs shelf price';
+        }
+
+        let nextPart = '';
+        if (decision.next_steps && decision.next_steps.length > 0) {
+          nextPart = ` · Next: ${decision.next_steps.map(s => s.replace('_', ' ')).join(' → ')}`;
+        }
+        return `${buyers ? buyers + ' · ' : ''}${pricePart}${nextPart}`;
+      }
+      if (decision.step === 'donate') {
+        let line = 'Free to charities';
+        if (decision.next_steps && decision.next_steps.length > 0) {
+          line += ' · Next: ' + decision.next_steps.map(s => s.replace('_', ' ')).join(' → ');
+        }
+        return line;
+      }
+      if (decision.step === 'compost') {
+        return 'Needs manager approval';
+      }
+      return decision.step;
+    }
+
+    function formatProfileLine(decision) {
+      const pName = decision.name || 'produce';
+      if (decision.profile_source === 'manager') {
+        return `Produce profile: ${pName} · Manager profile`;
+      }
+      if (decision.profile_source === 'fallback') {
+        return `Produce profile: ${pName} · Generic fallback`;
+      }
+      const votes = decision.profile_votes || 5;
+      const uncText = formatUncertainFields(decision.profile_uncertain_fields);
+      return `Produce profile: ${pName} · Gemini, ${votes} votes · ${uncText}`;
+    }
+
     // Safe card builder using textContent exclusively
-    function createItemCard(item) {
+    function createItemCard(item, decision = null, deciding = false) {
       const card = document.createElement('div');
       card.className = 'item-card';
 
@@ -1407,11 +1676,110 @@
         card.appendChild(chgBox);
       }
 
+      // Module 3: Decision Block
+      const decisionBlock = document.createElement('div');
+      decisionBlock.className = 'decision-block';
+
+      if (deciding) {
+        const decLoading = document.createElement('div');
+        decLoading.className = 'decision-line';
+        decLoading.style.color = '#fbbf24';
+        decLoading.textContent = '⏳ Deciding…';
+        decisionBlock.appendChild(decLoading);
+      } else if (decision) {
+        const decTop = document.createElement('div');
+        decTop.className = 'decision-block-top';
+
+        const stepChip = document.createElement('span');
+        stepChip.className = `step-chip step-${decision.step}`;
+        stepChip.textContent = decision.step.replace('_', ' ');
+        decTop.appendChild(stepChip);
+
+        if (decision.on_hold) {
+          const holdChip = document.createElement('span');
+          holdChip.className = 'hold-warning-chip';
+          holdChip.textContent = '⚠️ On hold until staff check';
+          decTop.appendChild(holdChip);
+        }
+
+        decisionBlock.appendChild(decTop);
+
+        const decLine = document.createElement('div');
+        decLine.className = 'decision-line';
+        decLine.textContent = formatDecisionLine(decision);
+        decisionBlock.appendChild(decLine);
+
+        if (decision.reason) {
+          const decReason = document.createElement('div');
+          decReason.className = 'decision-reason';
+          decReason.textContent = decision.reason;
+          decisionBlock.appendChild(decReason);
+        }
+
+        if (decision.staff_actions && decision.staff_actions.length > 0) {
+          const actCont = document.createElement('div');
+          actCont.className = 'staff-actions-container';
+          decision.staff_actions.forEach(act => {
+            const actChip = document.createElement('span');
+            actChip.className = 'staff-action-chip';
+            actChip.textContent = STAFF_ACTION_LABELS[act] || act.replace(/_/g, ' ');
+            actCont.appendChild(actChip);
+          });
+          decisionBlock.appendChild(actCont);
+        }
+
+        const profLine = document.createElement('div');
+        profLine.className = 'profile-line';
+        profLine.textContent = formatProfileLine(decision);
+        decisionBlock.appendChild(profLine);
+
+        const priceRow = document.createElement('div');
+        priceRow.className = 'price-override-container';
+
+        const priceLabel = document.createElement('label');
+        priceLabel.style.fontSize = '0.75rem';
+        priceLabel.textContent = `Shelf price (Rs/${decision.unit}):`;
+
+        const priceInput = document.createElement('input');
+        priceInput.type = 'number';
+        priceInput.min = '1';
+        priceInput.max = '100000';
+        priceInput.className = 'price-override-input';
+        priceInput.placeholder = decision.shelf_price ? String(decision.shelf_price) : 'Enter price';
+        if (priceOverrides[decision.item_key]) {
+          priceInput.value = String(priceOverrides[decision.item_key]);
+        }
+
+        const btnRedecide = document.createElement('button');
+        btnRedecide.type = 'button';
+        btnRedecide.className = 'btn-redecide';
+        btnRedecide.textContent = 'Re-decide';
+
+        btnRedecide.addEventListener('click', () => {
+          const val = parseInt(priceInput.value.trim(), 10);
+          if (!isNaN(val) && val > 0 && val <= 100000) {
+            priceOverrides[decision.item_key] = val;
+            triggerDecide();
+          } else {
+            alert('Please enter a valid shelf price (1 to 100,000 Rs).');
+          }
+        });
+
+        priceRow.appendChild(priceLabel);
+        priceRow.appendChild(priceInput);
+        priceRow.appendChild(btnRedecide);
+        decisionBlock.appendChild(priceRow);
+      }
+
+      card.appendChild(decisionBlock);
       return card;
     }
 
     function renderResults(data, imgSrc) {
-      inspectedImage.src = imgSrc;
+      if (imgSrc) {
+        inspectedImage.src = imgSrc;
+        currentDisplayUrl = imgSrc;
+      }
       bboxOverlay.replaceChildren();
 
       // Draw bounding boxes on photo
@@ -1453,6 +1821,14 @@
         (data.items && data.items.some(i => i.issues && i.issues.includes('instruction_text')));
       inspectInstructionBanner.style.display = hasInstruction ? 'block' : 'none';
 
+      // Build decisions map
+      const decisionsMap = {};
+      if (currentLadderResult && currentLadderResult.decisions) {
+        currentLadderResult.decisions.forEach(d => {
+          decisionsMap[d.item_key] = d;
+        });
+      }
+
       // Rank produce items
       itemsContainer.replaceChildren();
       const items = data.items || [];
@@ -1465,12 +1841,12 @@
         emptyMsg.textContent = data.photo_status === 'no_produce' ? 'No produce detected in this shelf photo.' : 'No items found.';
         itemsContainer.appendChild(emptyMsg);
       } else {
-        const ranked = rankItems(items);
+        const ranked = rankItems(items, decisionsMap);
         const top3 = ranked.slice(0, 3);
         const remaining = ranked.slice(3);
 
         top3.forEach(item => {
-          itemsContainer.appendChild(createItemCard(item));
+          itemsContainer.appendChild(createItemCard(item, decisionsMap[item.item_key], isDeciding));
         });
 
         if (remaining.length > 0) {
@@ -1487,7 +1863,7 @@
           hiddenContainer.style.display = 'none';
 
           remaining.forEach(item => {
-            hiddenContainer.appendChild(createItemCard(item));
+            hiddenContainer.appendChild(createItemCard(item, decisionsMap[item.item_key], isDeciding));
           });
 
           toggleBtn.addEventListener('click', () => {
@@ -1510,11 +1886,19 @@
           `Model: ${meta.model}`,
           `Thinking: ${meta.thinking_level}`,
           `Prompt: v${meta.prompt_version}`,
-          `Latency: ${meta.latency_ms} ms`,
+          `Inspect Latency: ${meta.latency_ms} ms`,
           `Gemini Calls: ${meta.calls}`,
           `Hedges: ${meta.hedges || 0}`,
           `Zoomed Groups: ${meta.zoomed_groups}`
         ];
+
+        if (currentLadderResult && currentLadderResult.meta) {
+          const lmeta = currentLadderResult.meta;
+          metaItems.push(`Decide Latency: ${lmeta.latency_ms} ms`);
+          metaItems.push(`Profiles Generated: ${lmeta.profiles_generated}`);
+          metaItems.push(`Profile Calls: ${lmeta.profile_calls}`);
+          metaItems.push(`Fallbacks: ${lmeta.fallback_profiles}`);
+        }
 
         metaItems.forEach(text => {
           const span = document.createElement('span');
@@ -1529,6 +1913,66 @@
 
       inspectResultContainer.style.display = 'grid';
     }
+
+    async function triggerDecide() {
+      if (!currentInspection || !currentInspection.inspection_id) return;
+      const code = inspectAccessCodeEl.value.trim() || accessCodeEl.value.trim();
+      if (!code) return;
+
+      const thisRequestId = ++decideRequestCounter;
+      isDeciding = true;
+      decideError.style.display = 'none';
+      decideError.textContent = '';
+      renderResults(currentInspection, currentDisplayUrl);
+
+      const hoursVal = closingTimeSelect.value ? parseFloat(closingTimeSelect.value) : null;
+      const payload = {
+        inspection_id: currentInspection.inspection_id,
+        hours_until_closing: hoursVal,
+        price_overrides: Object.keys(priceOverrides).length > 0 ? priceOverrides : null
+      };
+
+      try {
+        const res = await fetch('/demo/decide', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Demo-Access-Code': code
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (thisRequestId !== decideRequestCounter) return;
+
+        if (res.ok) {
+          currentLadderResult = await res.json();
+          decideError.style.display = 'none';
+          decideError.textContent = '';
+        } else {
+          currentLadderResult = null;
+          const errData = await res.json().catch(() => ({}));
+          const detail = errData.detail || (res.status === 429 ? 'Hourly limit reached. Please try again later.' : 'Decision failed, please try again.');
+          decideError.textContent = detail;
+          decideError.style.display = 'block';
+        }
+      } catch (err) {
+        if (thisRequestId !== decideRequestCounter) return;
+        currentLadderResult = null;
+        decideError.textContent = err.message || 'Decision failed, please try again.';
+        decideError.style.display = 'block';
+      } finally {
+        if (thisRequestId === decideRequestCounter) {
+          isDeciding = false;
+          renderResults(currentInspection, currentDisplayUrl);
+        }
+      }
+    }
+
+    closingTimeSelect.addEventListener('change', () => {
+      if (currentInspection && currentInspection.items && currentInspection.items.length > 0) {
+        triggerDecide();
+      }
+    });
 
     async function handleInspect() {
       const code = inspectAccessCodeEl.value.trim() || accessCodeEl.value.trim();
@@ -1560,8 +2004,15 @@
       }
 
       inspectError.style.display = 'none';
+      decideError.style.display = 'none';
+      decideError.textContent = '';
       inspectLoading.style.display = 'flex';
       btnInspect.disabled = true;
+
+      currentInspection = null;
+      currentLadderResult = null;
+      priceOverrides = {};
+      isDeciding = false;
 
       const shelfId = getOrCreateShelfId();
       const formData = new FormData();
@@ -1599,7 +2050,11 @@
         }
 
         const data = await res.json();
+        currentInspection = data;
         renderResults(data, displayUrl);
+        if (data.photo_status === 'ok' && data.items && data.items.length > 0) {
+          triggerDecide();
+        }
       } catch (err) {
         inspectError.textContent = err.message;
         inspectError.style.display = 'block';

@@ -45,7 +45,7 @@ class FakeGenAIClient:
         self.call_count += 1
         if not self.responses:
             raise RuntimeError("No more responses configured in FakeGenAIClient")
-        resp = self.responses.pop(0)
+        resp = self.responses.pop(0) if len(self.responses) > 1 else self.responses[0]
         if isinstance(resp, Exception):
             raise resp
         return resp
@@ -135,8 +135,8 @@ async def test_decide_inspection_end_to_end_and_consistency_guarantee():
     )
 
     assert len(res1.decisions) == 2
-    assert fake_client.call_count == 1
-    assert res1.meta.profile_calls == 1
+    assert fake_client.call_count == 5
+    assert res1.meta.profile_calls == 5
     assert res1.meta.profiles_generated == 2
     assert res1.decisions[0].name == "banana"
     assert res1.decisions[0].step == "discount"
@@ -154,7 +154,7 @@ async def test_decide_inspection_end_to_end_and_consistency_guarantee():
     )
 
     # ZERO new Gemini calls made
-    assert fake_client.call_count == 1
+    assert fake_client.call_count == 5
     assert res2.meta.profile_calls == 0
     assert res2.meta.profiles_generated == 0
     # Decisions are completely identical

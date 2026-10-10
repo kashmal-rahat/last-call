@@ -105,7 +105,7 @@
 Plan: [plans/module-3/plan.md](../plans/module-3/plan.md) (D38–D42).
 
 - **Input:** freshness result, hours until closing, the mart's rules and shelf prices, and a produce profile for each item
-- **Produce profile:** written by Gemini the first time a produce is seen (shelf-life band and which buyers can use it, per stage), stored and shared by every mart, fixable by the manager. A direct structured Gemini call, not an ADK agent
+- **Produce profile:** written by Gemini the first time a produce is seen (shelf-life band and which buyers can use it, per stage), as the consensus of 5 parallel answers merged in code, stored and shared by every mart, with uncertain fields flagged and fixable by the manager. A direct structured Gemini call, not an ADK agent
 - **Decision:** pure code, so the same input always gives the same decision: keep, discount, bulk sale, donate, animal feed or compost, with prices, buyer types, next steps, staff actions and a reason built from the facts
 - **Output:** shelf or off-shelf, discount, which off-shelf steps apply, opening and floor price, and a reason for each
 - Items kept on the shelf are re-checked at the next photo

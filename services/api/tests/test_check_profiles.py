@@ -34,7 +34,9 @@ class FakeClient:
         self.aio.models.generate_content = self._generate_content
 
     async def _generate_content(self, model, contents, config):
-        resp = self.responses.pop(0)
+        if not self.responses:
+            raise RuntimeError("No more responses configured in FakeClient")
+        resp = self.responses.pop(0) if len(self.responses) > 1 else self.responses[0]
         return resp
 
 
@@ -104,9 +106,10 @@ async def test_check_profiles_flow_with_fake_client(tmp_path):
     )
 
     assert results["total_produce"] == 2
-    assert results["differences_count"] == 1  # spinach differed between run 1 and run 2
+    assert results["raw_diff_count"] == 1  # spinach differed between raw run 1 and run 2
     assert out_md.is_file()
     content = out_md.read_text(encoding="utf-8")
-    assert "Produce Profiles Accuracy & Consistency Report" in content
+    assert "Profile check" in content
+    assert "accuracy" not in content.lower()
     assert "Sense check (user)" in content
     assert "labels" not in content.lower()

@@ -109,11 +109,11 @@ def test_find_price():
     assert find_price(rules, "bananas", "dozen") == 180
     assert find_price(rules, "banana", "kg") == 150
     # M3 dual units: kinnow, lemon, guava have both dozen and kg
-    assert find_price(rules, "kinnow", "dozen") == 200
+    assert find_price(rules, "kinnow", "dozen") == 280
     assert find_price(rules, "kinnow", "kg") == 140
     assert find_price(rules, "lemon", "dozen") == 120
     assert find_price(rules, "lemon", "kg") == 220
-    assert find_price(rules, "guava", "dozen") == 100
+    assert find_price(rules, "guava", "dozen") == 210
     assert find_price(rules, "guava", "kg") == 140
     # Unit mismatch (tomato only kg)
     assert find_price(rules, "tomato", "dozen") is None

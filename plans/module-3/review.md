@@ -93,3 +93,125 @@ Decision (user, 2026-10-10): there will be **no labels CSV**. Shelf-life bands a
 2. The Firestore contract tests run live and green (C1), with the output pasted in the report.
 3. `uv run pytest` green, with the Module 1 and 2 tests unchanged.
 4. The user skims the generated profiles in `profiles.md` and fixes anything clearly wrong with `scripts/produce_profiles.py set` (built in Step 7). Optional real evidence: the banana time-lapse (daily photos of one tray) compared with the banana profile's bands.
+
+---
+
+# Round 2: re-review of the fixes (2026-10-10)
+
+Method: read-only code review of the changes, plus the round-1 report and the regenerated `profiles.md`. The agent reports 225 passed and 7 skipped (the 7 are the Firestore tests the default run skips), and **16/16 live Firestore contract tests passed**.
+
+**Verdict: Milestone 3A is approved. 3B can start.** Every Critical and Important item is fixed correctly, and nothing new is blocking.
+
+| Item | Status | Checked |
+|---|---|---|
+| C1 | ✅ | `get_profiles` uses `async for … in self.client.get_all(...)`; live Firestore run green |
+| C2 | ✅ | `check_profile` sets `charity=True` for edible stages and logs it; overripe spinach now → **donate** (was animal feed) |
+| I1 | ✅ | a lost create race reads the stored profile back |
+| I2 | ✅ | save errors are logged (error type only) and don't fail the decision |
+| I3 | ✅ | `ResolveProfilesStats(calls, generated, fallbacks)` copied into `LadderMeta` |
+| I4 | ✅ | `keep` → `next_steps` starts with `discount` |
+| I5 | ✅ | labels removed; "Sense check (user)" column added |
+| M1–M4 | ✅ | monotonic deadline; demo mart now "Demo Mart Clifton, Karachi"; dual units; `produce_key` moved to `ladder/keys.py`, so the engine no longer imports the Gemini SDK |
+
+## Small notes (not blocking; fold into 3B)
+- **N1. Dozen and kg prices disagree with each other.** A dozen should cost about (kg price × kg per dozen):
+  - guava: Rs 140/kg but Rs 100/dozen (a dozen guavas weigh roughly 1.5–2 kg)
+  - kinnow: Rs 140/kg vs Rs 200/dozen (a dozen weighs roughly 2 kg)
+
+  These are demo values, but a judge comparing two cards would notice. **The user** sets them consistently when checking the price list.
+- **N2. `check_profile` logs `produce_key` (e.g. `banana__v1`),** which is a produce name. The "no names in logs" rule was about untrusted photo text, and the key is sanitised, so this is acceptable. Either log only `corrections` or accept it. No action needed.
+- **N3. `profiles.md` is still titled "Accuracy & Consistency Report".** Rename it "Profile check" to match the no-labels decision, so the slide doesn't claim accuracy.
+- **N4. `profiles_generated` also counts a profile that lost the create race** (the stored one is used instead). A footer number is off by one in a rare race. Ignore.
+
+## For the user: sense check (`results/profiles.md`)
+Raw variation went **from 4/12 to 9/12** produce between two uncached runs, so whichever answer gets stored first is partly a coin flip. That's exactly why profiles are stored, and why your skim matters. Entries worth a look:
+- **kinnow, apple:** the ripening and overripe bands flipped between runs (`1_to_3_days` vs `over_3_days`). Pick the one you believe.
+- **spinach fresh → juice shop**, **bottle gourd → juice shop:** plausible in Pakistan (green juice, lauki juice). Keep or remove.
+- **banana spoiled → OK for cattle (True)**, while mango and guava flipped between runs. Decide what you're comfortable with; "no" is the cautious choice.
+- **Tomato and the other produce marked "not OK for cattle when spoiled"** → spoiled tomatoes go to compost. Cautious and fine.
+
+Profiles are generated in production on first sight, so these exact answers won't automatically be the stored ones. After 3B, run `scripts/produce_profiles.py warm` for the demo produce, skim the stored profiles, and fix anything with `scripts/produce_profiles.py set`.
+
+## Before the 3B deploy
+- The Step 0 photo is still needed. The banana tray (day 1 now, plus a photo in 2–3 days) gives the overripe sample and a time-lapse pair.
+
+---
+
+# Additions for Milestone 3B (2026-10-10)
+Build these together with Steps 7–10:
+- **Step 6B (new, D43): 5-vote consensus profiles.** See `plan.md` Step 6B for the exact merge rules, the parallel-call rules (no hedging, `max_attempts=1`, at least 3 answers) and the tests. Measure raw vs consensus variation in `profiles.md`.
+- **N1:** make the demo dozen and kg prices consistent (a dozen ≈ kg price × typical weight of 12 pieces). **The user** checks the final price list.
+- **N3:** rename `profiles.md`'s title to "Profile check" and remove "accuracy" wording.
+- **Simulated sample:** the user's AI-generated overripe banana tray (`data/probe/simulated_overripe_banana.webp`) goes in `static/samples/` as `sample_overripe_banana_simulated.jpg` (run through `prepare_image`), labelled **"Simulated overripe tray (AI-generated)"** in `samples.json`. It's for testing the off-shelf paths only: don't pair it with a real photo as a time-lapse, and keep it out of any eval. If the Inspector returns `no_produce` for it, report that; it's the safety rule working, not a bug.
+
+---
+
+# Round 3: Milestone 3B review (before deploy, 2026-10-10)
+
+Method: read-only review of the 3B code and `results/report-3b.md`. I didn't run tests; the agent reports 240 passed, 8 skipped, and 18/18 live Firestore contract tests passed.
+
+**Verdict: well built. Fix B1 and B2 (both small, both visible to judges), then deploy.** Step 6B voting, the decisions store, `/demo/decide`, the profiles script and the decision panel match the plan. The one deviation (votes and uncertain fields copied onto each decision) is sensible. The simulated-banana table shows the ladder working: bulk sale when the bananas won't last until closing, 40% off in the last hour.
+
+## Fix before deploy
+### B1. Judges will hit the hourly limit quickly
+`/demo/decide` uses the same per-IP limit as inspections and voice sessions (`IP_RATE_LIMIT_PER_HOUR`, default 20). Every photo triggers one decide, and **every closing-time change or typed price triggers another**. A judge trying 3–4 photos and the selector will get 429s within minutes. Yet a decide costs nothing once profiles are warm.
+**Fix:**
+- give decide its own setting, `DECIDE_IP_LIMIT_PER_HOUR: int = 120`, in `config.py` (a default in code; no Terraform change)
+- raise `DEMO_DAILY_DECIDE_CAP` to 1000
+
+The Gemini cost is still bounded: only a first sighting of new produce calls Gemini (5 votes), and inspections keep their own limits.
+
+### B2. A failed decide is silent and shows the old decisions
+In `triggerDecide()`, a non-OK response only goes to `console.error`, and `currentLadderResult` **keeps the previous result**. So after a 429 or 502, the cards still show the "Morning" decisions while the selector says "Last hour". That's a wrong answer on screen, not just a missing one.
+**Fix:**
+- on any failure, clear `currentLadderResult` and show a visible banner with the server's `detail` (e.g. "Hourly limit reached", "Decision failed, please try again")
+- also ignore out-of-order responses when the selector is changed quickly: keep a request counter and apply a response only if it's the latest
+
+## Minor (cheap; do in the same pass)
+- **B3.** Validate `inspection_id` in step 2 of the endpoint (`^insp_[a-z0-9_]{1,80}$`, matching how the Inspector builds ids). An id containing `/` is an invalid Firestore path and currently becomes an unhandled 500.
+- **B4.** In the vote collection, one answer can list the same produce twice, and each copy counts as a vote. Count at most one answer per produce per vote (keep the first).
+- **B5.** `produce_profiles.py set` keeps `uncertain_fields` from the input file. If the manager copied the output of `show`, the card would still say "uncertain" after the manager decided. For manager profiles, set `uncertain_fields = []`.
+- **B6.** The Docker packaging check couldn't run (no local Docker). Accept that; the first `/demo/decide` on the deployed service proves `demo_mart.json` and `profile_prompt.md` are in the image. If it fails with `FileNotFoundError`, that's the cause.
+
+## Notes (no change needed)
+- With the stored banana profile, the simulated tray goes to **bulk sale even at "Now", about 1.8 h before closing**. That's correct by our rules (it won't last until closing). Whether a buyer can collect that late is the pickup window's job in Module 6. For the demo, the clearest contrast is **Morning → bulk sale** vs **Last hour → 40% off**.
+- Consensus variation is down from 8/12 (raw) to 3/12 (5-vote). The rest is removed by storing the profile; that's the intended design.
+- The final price list (N1) looks consistent: banana 180/dozen ≈ 150/kg × 1.2 kg, guava 210/dozen ≈ 140 × 1.5, kinnow 280/dozen ≈ 140 × 2. **The user** confirms the values.
+
+## Then deploy (the agent's stop point, with user approval)
+1. `uv run pytest` green after B1–B5.
+2. Delete any old single-call `produce_knowledge/*__v1` docs in the real collection, if any exist.
+3. `produce_profiles.py warm` with the produce names the Inspector actually returns for the demo samples (run each sample once locally, or use the names in their saved inspections, e.g. banana, apple, tomato, cucumber, guava). Show the warmed profiles (votes, uncertain fields) in the report.
+4. `./scripts/deploy.sh api`, then the Step 10 checks on the deployed `/demo`:
+   - the simulated tray: Morning → bulk sale, Last hour → discount
+   - the selector changes a decision
+   - repeating the same photo gives identical decisions
+   - a typed price re-decides
+   - a forced failure (wrong access code) shows the B2 banner
+   - Firestore has `produce_knowledge/…` and `decisions/…`
+5. The Step 10 docs: Module 3 status and the README section.
+
+---
+
+# Round 4: Fixes and deploy check (2026-10-10)
+
+Method: read-only review of the round-3 fixes and the deploy section of `results/report-3b.md`.
+
+**Verdict: Module 3 is done and deployed** (`api-00020-w75`). B1–B6 are fixed, the docs show Module 3 as deployed, and the live checks show the intended behaviour:
+- the simulated tray: Morning → bulk sale (opening Rs 110, floor Rs 65), Last hour → 40% off;
+- the real shelf sample: banana overripe (mid), Morning → bulk sale, Last hour → 35% off; the apples are kept;
+- repeating a decision gives an identical result, and a typed price re-decides.
+
+Checked in code:
+- **B2:** request counter, old decisions cleared, visible banner.
+- **B1:** a separate 120/h limit and a 1000/day cap.
+- **B3–B5:** fixed as described.
+
+## Small leftovers (not blocking; any later pass)
+- **R1.** The B2 banner was only checked by calling the API directly (401 with `curl`), not by clicking in the browser. **The user** should check it once on `/demo`: enter a wrong access code → decide → the banner appears and no decisions show.
+- **R2.** A FastAPI validation error (422) returns `detail` as a list, so the banner would show "[object Object]". In the page, when `detail` isn't a string, show "Decision failed, please try again." This only happens with malformed requests, which the page doesn't send.
+- **R3.** The deployed revision was built from **uncommitted** changes, so git doesn't yet contain the code that is live. **The user** should commit Module 3 now, so the repo matches what's deployed.
+
+## Notes
+- Cattle suitability for spoiled banana, apple and guava came out **uncertain**, so the consensus is "no" (needs 4 of 5 votes) and those produce go to compost when spoiled. That's the cautious outcome by design. If you want spoiled bananas to go to cattle feed, set a manager profile with `scripts/produce_profiles.py set`.
+- The warmed profiles cover the produce in the current samples (banana, apple, tomato, cucumber, guava). Any new produce in an uploaded photo is generated on first sight (5 votes, about 5–8 s for the first decide).

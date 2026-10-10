@@ -19,8 +19,10 @@ from pydantic import BaseModel
 
 from lastcall_api.inspector.images import ImageError
 from lastcall_api.inspector.inspector import InspectorError, inspect_photo
+from lastcall_api.ladder.ladder import decide_inspection
 from lastcall_shared.firestore_store import FirestoreStore
 from lastcall_shared.logging_utils import setup_structured_logging
+from lastcall_shared.marts.loader import load_mart_rules
 from lastcall_shared.scenarios.loader import build_call, list_scenarios, load_scenario
 from lastcall_shared.session_tokens import mint
 from lastcall_shared.store import CallStore
@@ -326,6 +328,112 @@ async def demo_inspect(
     # 9. Save and return result
     await store.save_inspection(result)
     return result.model_dump(mode="json")
+
+
+class DecideRequest(BaseModel):
+    inspection_id: str
+    hours_until_closing: float | None = None
+    price_overrides: dict[str, int] | None = None
+
+
+@app.post("/demo/decide")
+async def demo_decide(
+    request: Request,
+    body: DecideRequest,
+    x_demo_access_code: str | None = Header(default=None),
+):
+    """Executes Ladder decision engine for an inspection (Step 8)."""
+    # 1. Access code check
+    if not _verify_access_code(x_demo_access_code):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access code")
+
+    # 2. Validation
+    if not body.inspection_id or not body.inspection_id.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="inspection_id is required",
+        )
+    if not re.match(r"^insp_[a-z0-9_]{1,80}$", body.inspection_id.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid inspection_id format '{body.inspection_id}', must match ^insp_[a-z0-9_]{{1,80}}$",
+        )
+    if body.hours_until_closing is not None:
+        if not (0.5 <= body.hours_until_closing <= 16.0):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="hours_until_closing must be between 0.5 and 16.0",
+            )
+    if body.price_overrides is not None:
+        if len(body.price_overrides) > 12:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="At most 12 price overrides allowed",
+            )
+        for key, price in body.price_overrides.items():
+            if not re.match(r"^[a-z0-9_]{1,60}$", key):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid key in price_overrides: '{key}', must match ^[a-z0-9_]{{1,60}}$",
+                )
+            if not (1 <= price <= 100_000):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Price override for '{key}' must be between 1 and 100,000",
+                )
+
+    # 3. IP limit bucket 'decide' and daily cap 'decide-{date}'
+    settings = get_settings()
+    ip_limit = int(os.getenv("DECIDE_IP_LIMIT_PER_HOUR", str(settings.DECIDE_IP_LIMIT_PER_HOUR)))
+    await _check_ip_limit(
+        request,
+        bucket="decide",
+        limit=ip_limit,
+        detail=f"Hourly IP limit reached (max {ip_limit} decisions per hour)",
+    )
+
+    now_pkt = datetime.now(PKT)
+    date_str = now_pkt.strftime("%Y-%m-%d")
+    daily_cap = int(os.getenv("DEMO_DAILY_DECIDE_CAP", str(settings.DEMO_DAILY_DECIDE_CAP)))
+    store = _get_store()
+    allowed = await store.incr_daily_sessions(f"decide-{date_str}", daily_cap)
+    if not allowed:
+        logger.warning("daily_decide_cap_exceeded", extra={"date": date_str, "cap": daily_cap})
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Daily demo decide cap reached",
+        )
+
+    # 4. Inspection lookup
+    inspection = await store.get_inspection(body.inspection_id)
+    if not inspection or inspection.mart_id != "demo_mart":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Inspection '{body.inspection_id}' not found for demo_mart",
+        )
+
+    # 5. Call decision function
+    decide_fn = getattr(app.state, "decide_fn", decide_inspection)
+    rules = load_mart_rules("demo_mart")
+    try:
+        ladder_result = await decide_fn(
+            inspection,
+            rules=rules,
+            store=store,
+            now=now_pkt,
+            hours_override=body.hours_until_closing,
+            price_overrides=body.price_overrides,
+        )
+    except Exception as exc:
+        logger.error("decide_failed", extra={"error": str(exc)})
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Decision failed",
+        )
+
+    # 6. Save decisions and return
+    await store.save_decisions(ladder_result)
+    return ladder_result.model_dump(mode="json")
 
 
 if __name__ == "__main__":

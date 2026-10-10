@@ -29,6 +29,9 @@ from lastcall_shared.models import (
 logger = setup_structured_logging(service_name="ladder_profiles")
 
 PROFILE_PROMPT_VERSION = "1"
+PROFILE_VOTES = 5
+MIN_VOTES = 3
+CATTLE_MIN_SHARE = 0.8
 
 PROMPT_FILE = Path(__file__).parent / "profile_prompt.md"
 SYSTEM_PROMPT = PROMPT_FILE.read_text(encoding="utf-8")
@@ -70,6 +73,85 @@ class ProfilesOut(BaseModel):
     """Container schema for batch profile output."""
 
     profiles: list[ProfileOut]
+
+
+def merge_votes(answers: list[ProfileOut]) -> tuple[ProfileOut, list[str]]:
+    """Merges multiple Gemini answers for the same produce into a consensus ProfileOut (Step 6B, D43).
+
+    Rules:
+    - juice_shop, restaurant, bakery: majority (> 50%). Ties mean False.
+    - sellable_for: median band. On even count, lower/shorter of the two middle bands.
+    - cattle yes: requires >= CATTLE_MIN_SHARE (80%) of votes.
+    - note: taken from the first answer.
+    - uncertain_fields: fields where fewer than 80% of answers matched the merged value.
+    """
+    if not answers:
+        raise ValueError("Cannot merge empty answers list")
+
+    n = len(answers)
+    uncertain_fields: list[str] = []
+
+    def _merge_bool(values: list[bool], field_name: str, min_share: float = 0.5) -> bool:
+        yes_count = sum(1 for v in values if v)
+        if min_share == 0.5:
+            merged = yes_count > (n / 2.0)
+        else:
+            merged = (yes_count / n) >= min_share
+
+        matching_count = sum(1 for v in values if v == merged)
+        if (matching_count / n) < 0.8:
+            uncertain_fields.append(field_name)
+        return merged
+
+    def _merge_band(bands: list[ShelfLifeBand], field_name: str) -> ShelfLifeBand:
+        sorted_orders = sorted(BAND_ORDER[b] for b in bands)
+        # On even count, lower middle: index = (n - 1) // 2
+        median_order = sorted_orders[(n - 1) // 2]
+        merged_band = ORDER_TO_BAND[median_order]
+
+        matching_count = sum(1 for b in bands if b == merged_band)
+        if (matching_count / n) < 0.8:
+            uncertain_fields.append(field_name)
+        return merged_band
+
+    stages: dict[str, StageProfile] = {}
+    for st in ("fresh", "ripening", "overripe"):
+        st_bands = [getattr(a, st).sellable_for for a in answers]
+        m_band = _merge_band(st_bands, f"{st}.sellable_for")
+
+        m_juice = _merge_bool([getattr(a, st).juice_shop for a in answers], f"{st}.juice_shop")
+        m_rest = _merge_bool([getattr(a, st).restaurant for a in answers], f"{st}.restaurant")
+        m_bake = _merge_bool([getattr(a, st).bakery for a in answers], f"{st}.bakery")
+        # charity is set in check_profile, but we populate True as baseline
+        stages[st] = StageProfile(
+            sellable_for=m_band,
+            juice_shop=m_juice,
+            restaurant=m_rest,
+            bakery=m_bake,
+            charity=True,
+        )
+
+    m_overripe_cattle = _merge_bool(
+        [a.overripe_ok_for_cattle for a in answers],
+        "overripe_ok_for_cattle",
+        min_share=CATTLE_MIN_SHARE,
+    )
+    m_spoiled_cattle = _merge_bool(
+        [a.spoiled_ok_for_cattle for a in answers],
+        "spoiled_ok_for_cattle",
+        min_share=CATTLE_MIN_SHARE,
+    )
+
+    merged_out = ProfileOut(
+        input_name=answers[0].input_name,
+        note=answers[0].note,
+        fresh=stages["fresh"],
+        ripening=stages["ripening"],
+        overripe=stages["overripe"],
+        overripe_ok_for_cattle=m_overripe_cattle,
+        spoiled_ok_for_cattle=m_spoiled_cattle,
+    )
+    return merged_out, uncertain_fields
 
 
 def check_profile(p: ProduceProfile) -> tuple[ProduceProfile, list[str]]:
@@ -138,6 +220,8 @@ def fallback_profile(name: str) -> ProduceProfile:
         model="",
         prompt_version=PROFILE_PROMPT_VERSION,
         created_at=datetime.now(timezone.utc),
+        votes=1,
+        uncertain_fields=[],
     )
 
 
@@ -158,7 +242,7 @@ async def resolve_profiles(
     client: genai.Client | None = None,
     deadline: float,
 ) -> tuple[dict[str, ProduceProfile], CallUsage, ResolveProfilesStats]:
-    """Resolves produce profiles for names using batch store lookup and single Gemini call for missing ones."""
+    """Resolves produce profiles for names using batch store lookup and 5-vote Gemini consensus for missing ones."""
     total_usage = CallUsage(input_tokens=0, output_tokens=0, cached_tokens=0)
     empty_stats = ResolveProfilesStats(calls=0, generated=0, fallbacks=0)
     if not names:
@@ -202,83 +286,99 @@ async def resolve_profiles(
     gemini_calls = 0
     profiles_generated = 0
 
-    # 2. Call Gemini for missing names in one structured call
+    # 2. Call Gemini for missing names via 5 parallel votes (Step 6B, D43)
     if missing_names:
         if client is None:
             client = get_genai_client()
 
         user_content = "Produce names: " + json.dumps(missing_names)
         config = build_profile_config()
+        gemini_calls = PROFILE_VOTES
+        model_name = get_settings().GEMINI_FLASH_MODEL
 
-        try:
-            gemini_calls = 1
+        async def _call_vote() -> tuple[ProfilesOut, CallUsage]:
             out, usage, attempts, was_hedged = await call_structured(
                 client=client,
                 contents=[user_content],
                 config=config,
                 schema=ProfilesOut,
                 deadline=deadline,
-                max_attempts=2,
+                max_attempts=1,
                 per_attempt_timeout=15.0,
-                hedge_after_s=8.0,
+                hedge_after_s=15.0,  # no hedging on parallel votes
                 label="ProduceProfile",
             )
-            total_usage = usage
-            model_name = get_settings().GEMINI_FLASH_MODEL
+            return out, usage
 
-            # Match answers back by produce_key(input_name)
-            answers_by_key = {produce_key(item.input_name): item for item in out.profiles}
+        vote_coros = [_call_vote() for _ in range(PROFILE_VOTES)]
+        results = await asyncio.gather(*vote_coros, return_exceptions=True)
 
-            for raw_name in missing_names:
-                pkey = produce_key(raw_name)
-                item = answers_by_key.get(pkey)
-                if item is not None:
-                    prof = ProduceProfile(
-                        key=f"{pkey}__v{PROFILE_PROMPT_VERSION}",
-                        name=raw_name,
-                        note=item.note,
-                        fresh=item.fresh,
-                        ripening=item.ripening,
-                        overripe=item.overripe,
-                        spoiled_ok_for_cattle=item.spoiled_ok_for_cattle,
-                        overripe_ok_for_cattle=item.overripe_ok_for_cattle,
-                        source="gemini",
-                        model=model_name,
-                        prompt_version=PROFILE_PROMPT_VERSION,
-                        created_at=datetime.now(timezone.utc),
-                    )
-                    checked_p, _ = check_profile(prof)
-                    profiles_generated += 1
-
-                    # I1 & I2: save handling
-                    try:
-                        created = await store.create_profile(checked_p)
-                        if created:
-                            resolved_by_key[pkey] = checked_p
-                        else:
-                            # Lost create race: read back stored profile to ensure consistency
-                            stored_back = await store.get_profiles([checked_p.key])
-                            if checked_p.key in stored_back:
-                                resolved_by_key[pkey] = stored_back[checked_p.key]
-                            else:
-                                resolved_by_key[pkey] = checked_p
-                    except Exception as save_err:
-                        # Non-fatal write error: keep using generated profile for this request
-                        logger.warning(
-                            "Failed to save produce profile to store",
-                            extra={"save_error": type(save_err).__name__},
-                        )
-                        resolved_by_key[pkey] = checked_p
-                else:
-                    resolved_by_key[pkey] = fallback_profile(raw_name)
-
-        except GeminiCallError as exc:
-            logger.warning(
-                "Gemini profile call failed, falling back",
-                extra={"missing_count": len(missing_names)},
+        answers_by_key: dict[str, list[ProfileOut]] = {produce_key(m): [] for m in missing_names}
+        for res in results:
+            if isinstance(res, Exception):
+                logger.warning(
+                    "Profile vote request failed",
+                    extra={"error": type(res).__name__},
+                )
+                continue
+            out, usage = res
+            total_usage = CallUsage(
+                input_tokens=total_usage.input_tokens + usage.input_tokens,
+                output_tokens=total_usage.output_tokens + usage.output_tokens,
+                cached_tokens=total_usage.cached_tokens + usage.cached_tokens,
             )
-            for raw_name in missing_names:
-                pkey = produce_key(raw_name)
+            seen_in_vote: set[str] = set()
+            for item in out.profiles:
+                pkey = produce_key(item.input_name)
+                if pkey in answers_by_key and pkey not in seen_in_vote:
+                    seen_in_vote.add(pkey)
+                    answers_by_key[pkey].append(item)
+
+        for raw_name in missing_names:
+            pkey = produce_key(raw_name)
+            answers = answers_by_key.get(pkey, [])
+            if len(answers) >= MIN_VOTES:
+                merged_item, uncertain_fields = merge_votes(answers)
+                prof = ProduceProfile(
+                    key=f"{pkey}__v{PROFILE_PROMPT_VERSION}",
+                    name=raw_name,
+                    note=merged_item.note,
+                    fresh=merged_item.fresh,
+                    ripening=merged_item.ripening,
+                    overripe=merged_item.overripe,
+                    spoiled_ok_for_cattle=merged_item.spoiled_ok_for_cattle,
+                    overripe_ok_for_cattle=merged_item.overripe_ok_for_cattle,
+                    source="gemini",
+                    model=model_name,
+                    prompt_version=PROFILE_PROMPT_VERSION,
+                    created_at=datetime.now(timezone.utc),
+                    votes=len(answers),
+                    uncertain_fields=uncertain_fields,
+                )
+                checked_p, _ = check_profile(prof)
+                profiles_generated += 1
+
+                # I1 & I2: save handling
+                try:
+                    created = await store.create_profile(checked_p)
+                    if created:
+                        resolved_by_key[pkey] = checked_p
+                    else:
+                        # Lost create race: read back stored profile to ensure consistency
+                        stored_back = await store.get_profiles([checked_p.key])
+                        if checked_p.key in stored_back:
+                            resolved_by_key[pkey] = stored_back[checked_p.key]
+                        else:
+                            resolved_by_key[pkey] = checked_p
+                except Exception as save_err:
+                    # Non-fatal write error: keep using generated profile for this request
+                    logger.warning(
+                        "Failed to save produce profile to store",
+                        extra={"save_error": type(save_err).__name__},
+                    )
+                    resolved_by_key[pkey] = checked_p
+            else:
+                # Fewer than MIN_VOTES answers -> fallback profile, not saved
                 resolved_by_key[pkey] = fallback_profile(raw_name)
 
     # Count fallbacks across all unique produce

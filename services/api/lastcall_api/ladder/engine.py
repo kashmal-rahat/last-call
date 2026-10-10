@@ -376,4 +376,6 @@ def decide_item(
         recheck_next_photo=recheck_next_photo,
         profile_key=profile.key,
         profile_source=profile.source,
+        profile_votes=profile.votes,
+        profile_uncertain_fields=list(profile.uncertain_fields),
     )

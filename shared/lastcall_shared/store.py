@@ -16,6 +16,7 @@ from lastcall_shared.models import (
     StaffTask,
     TranscriptEntry,
     ProduceProfile,
+    LadderResult,
 )
 
 
@@ -48,6 +49,8 @@ class CallStore(Protocol):
     async def create_profile(self, profile: ProduceProfile) -> bool: ...
     async def set_profile(self, profile: ProduceProfile) -> None: ...
     async def delete_profile(self, key: str) -> None: ...
+    async def save_decisions(self, result: LadderResult) -> None: ...
+    async def get_decisions(self, inspection_id: str) -> LadderResult | None: ...
 
 
 class InMemoryStore:
@@ -66,6 +69,7 @@ class InMemoryStore:
         self.inspections: dict[str, FreshnessResult] = {}
         self.shelves: dict[tuple[str, str], str] = {}  # (mart_id, shelf_id) -> latest_inspection_id
         self.produce_knowledge: dict[str, ProduceProfile] = {}
+        self.decisions: dict[str, LadderResult] = {}
 
     def _now(self) -> datetime:
         if self.clock:
@@ -267,4 +271,12 @@ class InMemoryStore:
     async def delete_profile(self, key: str) -> None:
         async with self._lock:
             self.produce_knowledge.pop(key, None)
+
+    async def save_decisions(self, result: LadderResult) -> None:
+        async with self._lock:
+            self.decisions[result.inspection_id] = result
+
+    async def get_decisions(self, inspection_id: str) -> LadderResult | None:
+        async with self._lock:
+            return self.decisions.get(inspection_id)
 

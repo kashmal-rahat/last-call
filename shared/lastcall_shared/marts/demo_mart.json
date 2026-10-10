@@ -39,11 +39,11 @@
     },
     {
       "names": ["guava", "amrood"],
-      "prices": { "kg": 140, "dozen": 100 }
+      "prices": { "kg": 140, "dozen": 210 }
     },
     {
       "names": ["kinnow", "orange", "malta"],
-      "prices": { "dozen": 200, "kg": 140 }
+      "prices": { "dozen": 280, "kg": 140 }
     },
     {
       "names": ["cucumber", "kheera"],

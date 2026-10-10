@@ -81,6 +81,7 @@ If any of these conflict, **ask the user. Don't choose silently.**
 | D40 | 2026-10-10 | Profiles are checked in code before saving and never expire. Gemini profiles are keyed `{produce}__v{N}` (a prompt fix regenerates them); a manager's fix is keyed `{produce}__manager`, looked up first and never overwritten | Mistakes are rare, visible, contained to one produce, and fixed once |
 | D41 | 2026-10-10 | Ladder prices are percentages of the shelf price from mart rules (a demo price list in the prototype). A missing price or unit mismatch means `needs_price`, entered by the user in the demo | Money never depends on a model guess; in production prices come from the POS |
 | D42 | 2026-10-10 | Ladder decisions are saved as one `LadderResult` in `decisions/{inspection_id}`, overwritten on re-decide. No batches until Module 6 | Keeps `FreshnessResult` v3 untouched |
+| D43 | 2026-10-10 | A new produce profile is the consensus of 5 Gemini answers sent in parallel, merged in code (majority for uses, median for shelf life, 4 of 5 for cattle). It stores the vote count and uncertain fields; fewer than 3 answers → fallback profile | Raw answers varied for 9 of 12 produce between runs; voting makes the stored answer stable and shows the manager where to check. Gemini's consensus is accepted as the answer; the manager can overwrite it |
 
 ## Module status
 
@@ -89,4 +90,4 @@ If any of these conflict, **ask the user. Don't choose silently.**
 | 0: Foundations | [module-0/plan.md](module-0/plan.md) | Completed |
 | 2: Negotiator | [module-2/plan.md](module-2/plan.md) | Implemented and deployed (2B). Pending: user's native-speaker test, then lower the demo limits |
 | 1: Freshness Inspector | [module-1/plan.md](module-1/plan.md) | Implemented and deployed (cleanup 2026-10-10). Pending: eval once labels and home decay photos arrive. |
-| 3: Ladder | [module-3/plan.md](module-3/plan.md) | Plan approved 2026-10-10; ready for implementation |
+| 3: Ladder | [module-3/plan.md](module-3/plan.md) | Implemented and deployed (3B, 2026-10-10) |

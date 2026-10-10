@@ -19,6 +19,7 @@ from lastcall_shared.models import (
     StaffTask,
     TranscriptEntry,
     ProduceProfile,
+    LadderResult,
 )
 
 
@@ -372,6 +373,18 @@ class FirestoreStore:
         doc_ref = self._col("produce_knowledge").document(key)
         await doc_ref.delete()
 
+    async def save_decisions(self, result: LadderResult) -> None:
+        doc_ref = self._col("decisions").document(result.inspection_id)
+        await doc_ref.set(result.model_dump(mode="json"))
+
+    async def get_decisions(self, inspection_id: str) -> LadderResult | None:
+        doc_ref = self._col("decisions").document(inspection_id)
+        snap = await doc_ref.get()
+        if not snap.exists:
+            return None
+        data = snap.to_dict()
+        return LadderResult.model_validate(data) if data else None
+
     async def clean_prefix(self) -> None:
         """Deletes all test documents created under collection_prefix."""
         if not self.collection_prefix:
@@ -387,6 +400,7 @@ class FirestoreStore:
             "inspections",
             "shelves",
             "produce_knowledge",
+            "decisions",
         ]
         for col_name in collections:
             col_ref = self._col(col_name)

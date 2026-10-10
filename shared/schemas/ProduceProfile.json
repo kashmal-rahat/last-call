@@ -92,6 +92,18 @@
       "format": "date-time",
       "title": "Created At",
       "type": "string"
+    },
+    "votes": {
+      "default": 1,
+      "title": "Votes",
+      "type": "integer"
+    },
+    "uncertain_fields": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Uncertain Fields",
+      "type": "array"
     }
   },
   "required": [

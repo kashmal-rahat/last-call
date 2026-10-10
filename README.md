@@ -95,6 +95,22 @@ uv run python scripts/latency_probe.py
 uv run python scripts/eval_inspector.py --split dev --compare-zoom
 ```
 
+## Module 3: Ladder
+
+Module 3 decides what happens to each inspected item: `keep`, `discount`, `bulk_sale`, `donate`, `animal_feed`, or `compost`, with deterministic floor prices, buyer types, and auditable reasons. Following the design principle *"Gemini knows, code decides"*, Gemini Flash 3.8 writes structured produce profiles (shelf life and viable buyer uses per stage) once per produce type via 5-vote parallel consensus, stored in Firestore (`produce_knowledge/`). The clearance ladder engine itself is 100% deterministic pure code, enforcing strict safety bounds, monotonic freshness progression, and commercial price tiers.
+
+Interactive decision ranking is available on the deployed demo page at `/demo` under **"1 · Inspect a shelf"** (after inspection, decisions update reactively with closing-time selection and manual price overrides).
+
+Run Ladder profile inspection and verification scripts:
+```bash
+# Check profile variations (single-call vs 5-vote consensus)
+uv run python scripts/check_profiles.py
+
+# Manage stored produce profiles (warm, show, set, delete)
+uv run python scripts/produce_profiles.py warm banana apple tomato cucumber guava
+uv run python scripts/produce_profiles.py show banana
+```
+
 ---
 
 ## Module Status
@@ -104,4 +120,4 @@ uv run python scripts/eval_inspector.py --split dev --compare-zoom
 | **0** | **Foundations** | **Completed** |
 | **2** | **Negotiator** | **Implemented and deployed** (pending native-speaker test) |
 | **1** | **Freshness Inspector** | **Implemented and deployed** (eval pending labels & decay photos) |
-| **3** | **Ladder** | **Planned** ([plan](plans/module-3/plan.md): Gemini writes produce profiles once, code decides) |
+| **3** | **Ladder** | **Implemented and deployed** (consensus profiles + deterministic decision engine) |

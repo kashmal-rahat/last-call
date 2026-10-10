@@ -1,11 +1,12 @@
-"""Produce profiles consistency and cost check script (Step 6).
+"""Produce profiles consistency and cost check script (Step 6 & Step 6B).
 
-Generates produce profiles twice without saving to measure variation across raw runs,
-evaluates Step 4 worked examples, and presents a sense-check table for review.
+Generates produce profiles with raw single calls and with 5-vote consensus runs,
+measures variation, evaluates Step 4 worked examples, and presents a sense-check table.
 """
 
 import argparse
 import asyncio
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 import time
@@ -21,6 +22,7 @@ from lastcall_api.ladder.profiles import (
     ProfilesOut,
     build_profile_config,
     check_profile,
+    merge_votes,
     produce_key,
 )
 from lastcall_shared.config import get_settings
@@ -59,7 +61,7 @@ def calculate_cost(usage: CallUsage) -> float:
 
 
 def compare_profiles(p1: ProfileOut, p2: ProfileOut) -> dict[str, Any]:
-    """Compares two raw profile outputs for identical produce across runs."""
+    """Compares two raw or consensus profile outputs for identical produce across runs."""
     diffs = []
     # Band comparison
     for stage in ["fresh", "ripening", "overripe"]:
@@ -88,9 +90,7 @@ def compare_profiles(p1: ProfileOut, p2: ProfileOut) -> dict[str, Any]:
     }
 
 
-def to_produce_profile(item: ProfileOut) -> ProduceProfile:
-    from datetime import datetime, timezone
-
+def to_produce_profile(item: ProfileOut, votes: int = 1, uncertain_fields: list[str] | None = None) -> ProduceProfile:
     pkey = produce_key(item.input_name)
     prof = ProduceProfile(
         key=f"{pkey}__v{PROFILE_PROMPT_VERSION}",
@@ -105,6 +105,8 @@ def to_produce_profile(item: ProfileOut) -> ProduceProfile:
         model=get_settings().GEMINI_FLASH_MODEL,
         prompt_version=PROFILE_PROMPT_VERSION,
         created_at=datetime.now(timezone.utc),
+        votes=votes,
+        uncertain_fields=uncertain_fields or [],
     )
     checked, _ = check_profile(prof)
     return checked
@@ -171,6 +173,63 @@ def run_worked_examples(profiles_map: dict[str, ProduceProfile]) -> list[dict[st
     return results
 
 
+async def run_consensus_batch(
+    produce_names: list[str],
+    client: Any,
+    deadline: float,
+) -> tuple[dict[str, tuple[ProfileOut, list[str], int]], CallUsage, int]:
+    """Runs 5 parallel calls and merges answers using merge_votes."""
+    t0 = time.monotonic()
+    user_prompt = "Produce names: " + json.dumps(produce_names)
+    config = build_profile_config()
+
+    coros = [
+        call_structured(
+            client=client,
+            contents=[user_prompt],
+            config=config,
+            schema=ProfilesOut,
+            deadline=deadline,
+            max_attempts=1,
+            per_attempt_timeout=15.0,
+            hedge_after_s=15.0,
+            label="ConsensusVote",
+        )
+        for _ in range(5)
+    ]
+    raw_results = await asyncio.gather(*coros, return_exceptions=True)
+
+    answers_by_key: dict[str, list[ProfileOut]] = {produce_key(m): [] for m in produce_names}
+    total_usage = CallUsage(0, 0, 0)
+
+    for res in raw_results:
+        if isinstance(res, Exception):
+            continue
+        out, usage, _, _ = res
+        total_usage = CallUsage(
+            input_tokens=total_usage.input_tokens + usage.input_tokens,
+            output_tokens=total_usage.output_tokens + usage.output_tokens,
+            cached_tokens=total_usage.cached_tokens + usage.cached_tokens,
+        )
+        for p in out.profiles:
+            pkey = produce_key(p.input_name)
+            if pkey in answers_by_key:
+                answers_by_key[pkey].append(p)
+
+    merged_by_key: dict[str, tuple[ProfileOut, list[str], int]] = {}
+    for name in produce_names:
+        pkey = produce_key(name)
+        answers = answers_by_key.get(pkey, [])
+        if len(answers) >= 3:
+            merged_item, uncertain = merge_votes(answers)
+            merged_by_key[pkey] = (merged_item, uncertain, len(answers))
+        elif answers:
+            merged_by_key[pkey] = (answers[0], ["insufficient_votes"], len(answers))
+
+    lat_ms = int((time.monotonic() - t0) * 1000)
+    return merged_by_key, total_usage, lat_ms
+
+
 async def check_profiles_flow(
     produce_names: list[str] = STANDARD_PRODUCE,
     client: Any = None,
@@ -182,7 +241,7 @@ async def check_profiles_flow(
     config = build_profile_config()
     user_prompt = "Produce names: " + json.dumps(produce_names)
 
-    # 1. Raw run 1 (monotonic clock)
+    # 1. Raw run 1
     t0 = time.monotonic()
     deadline1 = time.monotonic() + 45.0
     out1, usage1, attempts1, _ = await call_structured(
@@ -191,12 +250,12 @@ async def check_profiles_flow(
         config=config,
         schema=ProfilesOut,
         deadline=deadline1,
-        label="ProduceProfiles_Run1",
+        label="ProduceProfiles_Raw1",
     )
-    lat1 = int((time.monotonic() - t0) * 1000)
-    cost1 = calculate_cost(usage1)
+    lat_raw1 = int((time.monotonic() - t0) * 1000)
+    cost_raw1 = calculate_cost(usage1)
 
-    # 2. Raw run 2 (monotonic clock)
+    # 2. Raw run 2
     t1 = time.monotonic()
     deadline2 = time.monotonic() + 45.0
     out2, usage2, attempts2, _ = await call_structured(
@@ -205,86 +264,118 @@ async def check_profiles_flow(
         config=config,
         schema=ProfilesOut,
         deadline=deadline2,
-        label="ProduceProfiles_Run2",
+        label="ProduceProfiles_Raw2",
     )
-    lat2 = int((time.monotonic() - t1) * 1000)
-    cost2 = calculate_cost(usage2)
+    lat_raw2 = int((time.monotonic() - t1) * 1000)
+    cost_raw2 = calculate_cost(usage2)
 
-    # 3. Compare runs
-    profiles_dict1 = {produce_key(p.input_name): p for p in out1.profiles}
-    profiles_dict2 = {produce_key(p.input_name): p for p in out2.profiles}
+    # 3. Compare raw runs
+    raw_dict1 = {produce_key(p.input_name): p for p in out1.profiles}
+    raw_dict2 = {produce_key(p.input_name): p for p in out2.profiles}
 
-    comparisons = {}
-    differences_count = 0
-    total_fields_differing = 0
+    raw_comparisons = {}
+    raw_diff_count = 0
+    raw_total_fields_differing = 0
 
     for name in produce_names:
         pkey = produce_key(name)
-        p1 = profiles_dict1.get(pkey)
-        p2 = profiles_dict2.get(pkey)
+        p1 = raw_dict1.get(pkey)
+        p2 = raw_dict2.get(pkey)
         if p1 and p2:
             comp = compare_profiles(p1, p2)
-            comparisons[pkey] = comp
+            raw_comparisons[pkey] = comp
             if not comp["identical"]:
-                differences_count += 1
-                total_fields_differing += comp["diff_count"]
+                raw_diff_count += 1
+                raw_total_fields_differing += comp["diff_count"]
 
-    # 4. Convert Run 1 into ProduceProfile objects and test worked examples
-    converted_profiles = {k: to_produce_profile(p) for k, p in profiles_dict1.items()}
-    worked_results = run_worked_examples(converted_profiles)
+    # 4. Consensus run 1 (5 parallel votes)
+    c_map1, c_usage1, c_lat1 = await run_consensus_batch(produce_names, client, time.monotonic() + 45.0)
+    c_cost1 = calculate_cost(c_usage1)
 
-    # 5. Format Markdown report
-    diff_rate = (differences_count / len(produce_names)) * 100 if produce_names else 0.0
+    # 5. Consensus run 2 (5 parallel votes)
+    c_map2, c_usage2, c_lat2 = await run_consensus_batch(produce_names, client, time.monotonic() + 45.0)
+    c_cost2 = calculate_cost(c_usage2)
+
+    # 6. Compare consensus runs
+    consensus_comparisons = {}
+    consensus_diff_count = 0
+    consensus_total_fields_differing = 0
+
+    for name in produce_names:
+        pkey = produce_key(name)
+        entry1 = c_map1.get(pkey)
+        entry2 = c_map2.get(pkey)
+        if entry1 and entry2:
+            comp = compare_profiles(entry1[0], entry2[0])
+            consensus_comparisons[pkey] = comp
+            if not comp["identical"]:
+                consensus_diff_count += 1
+                consensus_total_fields_differing += comp["diff_count"]
+
+    # 7. Convert Consensus Run 1 profiles and evaluate worked examples
+    consensus_profiles = {}
+    for pkey, (merged_item, uncertain, v_count) in c_map1.items():
+        consensus_profiles[pkey] = to_produce_profile(merged_item, votes=v_count, uncertain_fields=uncertain)
+    worked_results = run_worked_examples(consensus_profiles)
+
+    # 8. Format Markdown report (Title: Profile check, N3)
+    raw_rate = (raw_diff_count / len(produce_names)) * 100 if produce_names else 0.0
+    c_rate = (consensus_diff_count / len(produce_names)) * 100 if produce_names else 0.0
 
     lines = [
-        "# Produce Profiles Accuracy & Consistency Report (Step 6)",
+        "# Profile check (Step 6 & 6B)",
         "",
         "## Summary",
         f"- **Model**: `{get_settings().GEMINI_FLASH_MODEL}` (Vertex AI `eu`)",
         f"- **Produce tested**: {len(produce_names)} items",
-        f"- **Run 1 Latency**: {lat1} ms | Tokens: {usage1.input_tokens} in, {usage1.output_tokens} out | Cost: ${cost1:.6f}",
-        f"- **Run 2 Latency**: {lat2} ms | Tokens: {usage2.input_tokens} in, {usage2.output_tokens} out | Cost: ${cost2:.6f}",
-        f"- **Raw Variation (Run 1 vs Run 2)**: {differences_count}/{len(produce_names)} produce varied ({diff_rate:.1f}%), with {total_fields_differing} total differing fields.",
+        f"- **Raw Single-Call Runs**: {raw_diff_count}/{len(produce_names)} produce varied ({raw_rate:.1f}%), with {raw_total_fields_differing} differing fields.",
+        f"- **5-Vote Consensus Runs**: {consensus_diff_count}/{len(produce_names)} produce varied ({c_rate:.1f}%), with {consensus_total_fields_differing} differing fields.",
+        f"- **Raw Latency & Cost (per call)**: ~{lat_raw1} ms | Cost: ${cost_raw1:.6f}",
+        f"- **5-Vote Consensus Latency & Cost**: {c_lat1} ms (5 parallel requests) | Tokens: {c_usage1.input_tokens} in, {c_usage1.output_tokens} out | Cost: ${c_cost1:.6f}",
         "",
         "> [!IMPORTANT]",
-        "> **Why We Store Produce Profiles:**",
-        "> Without storing profiles, decisions would inherit raw model jitter across queries. Storing Gemini profiles once under `{produce}__v1` eliminates per-batch API calls, brings decision latency down to sub-millisecond code execution, guarantees 100% decision repeatability, and allows instant manager overrides (`__manager`).",
+        "> **Why We Store Produce Profiles & Use 5-Vote Consensus:**",
+        f"> Raw single-call variation ({raw_diff_count}/{len(produce_names)} varied) produces model jitter. A 5-vote consensus stabilizes the profile ({consensus_diff_count}/{len(produce_names)} varied), records uncertain fields, and storing once under `{{produce}}__v1` eliminates per-request API calls while allowing instant manager overrides (`__manager`).",
         "",
-        "## Generated Profiles (Run 1)",
-        "| Produce | Fresh Band | Ripening Band | Overripe Band | Uses (Fresh) | Uses (Ripe) | Uses (Overripe) | Cattle (Over/Spoiled) | Note | Sense check (user) |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "## Generated Profiles (5-Vote Consensus Run 1)",
+        "| Produce | Fresh Band | Ripening Band | Overripe Band | Uses (Fresh) | Uses (Ripe) | Uses (Overripe) | Cattle (Over/Spoiled) | Note | Votes | Uncertain Fields | Sense check (user) |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
 
     for name in produce_names:
         pkey = produce_key(name)
-        p = profiles_dict1.get(pkey)
-        if p:
+        entry = c_map1.get(pkey)
+        if entry:
+            p, uncertain, v_count = entry
             f_uses = [u for u in ["juice_shop", "restaurant", "bakery", "charity"] if getattr(p.fresh, u)]
             r_uses = [u for u in ["juice_shop", "restaurant", "bakery", "charity"] if getattr(p.ripening, u)]
             o_uses = [u for u in ["juice_shop", "restaurant", "bakery", "charity"] if getattr(p.overripe, u)]
             cattle = f"{p.overripe_ok_for_cattle}/{p.spoiled_ok_for_cattle}"
             note_esc = p.note.replace("|", "/")
+            uncert_str = ", ".join(uncertain) if uncertain else "none"
             lines.append(
-                f"| {name} | `{p.fresh.sellable_for}` | `{p.ripening.sellable_for}` | `{p.overripe.sellable_for}` | {', '.join(f_uses) or 'none'} | {', '.join(r_uses) or 'none'} | {', '.join(o_uses) or 'none'} | {cattle} | {note_esc} | |"
+                f"| {name} | `{p.fresh.sellable_for}` | `{p.ripening.sellable_for}` | `{p.overripe.sellable_for}` | {', '.join(f_uses) or 'none'} | {', '.join(r_uses) or 'none'} | {', '.join(o_uses) or 'none'} | {cattle} | {note_esc} | {v_count} | {uncert_str} | |"
             )
 
     lines.extend([
         "",
-        "## Variation Analysis Across Uncached Runs",
-        "| Produce | Run 1 == Run 2 | Differing Fields |",
+        "## Variation Comparison: Raw (Single-Call) vs 5-Vote Consensus",
+        "| Produce | Raw (Single-Call) Variation | 5-Vote Consensus Variation |",
         "|---|---|---|",
     ])
 
     for name in produce_names:
         pkey = produce_key(name)
-        comp = comparisons.get(pkey, {"identical": True, "diffs": []})
-        status = "✓ Identical" if comp["identical"] else f"✗ Differed ({comp['diff_count']})"
-        diff_str = "; ".join(comp["diffs"]) if comp["diffs"] else "None"
-        lines.append(f"| {name} | {status} | {diff_str} |")
+        raw_comp = raw_comparisons.get(pkey, {"identical": True, "diffs": []})
+        c_comp = consensus_comparisons.get(pkey, {"identical": True, "diffs": []})
+
+        raw_status = "✓ Identical" if raw_comp["identical"] else f"✗ Differed ({raw_comp['diff_count']}): " + "; ".join(raw_comp["diffs"])
+        c_status = "✓ Identical" if c_comp["identical"] else f"✗ Differed ({c_comp['diff_count']}): " + "; ".join(c_comp["diffs"])
+        lines.append(f"| {name} | {raw_status} | {c_status} |")
 
     lines.extend([
         "",
-        "## Step 4 Worked Examples Decisions (Using Generated Profiles)",
+        "## Step 4 Worked Examples Decisions (Using 5-Vote Consensus Profiles)",
         "| Case | Produce | Stage & Level | H to Closing | Shelf Price | Engine Step | Pricing / Discount | Buyer Types | Reason |",
         "|---|---|---|---|---|---|---|---|---|",
     ])
@@ -309,12 +400,11 @@ async def check_profiles_flow(
         output_md_path.write_text(md_content, encoding="utf-8")
 
     return {
-        "run1_latency_ms": lat1,
-        "run1_cost_usd": cost1,
-        "run2_latency_ms": lat2,
-        "run2_cost_usd": cost2,
-        "differences_count": differences_count,
+        "raw_diff_count": raw_diff_count,
+        "consensus_diff_count": consensus_diff_count,
         "total_produce": len(produce_names),
+        "raw_cost_usd": cost_raw1 + cost_raw2,
+        "consensus_cost_usd": c_cost1 + c_cost2,
         "markdown": md_content,
     }
 
@@ -327,7 +417,7 @@ def main():
     repo_root = Path(__file__).parent.parent
     out_path = repo_root / args.output_md
 
-    print("Running produce profiles consistency check...")
+    print("Running produce profiles consistency check (Raw vs 5-Vote Consensus)...")
     results = asyncio.run(
         check_profiles_flow(
             produce_names=STANDARD_PRODUCE,
@@ -335,9 +425,8 @@ def main():
         )
     )
     print(f"Check complete! Results written to: {out_path}")
-    print(f"Run 1 Latency: {results['run1_latency_ms']}ms | Cost: ${results['run1_cost_usd']:.6f}")
-    print(f"Run 2 Latency: {results['run2_latency_ms']}ms | Cost: ${results['run2_cost_usd']:.6f}")
-    print(f"Raw variation between runs: {results['differences_count']}/{results['total_produce']} produce differed.")
+    print(f"Raw variation between runs: {results['raw_diff_count']}/{results['total_produce']} produce differed.")
+    print(f"5-Vote consensus variation: {results['consensus_diff_count']}/{results['total_produce']} produce differed.")
 
 
 if __name__ == "__main__":

@@ -346,3 +346,51 @@ async def test_firestore_store_get_profiles_async_generator():
     assert res["banana__v1"].name == "banana"
     assert "missing__v1" not in res
 
+
+@pytest.mark.asyncio
+async def test_decisions_lifecycle(store):
+    from lastcall_shared.models import LadderDecision, LadderMeta, LadderResult
+
+    # Unknown inspection_id returns None
+    assert await store.get_decisions("insp_unknown_999") is None
+
+    dec = LadderDecision(
+        item_key="item_01",
+        name="banana",
+        step="keep",
+        allowed_steps=["keep", "discount"],
+        next_steps=["discount"],
+        unit="dozen",
+        sellable_hours=48.0,
+        shelf_price=180,
+        reason="Banana is fresh",
+    )
+    res = LadderResult(
+        mart_id="demo_mart",
+        inspection_id="insp_dec_001",
+        decided_at=NOW,
+        hours_until_closing=12.0,
+        decisions=[dec],
+        meta=LadderMeta(latency_ms=100, profiles_used=1),
+    )
+
+    # 1. Save decisions
+    await store.save_decisions(res)
+    fetched = await store.get_decisions("insp_dec_001")
+    assert fetched is not None
+    assert fetched.inspection_id == "insp_dec_001"
+    assert len(fetched.decisions) == 1
+    assert fetched.decisions[0].name == "banana"
+    assert fetched.decisions[0].step == "keep"
+
+    # 2. Overwrite decisions (e.g. on re-decide)
+    dec_updated = dec.model_copy(update={"step": "discount", "discount_pct": 20, "discounted_price": 145})
+    res_updated = res.model_copy(update={"decisions": [dec_updated], "hours_until_closing": 2.0})
+    await store.save_decisions(res_updated)
+
+    fetched_2 = await store.get_decisions("insp_dec_001")
+    assert fetched_2 is not None
+    assert fetched_2.hours_until_closing == 2.0
+    assert fetched_2.decisions[0].step == "discount"
+    assert fetched_2.decisions[0].discount_pct == 20
+

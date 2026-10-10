@@ -598,6 +598,8 @@ class ProduceProfile(BaseModel):
     model: str = ""
     prompt_version: str
     created_at: AwareDatetime
+    votes: int = 1
+    uncertain_fields: list[str] = Field(default_factory=list)
 
 
 class PriceEntry(BaseModel):
@@ -689,6 +691,8 @@ class LadderDecision(BaseModel):
     recheck_next_photo: bool = False
     profile_key: str | None = None
     profile_source: Literal["gemini", "manager", "fallback"] | None = None
+    profile_votes: int | None = None
+    profile_uncertain_fields: list[str] = []
 
     @model_validator(mode="after")
     def validate_decision(self) -> "LadderDecision":

@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     DEMO_ACCESS_CODE: str | None = None
     DEMO_DAILY_SESSION_CAP: int = 50
     DEMO_DAILY_INSPECT_CAP: int = 100
+    DEMO_DAILY_DECIDE_CAP: int = 1000
+    DECIDE_IP_LIMIT_PER_HOUR: int = 120
     MAX_UPLOAD_MB: int = 8
     IP_RATE_LIMIT_PER_HOUR: int = 20
     VOICE_WS_URL: str | None = None

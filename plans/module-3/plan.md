@@ -53,10 +53,11 @@ Without storing, Gemini would still make mistakes, just randomly and invisibly. 
 | D40 | Profiles are checked in code before saving and never expire. Gemini profiles are keyed `{produce}__v{N}` (a prompt fix regenerates them); a manager's fix is keyed `{produce}__manager`, looked up first and never overwritten. A script shows, deletes and sets profiles | Mistakes are rare, visible, contained to one produce, and fixed once |
 | D41 | Prices are percentages of the shelf price from mart rules (demo price list JSON). A missing price, or a unit mismatch with the item's quantity unit, means `needs_price`, and the demo lets the user enter one | Money never depends on a model guess; in production prices come from the POS |
 | D42 | Decisions are saved as one `LadderResult` in `decisions/{inspection_id}` (overwritten on re-decide). No batches until Module 6 | Keeps `FreshnessResult` v3 untouched |
+| D43 | (added 2026-10-10, after 3A) A new profile is the **consensus of 5 Gemini answers** sent in parallel and merged in code field by field (majority for uses, median for shelf life, 4 of 5 for cattle). The profile stores how many votes it used and which fields were uncertain. At least 3 answers are needed, otherwise the fallback profile is used | Raw answers varied for 9 of 12 produce between two runs; voting makes the stored answer stable, and the uncertain fields show the manager where to check. We accept Gemini's consensus as the answer; the manager can overwrite any profile |
 
 ## Milestones (implement one, report, then 🛑 wait)
 - **3A, logic and profiles (no deploy):** Steps 1–6.
-- **3B, deployed:** Steps 7–10.
+- **3B, deployed:** Steps 6B, 7–10.
 
 **Stop rules:** if the same test fails twice for the same reason, stop and report. At most 3 prompt iterations. On 429s for more than 5 minutes, stop and report.
 
@@ -118,6 +119,8 @@ class ProduceProfile(BaseModel):
     model: str = ""
     prompt_version: str
     created_at: AwareDatetime
+    votes: int = 1                  # added in Step 6B: Gemini answers merged into this profile
+    uncertain_fields: list[str] = []  # added in Step 6B: fields where the votes did not reach the agreement threshold
 
 class PriceEntry(BaseModel):
     names: list[str]                # aliases, e.g. ["okra", "bhindi"]
@@ -302,6 +305,23 @@ async def decide_inspection(result: FreshnessResult, *, rules: MartRules, store,
 
 # Milestone 3B (after the 3A report and approval)
 
+### Step 6B: 5-vote consensus profiles (D43)
+Replaces the single Gemini call in `resolve_profiles` (Step 3). Everything else in Step 3 (store reads, manager profiles first, create-if-absent, fallback, stats) stays as built.
+- **Constants** (`ladder/profiles.py`): `PROFILE_VOTES = 5`, `MIN_VOTES = 3`, `CATTLE_MIN_SHARE = 0.8`.
+- **Parallel calls:** for the missing names, send `PROFILE_VOTES` identical `call_structured` requests **at the same time** (`asyncio.gather(..., return_exceptions=True)`). Each vote: `max_attempts=1`, `per_attempt_timeout=15`, **no hedging** (`hedge_after_s` ≥ `per_attempt_timeout`; 5 parallel calls already give redundancy), the same 20 s deadline. Each request still contains all missing names. A failed or timed-out vote is dropped.
+- **Merge per produce, in code** (new pure function `merge_votes(answers: list[ProfileOut]) -> (ProfileOut, uncertain_fields)`). Answers are matched by `produce_key(input_name)`. A produce with fewer than `MIN_VOTES` answers gets the fallback profile (not saved).
+  - `juice_shop`, `restaurant`, `bakery` (each stage): **majority**, i.e. more than half of the votes say yes. With an even number of votes, a tie means no.
+  - `sellable_for` (each stage): the **median** in band order (`under_6h` < `6_to_24h` < `1_to_3_days` < `over_3_days`); with an even count, take the lower (shorter) of the two middle values.
+  - `overripe_ok_for_cattle`, `spoiled_ok_for_cattle`: yes only if at least `CATTLE_MIN_SHARE` of the votes say yes (4 of 5; 3 of 3 or 4 of 4 when fewer votes arrived).
+  - `charity`: not voted (set by `check_profile`, C2).
+  - `note`: from the first answer.
+  - `uncertain_fields`: every field (e.g. `"ripening.sellable_for"`, `"overripe.bakery"`) where fewer than 80% of the votes match the merged value. `votes` = the number of answers used.
+  - Then `check_profile` as today (monotonic shelf life, charity, note).
+- **Stats:** `calls` = the number of vote requests sent (5), not 1.
+- **Tests (fake client):** 5 calls are started concurrently (not one after another); 3 wins of 5 for a use → yes, 2 of 5 → no; bands `[under_6h, 6_to_24h, 6_to_24h, 1_to_3_days, over_3_days]` → `6_to_24h`; cattle 3 of 5 yes → no, 4 of 5 → yes; 2 votes fail → merge of 3; 3 votes fail → fallback, nothing saved; `uncertain_fields` lists exactly the split fields; a stored profile → 0 calls.
+- **Measure it** (`scripts/check_profiles.py`, `profiles.md`): keep the raw comparison (two single calls), and add a second comparison of **two independent 5-vote consensus runs**: how many produce and fields still differ. Report both numbers side by side ("raw: 9/12 produce varied; 5-vote consensus: x/12"). Show `votes` and `uncertain_fields` in the profiles table. Cost: 12 calls for the script, about $0.10.
+- **Before warming:** if any `produce_knowledge/*__v1` documents exist in the real (unprefixed) collection from earlier single-call runs, delete them with `scripts/produce_profiles.py delete` (Step 7) so every stored profile is a consensus.
+
 ### Step 7: Decisions store and the profiles script
 Add to the `CallStore` protocol, `InMemoryStore` and `FirestoreStore`: `save_decisions(result)` → `decisions/{inspection_id}` (overwrite) and `get_decisions(inspection_id) -> LadderResult | None`. Add `decisions` to `clean_prefix`. Contract tests: save, get, overwrite, unknown → `None`.
 
@@ -329,7 +349,7 @@ Tests (`test_demo_decide.py`, fake `decide_fn`): 401, each 400, 404, 429, 200 sa
     - donate: "Free to charities"
     - compost: "Needs manager approval"
   - the `reason`, staff-action badges, "On hold until staff check"
-  - a small profile line: "Produce profile: banana · Gemini · v1" (or "Generic fallback")
+  - a small profile line: "Produce profile: banana · Gemini, 5 votes · uncertain: ripening shelf life" (list `uncertain_fields` in plain words; "all fields agreed" when empty), or "Manager profile" / "Generic fallback"
   - `needs_price`: an input plus a **Re-decide** button
 - Top-3 ranking uses the decision when present: compost, off-shelf, discount, staff actions, keep.
 - Footer: decide latency, profiles generated, fallbacks.
