@@ -272,3 +272,23 @@ Expected property, shown by rows 7–9: the same reading can be discounted at 17
 - `uv run pytest` green, with the Module 1 and 2 tests unchanged.
 - Deploy `api`. Stored profiles are unaffected (no prompt change), so there's no need to re-warm.
 - On the deployed `/demo`, run the "Bananas & Apples" sample once and switch the selector on the **same inspection**. If the bananas read ripening (mid) again, expect: Morning (12 h) → keep for now; Evening (4 h) → 20%; Last hour (1 h) → 35%. The apples stay keep. Run the simulated tray: Morning → bulk sale; Last hour → 40% off. Report the actual Inspector stage with each result, since the reading can vary between inspections.
+
+---
+
+# Round 6: D44 check (2026-10-10)
+
+Method: read-only review of `engine.py`, the scenario tests and the round-5 report, plus the live `/health`.
+
+**Verdict: D44 is implemented correctly and live.**
+- `decide_item` follows plan Step 4 v2 branch for branch: ripening never off-shelf, the evening-window schedule, 40% when produce stops selling before closing, overripe bulk only with ≥ 2 h for pickup, spoiled → feed or compost.
+- All 24 scenario rows are in the table-driven test.
+- The exhaustive loop asserts "fresh/ripening never off-shelf" (2,880 combinations, 0 violations), and the monotonic-discount test exists.
+- Reason lines use clock times ("sells until 06:12 in 3 days; still fine at tomorrow's 09:00 opening → keep").
+
+## Notes
+- **S1. The live commit label is wrong again.** `/health` reports `96f0375`, but the D44 code was committed later (`475cedb`), so the deploy was built from uncommitted files. The working tree is clean now, so **redeploy once** (`./scripts/deploy.sh api`) to make the label match. Optional: have `deploy.sh` refuse to run with uncommitted changes.
+- **S2. The live check didn't exercise the main fix.** This time the Inspector read the "Bananas & Apples" bananas as **overripe (mid)**, not ripening, so the live run shows overripe behaviour (Morning/Evening → bulk sale, Last hour → 40%). That's correct, but the "ripening stays on the shelf" fix is proven only by the unit tests. **The user** can check it live by re-running that sample until the bananas read ripening, or with any fresh/ripening photo.
+- **S3. Inspector readings vary between inspections of the same photo.** The same bananas read ripening (mid) earlier and overripe (mid) now. The simulated tray went from overripe (late) to **spoiled (mid) → compost**. This is Module 1 behaviour, not the Ladder. The Ladder is deterministic for a given reading, but a different reading gives a different card. The Module 1 eval target (same stage ≥ 90% when a photo is run twice) is still pending. Worth measuring before the demo video, because a judge re-running a sample may see a different stage.
+- **S4. (cosmetic)** `engine.py` uses a hard-coded `datetime(2026, 10, 10)` only to format clock times. It's harmless (only time differences matter), but any fixed date or plain `timedelta` arithmetic would read better.
+
+**Module 3 is complete.** S1 is a one-command redeploy; S2 is a quick manual check; S3 belongs to Module 1.
