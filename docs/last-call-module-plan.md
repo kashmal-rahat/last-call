@@ -100,14 +100,18 @@
 
 **Done when:** across all personas the agent never breaks the floor, always confirms deals, sounds natural in Urdu, and handles every situation above without getting stuck.
 
-## Module 3: Ladder Agent
+## Module 3: Ladder ("Gemini knows, code decides")
 
-- **Input:** freshness result, rate of decline, quantity, hours until closing, the mart's rules, pricing stats
-- **Output:** shelf or off-shelf, discount, which off-shelf steps apply, opening price per kg, and a reason for each
+Plan: [plans/module-3/plan.md](../plans/module-3/plan.md) (D38–D42).
+
+- **Input:** freshness result, hours until closing, the mart's rules and shelf prices, and a produce profile for each item
+- **Produce profile:** written by Gemini the first time a produce is seen (shelf-life band and which buyers can use it, per stage), stored and shared by every mart, fixable by the manager. A direct structured Gemini call, not an ADK agent
+- **Decision:** pure code, so the same input always gives the same decision: keep, discount, bulk sale, donate, animal feed or compost, with prices, buyer types, next steps, staff actions and a reason built from the facts
+- **Output:** shelf or off-shelf, discount, which off-shelf steps apply, opening and floor price, and a reason for each
 - Items kept on the shelf are re-checked at the next photo
-- **Code guardrails:** mould or rot means compost; low confidence means staff check; discount and price kept within the manager's limits
-- **Rules fallback** if the agent fails
-- **Start with the rules version** so modules 1 and 2 can be connected early, then add the agent
+- **Code guardrails:** allowed steps come from the inspector's stage and issues (mould or slime means compost); low confidence means staff check before off-shelf steps; discount and price kept within the manager's limits; compost needs approval
+- **Fallback:** a generic, cautious profile if Gemini can't write one
+- **Future (documented, not built):** manager "Correct this" on a decision; the next photo and call outcomes refine profiles
 
 ## Module 4: Scout Agent
 
@@ -145,7 +149,7 @@
 
 - Logs every photo result, decision, call, deal and pickup
 - Records actual weight and amount paid, not just the agreed deal, so impact numbers are real
-- Feeds back into the system: pricing stats in Firestore (which buyers said yes, at what price, and which discounts worked) inform the Ladder Agent's prices; BigQuery is for reporting
+- Feeds back into the system: pricing stats in Firestore (which buyers said yes, at what price, and which discounts worked) inform the Ladder's prices; BigQuery is for reporting
 - Powers the daily summary and impact numbers (kg saved, money recovered)
 
 ## Module 8: Judge demo experience (deployed link)

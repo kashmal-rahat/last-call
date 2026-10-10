@@ -104,3 +104,4 @@ uv run python scripts/eval_inspector.py --split dev --compare-zoom
 | **0** | **Foundations** | **Completed** |
 | **2** | **Negotiator** | **Implemented and deployed** (pending native-speaker test) |
 | **1** | **Freshness Inspector** | **Implemented and deployed** (eval pending labels & decay photos) |
+| **3** | **Ladder** | **Planned** ([plan](plans/module-3/plan.md): Gemini writes produce profiles once, code decides) |

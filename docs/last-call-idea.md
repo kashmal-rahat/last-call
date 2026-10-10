@@ -31,12 +31,12 @@ An AI system that watches a mart's fresh produce, decides the best way to recove
 7. **Ask only when needed:** AI acts on its own within the manager's rules and asks for approval only for exceptions, such as sending produce to compost or checking items it isn't sure about. The manager can also choose to review the buyer list before calls go out.
 8. **Report and learn:** the manager gets one summary at the end of the day showing what was sold, donated, fed to animals or composted, and how much money was recovered. The system remembers which buyers said yes, at what price, and which discounts worked, so every decision and call gets better.
 
-## The four agents
+## The four parts
 
-| Agent | Role |
+| Part | Role |
 |---|---|
 | Freshness Inspector | Judges each item in the picture |
-| Ladder Agent | Decides the step and price for each item |
+| Ladder | Decides the step and price for each item: Gemini writes a profile for each produce once (how long it lasts, who can use it), and code makes the decision consistently |
 | Scout Agent | Finds and ranks relevant nearby buyers |
 | **Negotiator Agent** | Makes the call and closes the deal (the hero) |
 

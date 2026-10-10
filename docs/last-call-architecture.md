@@ -15,7 +15,7 @@
 | Need | Service |
 |---|---|
 | Frontend | Firebase Hosting, Firebase Authentication, Firebase App Check, Firestore live listeners |
-| Business logic and agents | Cloud Run `api` (ADK: Freshness Inspector, Ladder Agent, Scout Agent, Orchestrator) |
+| Business logic and agents | Cloud Run `api` (Freshness Inspector and Ladder as direct Gemini calls with structured output; ADK: Scout Agent; Orchestrator) |
 | Live calls | Cloud Run `voice` (ADK live: Negotiator Agent, price tools, audio gateway) |
 | Steps and anything that happens later | Cloud Tasks |
 | AI | Gemini Flash (vision and reasoning), Gemini Live native audio (voice) |
@@ -64,14 +64,17 @@ Request-based CPU, scales to zero, many requests per instance, capped maximum in
 - **Concurrency limit (D37):** at most 2 simultaneous inspections per `api` instance via `asyncio.Semaphore` and a shared cached Firestore store to stay safely within Cloud Run 512 MB RAM.
 - Perception only
 
-### Ladder Agent (ADK agent, structured output)
+### Ladder ("Gemini knows, code decides")
 
-- **Inputs:** Inspector result, rate of decline, quantity, hours until closing, the mart's rules, and `pricing_stats` from Firestore (average accepted price and acceptance rate by item and buyer type)
-- **Output:** shelf or off-shelf, discount, which off-shelf steps apply, opening price per kg, estimated hours of shelf life left, a reason for each
-- **Code guardrails:** a group whose `stage` is unsafe (mould or slime through the group) goes to compost only; when only `worst_stage` is spoiled or unsafe, staff remove those pieces and the rest of the group is decided normally (D24); low confidence means staff check before donation or animal feed; discount clamped to the manager's maximum; opening price at or above the floor
-- **One call per item, run in parallel** (at most 4 at a time), so latency stays flat as the number of items grows and a failure affects only that item (D32)
-- **Fallback:** a rules version if the agent fails or times out
-- **Discount path:** the `api` saves the new price and creates a discount tag; the item stays on the shelf and the next photo re-evaluates it
+- **Two parts (D38):**
+    1. **Produce profile (Gemini, once per produce, stored).** The first time a produce name is seen, one direct `google-genai` call on `gemini-3.8-flash` with structured output (text only, `thinking_level=low`, no sampling parameters, D30) writes its profile. For fresh, ripening and overripe, the profile gives a shelf-life band (`under_6h`, `6_to_24h`, `1_to_3_days`, `over_3_days`) and which buyers can use it (juice shop, restaurant, bakery, charity), plus whether cattle can eat it when overripe or spoiled. All new names on a shelf go in one call. Not ADK: one request in, one structured answer out, no tools or turns (as D22 for the Inspector).
+    2. **Decision engine (pure code, every time).** From the Inspector's stage and level, the profile, the hours until the next closing and the mart's rules, code picks the step, discount, prices, buyer types, next steps, staff actions and a reason built from those facts. Same input → same decision; instant once profiles exist.
+- **Safety in code (D39):** allowed steps come only from the Inspector's `stage` and `issues`: fresh → keep, discount; ripening → keep, discount, bulk sale; overripe → discount, bulk sale, donate, animal feed; spoiled → animal feed or compost (compost only with mould or slime); unsafe → compost. The profile only chooses among allowed steps. When only `worst_stage` is spoiled or unsafe, staff remove those pieces and the rest is decided normally (D24). Staff-check reasons put off-shelf steps on hold; compost needs manager approval.
+- **Timing:** keep if it still sells after tomorrow's opening; if it lasts until closing but not overnight, keep until the discount window (6 h before closing) and then discount, deeper the less it outlasts closing; if it won't last until closing, move it off the shelf to the first step that fits (bulk sale, donate, animal feed, compost). Every photo re-decides.
+- **Prices (D41):** percentages of the shelf price from the mart's rules (prototype: a demo price list; production: the POS). Discount clamped to the manager's limits; opening price at or above the floor; a missing price means "needs shelf price".
+- **Profiles are trusted data (D40):** checked in code before saving (a worse stage never lasts longer), keyed `{produce}__v{prompt version}` so a prompt fix regenerates them, never expire, shown on every decision, and fixable by script; a manager's fix (`{produce}__manager`) is looked up first and never overwritten. If Gemini fails, a generic cautious profile is used and not saved.
+- **Output:** a `LadderResult` saved in `decisions/{inspection_id}` (D42). Off-shelf decisions carry what the Scout and Negotiator need: `buyer_types`, `buyer_condition` (what the buyer will receive; worst-piece details left out when staff remove them), `opening_price`, `floor_price`, `next_steps`.
+- **Discount path:** the `api` saves the new price and creates a discount tag; the item stays on the shelf and the next photo re-evaluates it.
 
 ### Scout Agent (ADK agent with tools)
 
@@ -93,7 +96,7 @@ Every step is its own Cloud Task.
 **Step tasks** (each one short, retried independently by Cloud Tasks, and skipped if already done):
 
 1. **Inspect:** runs the Freshness Inspector on the shelf photo, saves the `FreshnessResult` in `inspections`, sets status "deciding," schedules the Decide task.
-2. **Decide:** runs the Ladder Agent (with the rules fallback) for each assessed produce item. Creates one batch for every off-shelf item (including compost, holding `inspection_id` and `item_key`), and saves the decision on each item:
+2. **Decide:** runs the Ladder (produce profiles, then the code decision engine) for each assessed produce item and saves the `LadderResult` in `decisions`. Creates one batch for every off-shelf item (including compost, holding `inspection_id` and `item_key`), and saves the decision on each item:
     - **Stays on the shelf:** applies the discount, creates the tag, marks the item "on shelf." Done.
     - **Compost:** batch enters "awaiting compost approval," sends it for manager approval.
     - **Off the shelf:** batch enters "finding buyers," schedules the next task.
@@ -165,10 +168,12 @@ Gemini Live takes **16 kHz** PCM in and returns **24 kHz** PCM out.
 Every record keyed by mart.
 
 - `marts`: settings, rules, floor prices, calling hours, calls per step, review setting, quantity check setting
-- `inspections`: stores `inspection_id`, `shelf_id`, `previous_inspection_id`, `photo_uri`, `taken_at`, `items` (each with `item_key` and `decision`), `photo_issues`
+- `inspections`: stores `inspection_id`, `shelf_id`, `previous_inspection_id`, `photo_uri`, `taken_at`, `items` (each with `item_key`), `photo_issues`
     - Pointer: `shelves/{mart_id}__{shelf_id}` points to `latest_inspection_id` for fast sequential shelf lookup without composite index (D28)
     - Quantities: stored as estimated range in selling units (`kg` or `dozen`, D4, D31); staff can confirm/override; final actual weight settled at pickup (no ERP in prototype)
     - States: inspecting → deciding → decided | needs attention
+- `decisions/{inspection_id}`: the Ladder's `LadderResult` (one decision per item), overwritten when re-decided (D42)
+- `produce_knowledge/{produce}__v{N}` and `{produce}__manager`: produce profiles shared by all marts (D38, D40)
 - `batches`: discrete off-shelf produce batch for every off-shelf item (including compost), holding `inspection_id` and `item_key`. Stores ladder plan, current step, calls made in this step, remaining quantity, `locked_until`
     - States: finding buyers → awaiting quantity check / awaiting review / scheduled → in negotiation (locked) → sold / partly sold / next step, plus awaiting compost approval → composted, and needs attention from any step
 - `calls`: pending → in progress → deal / declined / no answer / call back, with transcript (automatically deleted after a set period)
@@ -222,13 +227,13 @@ Uploaded photos, caller speech and Places data are treated as data, never as ins
 
 ## 9. Rules enforced in code
 
-Floor price, accept and counter logic, discount limit, quantity and deadline checks, mould means compost, low confidence means staff check, calls per step, calling hours, compost approval, quantity check, lock expiry, demo number override, judge demo limits.
+Floor price, accept and counter logic, ladder steps allowed by stage and issues, the ladder decision itself, discount limit, quantity and deadline checks, mould means compost, low confidence means staff check, calls per step, calling hours, compost approval, quantity check, lock expiry, demo number override, judge demo limits.
 
 ## 10. Fallbacks
 
 - **Negotiator:** plain Gemini SDK if ADK live mode proves unstable
 - **Voice quality:** Cloud Speech-to-Text (Chirp) → Gemini → Cloud Text-to-Speech if Gemini Live's Urdu isn't natural enough
-- **Ladder Agent:** rules version
+- **Ladder:** a generic, cautious produce profile (not saved) when Gemini can't write one
 
 ## 11. Evidence in the repo
 
@@ -238,6 +243,12 @@ Floor price, accept and counter logic, discount limit, quantity and deadline che
 - Measured cost per inspection and per call; measured audio delay on the phone path
 - README with architecture, setup, and module status
 
+## 12. Future: learning loop (not built for the hackathon)
+
+- **"Correct this" (manager):** each Ladder decision shows the produce-profile facts it used; the manager corrects a wrong one, which saves the profile as manager-owned. It applies immediately to every future decision for that produce in every mart and is never overwritten by Gemini. One explicit correction instead of statistics from many ratings.
+- **Next photo checks shelf life:** produce kept on the shelf is re-photographed; if it ages faster than its profile says, the shelf-life band is shortened.
+- **Call outcomes check buyer fit and price:** repeated declines lower a buyer type's fit; accepted prices tune opening prices through `pricing_stats`.
+
 ## Key design decisions
 
 - **Two services** because their scaling needs differ: the `api` scales to zero; `voice` needs CPU for whole calls.
@@ -246,3 +257,4 @@ Floor price, accept and counter logic, discount limit, quantity and deadline che
 - **Firestore for anything read during a decision;** BigQuery only for reporting.
 - **The judge demo is just another mart**, so it runs the real pipeline with no special code paths.
 - **Agents decide, code enforces:** every rule that protects money, stock or safety is checked in code.
+- **ADK only where an agent is needed:** the Negotiator (live conversation with tools) uses ADK; the Inspector and the Ladder's produce profiles are single structured Gemini calls; the Ladder's decision is code.
