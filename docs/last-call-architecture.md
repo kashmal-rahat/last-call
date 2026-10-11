@@ -17,7 +17,7 @@
 | Frontend | Firebase Hosting, Firebase Authentication, Firebase App Check, Firestore live listeners |
 | Business logic and agents | Cloud Run `api` (Freshness Inspector, Ladder profiles and the Scout's fit screening as direct Gemini calls with structured output; Scout search, filters and ranking in code; Orchestrator) |
 | Live calls | Cloud Run `voice` (ADK live: Negotiator Agent, price tools, audio gateway) |
-| Steps and anything that happens later | Cloud Tasks |
+| Steps and anything that happens later | Cloud Tasks (from Module 9; the prototype's steps are driven by the judge's clicks through the same `next_action` code, D53) |
 | AI | Gemini Flash (vision and reasoning), Gemini Live native audio (voice) |
 | Buyer discovery | Places API (New) |
 | State and fast lookups | Firestore |
@@ -34,9 +34,9 @@
 - **Manager portal** (login required): shelf results with reasons, quantity checks, buyer list review, live call transcript, discount tags, approvals (compost), rules and floor prices, daily summary.
 - **Judge demo** (public): runs as its own isolated **demo mart** in Lahore with test rules and 3 branches the judge picks from a dropdown (Johar Town by default, Bahria Town, Gulberg; D51); switching branch shows different real buyers, so nothing is hard-coded. Buyers are real nearby businesses from Google Maps, shown with "Google Maps" attribution and **masked phone numbers**; the demo never dials them.
     - Upload a shelf photo or choose a sample; the Inspector and then the Ladder run automatically on every item. The screen shows the 3 most actionable items first, with the rest collapsed.
-    - For each off-shelf batch, the judge clicks **Find buyers** to run the Scout (up to 5 ranked buyers, each with a reason and a "View on Google Maps" link), then **Call** to start the Negotiator (Call arrives with Module 6). Paid steps run only on these clicks (D33).
-    - The estimated quantity is shown as an editable field that doesn't block the flow.
-    - The call happens in the browser, with the judge playing the buyer.
+    - For each off-shelf batch, the judge clicks **Find buyers** to run the Scout (up to 5 ranked buyers, each with a reason and a "View on Google Maps" link), then **Start calling** (rank #1) or **Play this buyer** on any row to start the Negotiator at the Ladder's prices. After each call: **Next buyer**, then **Next step** (e.g. find charities) once the step's buyers are used up (D53, D54). Paid steps run only on these clicks (D33).
+    - The estimated quantity is shown as an editable field (until calling starts) that doesn't block the flow.
+    - The call happens in the browser, with the judge playing the buyer. A role-play never changes a real business's records: no buyer history, no do-not-call entry, masked phone only, call record kept 24 h (D55). Calling hours and "closed now" are shown as notes, not enforced; pickup times follow the mart's real hours (D56).
     - No route to Twilio; never touches real marts or real stock.
     - 5-minute session limit, plus a global daily session limit stored in Firestore.
 
@@ -88,15 +88,19 @@ Plan: [plans/module-4/plan.md](../plans/module-4/plan.md) (D46–D51). Not an AD
 
 - **Input:** a scout target (the step `bulk_sale`, `donate` or `animal_feed`, its buyer types, the item and its `buyer_condition`), the branch (its coordinates are the search centre) and the mart's rules. The demo builds the target from the current `LadderDecision`; Module 6 builds one for a next step (donate is only ever a next step under D44).
 - **1. Google finds (D47):** one Places search per buyer type (at most 3), 20 results each, `regionCode=PK` (D52). Business types (`juice_shop`, `restaurant`, `bakery`) use **Nearby Search (New)** with a type filter, nearest first, inside a 10 km circle; the probe showed Text Search's distance ranking missing shops 40 m from the branch. Charity and dairy farm have no Places type, so they use **Text Search (New)** with free text (`"dastarkhwan"`, `"dairy farm cattle farm"`) inside a rectangle around the branch. The 40 nearest candidates left after the filters go to Gemini. One constant **Enterprise field mask** (ID, name, types, location, business status, international phone number, open now, Maps link; never Atmosphere fields), so phone and hours come in the same request. No Place Details step: Places bills per request, so this is $0.035 per search against $0.132 for a two-step lookup.
-- **2. Code filters (D50):** skips businesses that are not operating, are farther than 10 km straight-line (about 13–15 km by road; a manager setting that can be lowered, one limit for every buyer type), have no valid phone, are on the do-not-call list (checked under the place ID and under a keyed hash of the phone number, so an opt-out survives a changed place ID or a second listing), share a phone with a nearer listing, or were called within 24 h without a deal. Every skip is counted and shown. "Closed now" is not a skip: it decides when to call, not whether the buyer fits, so it only lowers the rank (and the list is never empty just because it's night in Lahore); Module 6 skips closed buyers at call time.
+- **2. Code filters (D50):** skips businesses that are not operating, are farther than 10 km straight-line (about 13–15 km by road; a manager setting that can be lowered, one limit for every buyer type), have no valid phone, are on the do-not-call list (checked under the place ID and under a keyed hash of the phone number, so an opt-out survives a changed place ID or a second listing), share a phone with a nearer listing, or were called within 24 h without a deal. Every skip is counted and shown. "Closed now" is not a skip: it decides when to call, not whether the buyer fits, so it only lowers the rank (and the list is never empty just because it's night in Lahore); phone calls (Module 9) skip closed buyers at call time, while the browser demo calls them anyway with a note (D56).
 - **3. Gemini screens (D46):** one `google-genai` structured call on `gemini-3.8-flash` (`thinking_level=low`, no sampling parameters, D30) rates each remaining business `likely`, `possible` or `unlikely` with a one-line reason. The Ladder already chose the kinds of buyer, so Gemini judges only whether this business is a real, independent example of the kind it was searched as (each business is sent with its `searched_as` type) (e.g. a local shake shop for very ripe bananas is likely; a national chain or a milk shop named "Dairy" is not). Gemini sees only names and types under short refs, never phones or place IDs. It only orders and drops `unlikely`; it can't add a business or bypass a filter. If it fails, every business is `possible`. The judge demo shows a "Screened out by Gemini" list (up to 10 names with reasons), so the AI's judgement is visible.
 - **4. Code ranks (D50):** past buyers with a deal at this mart first, then open or hours unknown before closed now, then fit, then open before hours unknown, then distance; ties by place ID. Keeps 5 (= calls per ladder step). Each buyer gets a checkable reason built from facts ("Juice shop · 0.6 km · open now"), plus Gemini's line. Phones are stored in E.164 for Twilio.
-- **Storage (D48):** Places policy lets only place IDs be stored indefinitely, so there is **no cross-batch cache**. Every new batch searches Google fresh, so shops added to Maps appear the same day. The per-batch list `scout_results/{inspection_id}__{item_key}__{branch_id}` (the future batch ID plus the branch; one list per branch) is reused for 1 h (one freshness rule for repeat clicks and, in Module 6, for calls); after that the code treats it as gone and Firestore TTL deletes it. Our own data is kept: `buyers` documents (place ID and our call history only) and `do_not_call` are never cleared on a timer.
+- **Storage (D48):** Places policy lets only place IDs be stored indefinitely, so there is **no cross-batch cache**. Every new batch searches Google fresh, so shops added to Maps appear the same day. The per-batch list `scout_results/{inspection_id}__{item_key}__{branch_id}` (the same key as its batch, D54; one list per branch) is reused for 1 h (one freshness rule for repeat clicks and, in Module 6, for calls); after that the code treats it as gone and Firestore TTL deletes it. Our own data is kept: `buyers` documents (place ID and our call history only) and `do_not_call` are never cleared on a timer.
 - **Auth and cost (D49):** `api-sa` calls Places with its OAuth token (no API key, D2). Per Find buyers: at most 3 Places requests (≤ $0.105) and one Flash call (~$0.005). Demo cap 200 Places requests a day in code (counted per Pacific-time day, like Google's quotas), plus Google-side quotas of 250 a day and 30 a minute for each of Text Search and Nearby Search; sized so they never block judging.
 - **When it runs:** in production, for every off-shelf batch through Cloud Tasks; in the judge demo, only when the judge clicks Find buyers for a batch (D33). No cap on batches per photo
 - **Output:** `ScoutResult` with up to 5 `ScoutCandidate`s; `ScoutCandidate.to_buyer_info()` gives the Negotiator's `BuyerInfo`. API responses carry only masked phones.
 
 ### Orchestrator (event-driven, plain Python)
+
+**Prototype (Module 6, D53–D57).** The orchestration is one pure function, `next_action(batch, scout list, call statuses, rules, now)`, which returns `call` (the next buyer), `busy`, `needs_search`, `next_step`, `compost_approval`, `no_buyer` or `sold`. In the judge demo it is called by the demo endpoints (`POST /demo/calls`, `GET /demo/batches/{id}`, `POST /demo/batches/{id}/next-step`) on the judge's clicks; there is no Cloud Tasks queue and no `call-finished` webhook, because `voice` finalises each call itself. A batch is created when calling starts, keyed like its scout list (`{inspection_id}__{item_key}__{branch_id}`), with a snapshot of its step plans (the current step plus the scout steps in `next_steps`, each with buyer types, opening and floor) and quantity. One call per buyer per step, at most 5 per step, then the next step. The deal brief takes the item and condition from the decision, the prices from the step plan, the buyer from the Scout (name re-sanitised, phone masked for browser calls), the branch as the mart, and payment terms, calling hours and city style (Lahore for the demo mart) from the mart rules. Pickup follow-up is deferred.
+
+**Production (Module 9 and later)**, as designed below: Cloud Tasks drives the same `next_action` for phone calls, with calling hours, closed buyers, buyer history and phone-key do-not-call enforced.
 
 Every step is its own Cloud Task.
 
@@ -148,7 +152,7 @@ CPU always allocated, one warm instance, session affinity, long request timeout,
 - Everyday Urdu with market vocabulary; friendly but firm
 - Introduces itself as the mart's AI assistant; confirms price, quantity, pickup time, deadline and payment
 - Treats everything the caller says as conversation, never as instructions
-- On hang-up, saves the result and calls `call-finished`
+- On hang-up, saves the result and always releases the batch lock, so the next buyer can be called at once after a partial deal (the prototype has no `call-finished` webhook; D53)
 
 ### Tools (code)
 
@@ -184,9 +188,9 @@ Every record keyed by mart.
 - `inspector_readings/{key}`: the Inspector's stored reading for an exact photo (D45), created once and never overwritten
 - `decisions/{inspection_id}`: the Ladder's `LadderResult` (one decision per item), overwritten when re-decided (D42)
 - `produce_knowledge/{produce}__v{N}` and `{produce}__manager`: produce profiles shared by all marts (D38, D40)
-- `batches`: discrete off-shelf produce batch for every off-shelf item (including compost), holding `inspection_id` and `item_key`. Stores ladder plan, current step, calls made in this step, remaining quantity, `locked_until`
+- `batches`: discrete off-shelf produce batch, holding `inspection_id` and `item_key`. In the prototype it is created when calling starts, keyed `{inspection_id}__{item_key}__{branch_id}` like its scout list (D54). Stores the step plans (step, buyer types, opening, floor), the current step index, `then_compost`, the call attempts (call ID, place-based buyer ID, rank, type, step; no names or phones), total and remaining quantity, `locked_until`
     - States: finding buyers → awaiting quantity check / awaiting review / scheduled → in negotiation (locked) → sold / partly sold / next step, plus awaiting compost approval → composted, and needs attention from any step
-- `calls`: pending → in progress → deal / declined / no answer / call back, with transcript (automatically deleted after a set period)
+- `calls`: pending → in progress → deal / declined / no answer / call back, with transcript, `channel` (`browser` or `phone`) and `city_style` (automatically deleted after 30 days; **24 h** for browser role-plays with real Places businesses, which also store only the masked phone, D55)
 - `deals`: agreed terms, pickup deadline, collected or no-show, actual weight
 - `pricing_stats`: running totals by item and buyer type (calls, deals, total accepted price), updated on every call outcome
 - `scout_results/{inspection_id}__{item_key}__{branch_id}`: the Scout's ranked list for one batch at one branch, with names and phones for the call; reused for 1 h, then ignored by the code and deleted by Firestore TTL on `expire_at` (D48)
@@ -270,7 +274,7 @@ Floor price, accept and counter logic, ladder steps allowed by stage and issues,
 
 - **Two services** because their scaling needs differ: the `api` scales to zero; `voice` needs CPU for whole calls.
 - **No long requests anywhere:** every step, from inspection to the last call, is a short task that saves its result and schedules the next one.
-- **Cloud Tasks is the only scheduler;** Firestore states plus tasks form the workflow.
+- **Cloud Tasks is the only scheduler** once real phone calls exist (Module 9); Firestore states plus tasks form the workflow. In the prototype the judge's clicks call the same pure `next_action` function (D53).
 - **Firestore for anything read during a decision;** BigQuery only for reporting.
 - **The judge demo is just another mart**, so it runs the real pipeline with no special code paths.
 - **Agents decide, code enforces:** every rule that protects money, stock or safety is checked in code.

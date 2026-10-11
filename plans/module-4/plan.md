@@ -487,6 +487,7 @@ Tests (`test_demo_scout.py`, fake `scout_fn`). Keep them compact (about 8 tests;
 ---
 
 ## How Module 6 follows (for planning later; not built now)
+> **Superseded on 2026-10-11 by [plans/module-6/plan.md](../module-6/plan.md) (D53–D57)** wherever they differ: the batch ID includes the branch, browser role-plays write no buyer history or do-not-call (D55), and closed buyers are only noted in the demo (D56).
 1. **Batches at Decide.** One batch per off-shelf item, `batch_id = f"{inspection_id}__{item_key}"`, with the batch's `branch_id` (in production, the branch of the shelf camera). Its scout list is `scout_results/{batch_id}__{branch_id}`.
    - **Known bug to fix first:** `FirestoreStore.create_call` writes the batch with `set(..., merge=True)`, which **resets `remaining_quantity`** on every new call for the same batch (`InMemoryStore` creates only if absent, so the tests don't show it). Make it create-if-absent and add a contract test.
 2. **Per-step prices.** A `LadderDecision` has prices only for its chosen step. Escalating to animal feed needs feed prices, so the engine should expose `step_plan` (step, buyer types, opening, floor) for the current step and each of its `next_steps`.

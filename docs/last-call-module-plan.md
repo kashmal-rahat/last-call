@@ -122,10 +122,10 @@ Plan: [plans/module-4/plan.md](../plans/module-4/plan.md) (D46–D51).
 - **Search:** one Google Places search per buyer type (at most 3): Nearby Search (nearest first) for juice shops, restaurants and bakeries, Text Search for charities ("dastarkhwan") and dairy farms; phone and hours in the same request and a strict field mask
 - **Code filters:** skips businesses that aren't operating, are too far away, have no phone number, are on the do-not-call list (by place ID or by a hash of the phone), share a phone with a nearer listing, or were called in the last 24 h without a deal
 - **Gemini screening:** one structured call rates each remaining business likely, possible or unlikely for this produce and deal (e.g. drops national chains and milk shops listed as "dairy"); it judges only the specific business (the Ladder already chose the kinds of buyer), only reorders and drops, never bypasses a filter, and the card shows what it screened out and why
-- **Ranking:** past successful buyers first, then open or hours unknown before closed now (closed buyers are kept, so the list isn't empty at night; Module 6 skips them at call time), then fit, then distance
+- **Ranking:** past successful buyers first, then open or hours unknown before closed now (closed buyers are kept, so the list isn't empty at night; phone calls in Module 9 skip them at call time, the browser demo only notes it, D56), then fit, then distance
 - **Cost:** no cross-batch cache (Places policy allows storing only place IDs); every new batch searches fresh (new shops appear the same day); the per-batch list is reused for 1 h (one freshness rule); buyer history and do-not-call are kept; at most about $0.11 per Find buyers; demo cap 200 Places requests a day (sized so it never blocks judging)
 - **Judge demo:** a Find buyers button on off-shelf decision cards, with real business names, masked phones and "Google Maps" attribution; a branch selector (3 Lahore branches: Johar Town by default, Bahria Town, Gulberg) shows that the buyers really come from the chosen location; never dials
-- **Later:** the manager's buyer-list review ("review every list" or "only new buyers") comes with Module 5; the Call handoff with Module 6
+- **Later:** the manager's buyer-list review ("review every list" or "only new buyers") comes with Module 5; the Call handoff with Module 6 (done in its plan, D53–D57)
 
 ## Module 5: Manager rules and screen
 
@@ -139,21 +139,20 @@ Plan: [plans/module-4/plan.md](../plans/module-4/plan.md) (D46–D51).
     - Staff tasks (compost, "please check this item," quantity checks, manager callbacks)
     - End-of-day summary
 
-## Module 6: Orchestration
+## Module 6: Orchestration and the Call handoff
 
-- Connects everything: photo → freshness → ladder → scout → manager review → negotiator → result
-- Each step runs as its own short task; nothing waits in a long request
-- **Escalation:** up to 5 calls per ladder step (a manager setting), then the next step; compost needs approval
-- Waits for a quantity check (only when the estimate is unsure or the manager requires it), buyer list review and calling hours when those apply
-- Locks a batch during a call, with automatic release if a call fails
-- **Pickup follow-up:** staff mark the deal as collected and record the actual weight from the scale. At the pickup deadline, a missed pickup is recorded and the remaining stock goes back on the ladder.
-- **Handoff from the Scout (see [plans/module-4/plan.md](../plans/module-4/plan.md), "How Module 6 follows"):**
-    - batch ID = `{inspection_id}__{item_key}`; its buyer list is the Scout's `{batch_id}__{branch_id}`
-    - `build_deal_brief` from the decision, the chosen `ScoutCandidate.to_buyer_info()` and the mart rules (payment terms, calling hours, Lahore city style for the demo mart)
-    - per-step prices, so "no deal → next step" (e.g. donate, animal feed) has its own opening and floor
-    - `record_buyer_call` after every call, which feeds "past buyers first" and the 24 h cooldown
-    - fix first: `FirestoreStore.create_call` must create the batch only if absent (today it resets `remaining_quantity`)
-- **Judge demo:** a Call button on each buyer row starts the browser negotiation at the Ladder's prices, then "Next buyer" or "Next step"
+Plan: [plans/module-6/plan.md](../plans/module-6/plan.md) (D53–D57).
+
+- Connects everything in the judge demo: photo → freshness → ladder → scout → negotiator → result → next buyer → next step
+- **One pure function decides what happens next** (`next_action`: call the next buyer, busy, search again, next step, compost approval, no buyer, sold). In the prototype the judge's clicks call it; from Module 9, Cloud Tasks calls the same function for phone calls (D53)
+- **Batches** are created when calling starts, keyed like the Scout's list (`{inspection_id}__{item_key}__{branch_id}`), with a snapshot of the step plans (each step's buyer types, opening and floor) and the quantity (D54)
+- **Escalation:** one call per buyer, at most 5 calls per ladder step, then the next step (e.g. bulk sale → charities → cattle farms); compost needs approval
+- **Handoff:** the deal brief takes the item and condition from the decision, the prices from the step plan, the buyer from the Scout, the branch as the mart, and payment terms, calling hours and the Lahore city style from the mart rules
+- Locks a batch during a call and **always releases it when the call ends**, so after a partial deal the remaining stock goes to the next buyer at once
+- Fixes first: `create_call` no longer resets `remaining_quantity`
+- **A role-play never changes a real business's records:** no buyer history or do-not-call entry from browser calls, masked phones only, call records kept 24 h (D55)
+- **Judge demo:** quantity field, "Staff checked" when on hold, **Start calling** (#1) or **Play this buyer**, a status chip per called buyer, then **Next buyer** / **Next step**. Calling hours and closed buyers are shown as notes, not enforced; pickup follows the mart's real hours (D56). The old practice-scenario section is removed (D57)
+- **Later:** pickup follow-up (collected, actual weight, no-show back on the ladder) and waiting for quantity checks, buyer list review and calling hours come with real phone calls (Module 9) and the manager screen (Module 5)
 
 ## Module 7: Data and learning
 
