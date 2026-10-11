@@ -1081,6 +1081,202 @@
       color: #fff;
     }
 
+    .buyer-status-chip {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.18rem 0.5rem;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+    }
+    .buyer-status-chip.chip-deal {
+      background: rgba(16, 185, 129, 0.18);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+    .buyer-status-chip.chip-declined {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+    .buyer-status-chip.chip-callback {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fcd34d;
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+    .buyer-status-chip.chip-dnc {
+      background: rgba(168, 85, 247, 0.15);
+      color: #d8b4fe;
+      border-color: rgba(168, 85, 247, 0.35);
+    }
+    .buyer-status-chip.chip-no-answer {
+      background: rgba(148, 163, 184, 0.15);
+      color: #94a3b8;
+      border-color: rgba(148, 163, 184, 0.3);
+    }
+
+    .btn-play-buyer {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #38bdf8;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-play-buyer:hover:not(:disabled) {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: rgba(56, 189, 248, 0.6);
+      color: #e0f2fe;
+    }
+    .btn-play-buyer:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-start-calling {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      color: #ffffff;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.45rem 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .btn-start-calling:hover:not(:disabled) {
+      background: linear-gradient(135deg, #0369a1, #075985);
+      border-color: #38bdf8;
+    }
+    .btn-start-calling:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-next-action {
+      background: linear-gradient(135deg, #059669, #047857);
+      border: 1px solid rgba(52, 211, 153, 0.5);
+      color: #ffffff;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.45rem 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-next-action:hover:not(:disabled) {
+      background: linear-gradient(135deg, #047857, #065f46);
+    }
+    .btn-next-action:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-next-step {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      border-color: rgba(129, 140, 248, 0.5);
+    }
+
+    .btn-search-again {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      border-color: rgba(251, 191, 36, 0.5);
+    }
+
+    .next-action-chip {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.3rem 0.65rem;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .chip-sold {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+    .chip-compost {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+    .chip-no-buyer {
+      background: rgba(148, 163, 184, 0.15);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      color: #cbd5e1;
+    }
+    .chip-busy {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fcd34d;
+    }
+
+    .quantity-control-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 0.45rem 0.65rem;
+      font-size: 0.8rem;
+    }
+
+    .quantity-control-row input[type="number"] {
+      width: 75px;
+      padding: 0.25rem 0.45rem;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      color: #f8fafc;
+      font-size: 0.82rem;
+    }
+
+    .batch-qty-badge {
+      font-size: 0.8rem;
+      color: #38bdf8;
+      font-weight: 600;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 0.35rem 0.6rem;
+      border-radius: 6px;
+    }
+
+    .staff-check-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      color: #fcd34d;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+
+    .calling-hours-banner {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+      font-size: 0.76rem;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+    }
+
+    .scout-copy-line {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      font-style: italic;
+    }
+
     .screened-out-details {
       margin-top: 0.25rem;
       font-size: 0.74rem;
@@ -1445,46 +1641,33 @@
       </div>
     </section>
 
-    <!-- SECTION 2: Voice Negotiator -->
+    <!-- SECTION 2: Live Call Panel (Module 6) -->
     <section class="module-section" id="voiceSection">
-      <div class="voice-grid">
-        <!-- Left Configuration & Controls -->
+      <div class="voice-grid" id="liveCallPanel" style="display: none;">
+        <!-- Left Call Info & Controls -->
         <div class="card">
-          <h2>2 · Negotiate a deal (Voice Agent)</h2>
+          <h2>Live Call · Negotiator</h2>
 
           <div class="banner-headphones">
             <span>🎧</span>
             <div><strong>Please use headphones</strong> to prevent microphone echo during real-time Urdu conversation.</div>
           </div>
 
-          <div class="field">
-            <label for="accessCode">Demo Access Code</label>
-            <input type="password" id="accessCode" placeholder="Enter judge code" value="">
-          </div>
-
-          <div class="field">
-            <label for="scenarioSelect">Bargaining Scenario</label>
-            <select id="scenarioSelect">
-              <option value="easy_yes">Easy Yes (Mangoes — quick agreement)</option>
-              <option value="hard_bargainer">Hard Bargainer (Apples — multiple counters)</option>
-              <option value="quality_sceptic">Quality Sceptic (Oranges — wants photo)</option>
-              <option value="wants_half">Wants Half (Bananas — split quantity)</option>
-              <option value="donation">Donation (Bread — zero rupee salvage)</option>
-            </select>
-          </div>
-
-          <div class="scenario-info" id="scenarioInfo">
-            <div class="info-row"><span class="info-label">Item:</span><span class="info-val" id="infoItem">Sindhri Mangoes</span></div>
-            <div class="info-row"><span class="info-label">Available:</span><span class="info-val" id="infoQty">50 kg</span></div>
-            <div class="info-row"><span class="info-label">Opening Quote:</span><span class="info-val" id="infoOpening">Rs 180 / kg</span></div>
-            <div class="info-row"><span class="info-label">Floor Price (Hidden):</span><span class="info-val" id="infoFloor">Rs 130 / kg</span></div>
+          <div class="scenario-info" id="callInfoCard">
+            <div class="info-row">
+              <span class="info-label">Buyer:</span>
+              <span class="info-val">
+                <span id="callBuyerName">—</span>
+                <span class="buyer-maps-attr" style="font-size: 0.75rem; color: #94a3b8; margin-left: 6px;">from Google Maps</span>
+              </span>
+            </div>
+            <div class="info-row"><span class="info-label">Item / Qty:</span><span class="info-val" id="callItemQty">—</span></div>
+            <div class="info-row"><span class="info-label">Opening Quote:</span><span class="info-val" id="callOpeningQuote">—</span></div>
+            <div class="info-row"><span class="info-label">Floor Price:</span><span class="info-val" id="callFloorPrice">—</span></div>
+            <div class="info-row"><span class="info-label">Pickup Window:</span><span class="info-val" id="callPickupWindow">—</span></div>
           </div>
 
           <div class="actions">
-            <button id="btnStart" class="btn-start">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" /></svg>
-              Start Call
-            </button>
             <button id="btnHangup" class="btn-hangup" disabled>
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.684A1 1 0 008.279 3H5z" /></svg>
               Hang Up
@@ -1502,6 +1685,7 @@
           <div class="result-card" id="resultCard">
             <div class="result-title">Call Outcome</div>
             <div id="resultContent" style="font-size: 0.88rem; color: #d1fae5;"></div>
+            <div id="resultNextAction" style="margin-top: 12px;"></div>
           </div>
         </div>
       </div>
@@ -1546,6 +1730,11 @@
     let scoutErrorsMap = {};
     let scoutLoadingMap = {};
     let scoutRequestCounters = {};
+    let currentBatchesMap = {};
+    let staffCheckedMap = {};
+    let quantityInputs = {};
+    let isCallInProgress = false;
+    let currentActiveCall = null;
 
     function getStoredItem(key, defaultVal = '') {
       try {
@@ -1677,20 +1866,40 @@
 
     loadBranches();
 
+    async function loadBatchesForBranch() {
+      currentBatchesMap = {};
+      if (!currentInspection || !currentInspection.inspection_id) return;
+      const branchId = branchSelect.value;
+      if (!branchId) return;
+      const code = inspectAccessCodeEl.value.trim();
+      const items = currentInspection.items || [];
+      await Promise.all(items.map(async (item) => {
+        const batchId = `${branchId}:${currentInspection.inspection_id}:${item.item_key}`;
+        try {
+          const res = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
+            headers: code ? { 'X-Demo-Access-Code': code } : {}
+          });
+          if (res.ok) {
+            currentBatchesMap[item.item_key] = await res.json();
+          }
+        } catch (e) {}
+      }));
+      renderResults(currentInspection, currentDisplayUrl);
+    }
+
     branchSelect.addEventListener('change', () => {
       scoutResultsMap = {};
       scoutErrorsMap = {};
       scoutLoadingMap = {};
-      if (currentInspection) {
-        renderResults(currentInspection, currentDisplayUrl);
-      }
+      loadBatchesForBranch();
     });
 
     async function fetchScoutBuyers(itemKey, refresh = false) {
       if (!currentInspection || !currentInspection.inspection_id) return;
-      const code = inspectAccessCodeEl.value.trim() || accessCodeEl.value.trim();
+      const code = inspectAccessCodeEl.value.trim();
       if (!code) {
         alert('Please enter your Demo Access Code first.');
+        inspectAccessCodeEl.focus();
         return;
       }
       const branchId = branchSelect.value;
@@ -1725,6 +1934,15 @@
           const data = await res.json();
           scoutResultsMap[itemKey] = data;
           scoutErrorsMap[itemKey] = null;
+          const batchId = `${branchId}:${currentInspection.inspection_id}:${itemKey}`;
+          try {
+            const bRes = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
+              headers: { 'X-Demo-Access-Code': code }
+            });
+            if (bRes.ok) {
+              currentBatchesMap[itemKey] = await bRes.json();
+            }
+          } catch (e) {}
         } else {
           scoutResultsMap[itemKey] = null;
           const errData = await res.json().catch(() => ({}));
@@ -2187,13 +2405,16 @@
         priceRow.appendChild(btnRedecide);
         decisionBlock.appendChild(priceRow);
 
-        // Module 4: Scout Section
+        // Module 4 & 6: Scout Section & Call Orchestration
         if (['bulk_sale', 'donate', 'animal_feed'].includes(decision.step)) {
           const scoutSection = document.createElement('div');
           scoutSection.className = 'scout-section';
 
           const scoutActionRow = document.createElement('div');
           scoutActionRow.className = 'scout-action-row';
+
+          const batch = currentBatchesMap[decision.item_key];
+          const effectiveStep = (batch && batch.current_step) || decision.step;
 
           const btnFind = document.createElement('button');
           btnFind.type = 'button';
@@ -2204,7 +2425,8 @@
             btnFind.disabled = true;
             btnFind.textContent = 'Searching Google Maps…';
           } else {
-            btnFind.textContent = getFindBuyersLabel(decision.step);
+            btnFind.disabled = isCallInProgress;
+            btnFind.textContent = getFindBuyersLabel(effectiveStep);
             btnFind.addEventListener('click', () => {
               fetchScoutBuyers(decision.item_key, false);
             });
@@ -2241,6 +2463,164 @@
             scoutContainer.appendChild(scoutHeader);
 
             const buyers = scoutResult.buyers || [];
+
+            // Calling hours banner (D56)
+            const hasClosedBuyer = buyers.some(b => b.open_now === false);
+            if (scoutResult.outside_calling_hours || (batch && batch.outside_calling_hours) || hasClosedBuyer) {
+              const hoursBanner = document.createElement('div');
+              hoursBanner.className = 'calling-hours-banner';
+              hoursBanner.textContent = 'ℹ️ Note: Outside calling hours or business closed. Demo calls can proceed regardless for judging.';
+              scoutContainer.appendChild(hoursBanner);
+            }
+
+            // Quantity control row
+            const qtyRow = document.createElement('div');
+            qtyRow.className = 'quantity-control-row';
+            if (batch) {
+              const qtyBadge = document.createElement('span');
+              qtyBadge.className = 'batch-qty-badge';
+              qtyBadge.textContent = `Remaining: ${batch.remaining_quantity} of ${batch.total_quantity} ${batch.unit || 'kg'}`;
+              qtyRow.appendChild(qtyBadge);
+            } else {
+              const qtyLabel = document.createElement('label');
+              qtyLabel.textContent = `Batch quantity (${decision.unit || 'kg'}):`;
+              const qtyInput = document.createElement('input');
+              qtyInput.type = 'number';
+              qtyInput.min = '1';
+              qtyInput.max = '1000';
+              const defaultQty = quantityInputs[decision.item_key] != null
+                ? quantityInputs[decision.item_key]
+                : (item.quantity && item.quantity.low ? Math.round(item.quantity.low) : 20);
+              qtyInput.value = String(defaultQty);
+              quantityInputs[decision.item_key] = defaultQty;
+              qtyInput.disabled = isCallInProgress;
+              qtyInput.addEventListener('change', () => {
+                const v = parseFloat(qtyInput.value.trim());
+                if (!isNaN(v) && v > 0) {
+                  quantityInputs[decision.item_key] = v;
+                }
+              });
+              qtyRow.appendChild(qtyLabel);
+              qtyRow.appendChild(qtyInput);
+            }
+            scoutContainer.appendChild(qtyRow);
+
+            // Staff check toggle if decision on_hold
+            if (decision.on_hold) {
+              const staffRow = document.createElement('div');
+              staffRow.className = 'staff-check-toggle';
+              const staffCheckbox = document.createElement('input');
+              staffCheckbox.type = 'checkbox';
+              staffCheckbox.id = `staff_chk_${decision.item_key}`;
+              staffCheckbox.checked = !!staffCheckedMap[decision.item_key];
+              staffCheckbox.disabled = isCallInProgress;
+              staffCheckbox.addEventListener('change', () => {
+                staffCheckedMap[decision.item_key] = staffCheckbox.checked;
+              });
+              const staffLabel = document.createElement('label');
+              staffLabel.htmlFor = `staff_chk_${decision.item_key}`;
+              staffLabel.textContent = 'Staff checked this item (clear hold for calls)';
+              staffRow.appendChild(staffCheckbox);
+              staffRow.appendChild(staffLabel);
+              scoutContainer.appendChild(staffRow);
+            }
+
+            // Copy line
+            const copyLine = document.createElement('div');
+            copyLine.className = 'scout-copy-line';
+            copyLine.textContent = 'In a real mart, the AI calls these in order on its own; here you play the buyer.';
+            scoutContainer.appendChild(copyLine);
+
+            // Top action button row (Start calling #1 / Next buyer / Next step / status chips)
+            const actionRow = document.createElement('div');
+            actionRow.style.display = 'flex';
+            actionRow.style.flexWrap = 'wrap';
+            actionRow.style.alignItems = 'center';
+            actionRow.style.gap = '0.5rem';
+            actionRow.style.marginTop = '0.4rem';
+
+            if (batch && batch.next_action) {
+              const act = batch.next_action;
+              if (act.kind === 'call') {
+                const rank = act.buyer_rank || (batch.attempts.length + 1);
+                const targetB = buyers.find(x => x.rank === rank) || buyers[rank - 1];
+                const bId = targetB ? targetB.buyer_id : null;
+                const bName = targetB ? targetB.name : '';
+                const btnCall = document.createElement('button');
+                btnCall.type = 'button';
+                btnCall.className = 'btn-start-calling';
+                btnCall.textContent = `Start calling #${rank} ${bName}`;
+                btnCall.disabled = isCallInProgress;
+                btnCall.addEventListener('click', () => {
+                  startCallForItem(decision.item_key, bId);
+                });
+                actionRow.appendChild(btnCall);
+              } else if (act.kind === 'next_step') {
+                const btnStep = document.createElement('button');
+                btnStep.type = 'button';
+                btnStep.className = 'btn-next-action btn-next-step';
+                const label = getNextStepTargetLabel(batch);
+                btnStep.textContent = `Next step: find ${label}`;
+                btnStep.disabled = isCallInProgress;
+                btnStep.addEventListener('click', () => {
+                  advanceBatchStep(batch.batch_id, decision.item_key);
+                });
+                actionRow.appendChild(btnStep);
+              } else if (act.kind === 'sold_out') {
+                const chip = document.createElement('span');
+                chip.className = 'next-action-chip chip-sold';
+                chip.textContent = 'Sold out ✓';
+                actionRow.appendChild(chip);
+              } else if (act.kind === 'compost') {
+                const chip = document.createElement('span');
+                chip.className = 'next-action-chip chip-compost';
+                chip.textContent = 'Compost: needs manager approval';
+                actionRow.appendChild(chip);
+              } else if (act.kind === 'no_buyers') {
+                const chip = document.createElement('span');
+                chip.className = 'next-action-chip chip-no-buyer';
+                chip.textContent = 'No more buyers nearby';
+                actionRow.appendChild(chip);
+              } else if (act.kind === 'needs_search') {
+                const btnSearch = document.createElement('button');
+                btnSearch.type = 'button';
+                btnSearch.className = 'btn-next-action btn-search-again';
+                btnSearch.textContent = 'Search again';
+                btnSearch.disabled = isCallInProgress;
+                btnSearch.addEventListener('click', () => {
+                  fetchScoutBuyers(decision.item_key, true);
+                });
+                actionRow.appendChild(btnSearch);
+              } else if (act.kind === 'busy') {
+                const chip = document.createElement('span');
+                chip.className = 'next-action-chip chip-busy';
+                chip.textContent = 'Call in progress…';
+                const btnRef = document.createElement('button');
+                btnRef.type = 'button';
+                btnRef.className = 'btn-scout-refresh';
+                btnRef.textContent = 'Refresh';
+                btnRef.addEventListener('click', () => {
+                  loadBatchesForBranch();
+                });
+                actionRow.appendChild(chip);
+                actionRow.appendChild(btnRef);
+              }
+            } else if (buyers.length > 0) {
+              const btnCall = document.createElement('button');
+              btnCall.type = 'button';
+              btnCall.className = 'btn-start-calling';
+              btnCall.textContent = `Start calling #1 ${buyers[0].name}`;
+              btnCall.disabled = isCallInProgress;
+              btnCall.addEventListener('click', () => {
+                startCallForItem(decision.item_key, buyers[0].buyer_id);
+              });
+              actionRow.appendChild(btnCall);
+            }
+
+            if (actionRow.childNodes.length > 0) {
+              scoutContainer.appendChild(actionRow);
+            }
+
             if (buyers.length === 0) {
               const emptyMsg = document.createElement('div');
               emptyMsg.className = 'scout-empty-msg';
@@ -2299,6 +2679,55 @@
                 metaGroup.appendChild(openEl);
 
                 top.appendChild(metaGroup);
+
+                // Status chip or "Play this buyer"
+                const att = (batch && batch.attempts) ? batch.attempts.find(a => a.buyer_id === b.buyer_id) : null;
+                if (att) {
+                  const chip = document.createElement('span');
+                  if (att.call_status === 'completed') {
+                    if (att.outcome === 'deal' || att.outcome === 'partial_deal') {
+                      chip.className = 'buyer-status-chip chip-deal';
+                      chip.textContent = `Deal ${att.agreed_quantity || 0} ${batch.unit || 'kg'} @ Rs ${att.agreed_price || '—'}`;
+                    } else if (att.outcome === 'declined') {
+                      chip.className = 'buyer-status-chip chip-declined';
+                      chip.textContent = 'Declined';
+                    } else if (att.outcome === 'call_back') {
+                      chip.className = 'buyer-status-chip chip-callback';
+                      chip.textContent = att.notes ? `Call back ${att.notes}` : 'Call back';
+                    } else if (att.outcome === 'no_answer') {
+                      chip.className = 'buyer-status-chip chip-no-answer';
+                      chip.textContent = 'No answer';
+                    } else if (att.outcome === 'do_not_call') {
+                      chip.className = 'buyer-status-chip chip-dnc';
+                      chip.textContent = 'Asked not to be called';
+                    } else if (att.outcome === 'wants_photo') {
+                      chip.className = 'buyer-status-chip chip-declined';
+                      chip.textContent = 'Wants photo';
+                    } else if (att.outcome === 'wants_manager') {
+                      chip.className = 'buyer-status-chip chip-declined';
+                      chip.textContent = 'Wants manager';
+                    } else {
+                      chip.className = 'buyer-status-chip chip-declined';
+                      chip.textContent = (att.outcome || 'Completed').replace(/_/g, ' ');
+                    }
+                  } else {
+                    chip.className = 'buyer-status-chip chip-callback';
+                    chip.textContent = 'In progress…';
+                  }
+                  top.appendChild(chip);
+                } else {
+                  const btnPlay = document.createElement('button');
+                  btnPlay.type = 'button';
+                  btnPlay.className = 'btn-play-buyer';
+                  btnPlay.textContent = 'Play this buyer';
+                  btnPlay.disabled = isCallInProgress;
+                  btnPlay.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    startCallForItem(decision.item_key, b.buyer_id);
+                  });
+                  top.appendChild(btnPlay);
+                }
+
                 bRow.appendChild(top);
 
                 // Phone row
@@ -2334,6 +2763,15 @@
                   reasonEl.className = 'buyer-reason';
                   reasonEl.textContent = b.reason;
                   bRow.appendChild(reasonEl);
+                }
+
+                // Closed now note
+                if (b.open_now === false) {
+                  const closedNote = document.createElement('div');
+                  closedNote.style.fontSize = '0.72rem';
+                  closedNote.style.color = '#f87171';
+                  closedNote.textContent = 'Closed now (demo allows calling)';
+                  bRow.appendChild(closedNote);
                 }
 
                 // Google Maps link
@@ -2608,7 +3046,7 @@
 
     async function triggerDecide() {
       if (!currentInspection || !currentInspection.inspection_id) return;
-      const code = inspectAccessCodeEl.value.trim() || accessCodeEl.value.trim();
+      const code = inspectAccessCodeEl.value.trim();
       if (!code) return;
 
       const thisRequestId = ++decideRequestCounter;
@@ -2643,6 +3081,7 @@
           currentLadderResult = await res.json();
           decideError.style.display = 'none';
           decideError.textContent = '';
+          loadBatchesForBranch();
         } else {
           currentLadderResult = null;
           const errData = await res.json().catch(() => ({}));
@@ -2673,7 +3112,7 @@
     });
 
     async function handleInspect() {
-      const code = inspectAccessCodeEl.value.trim() || accessCodeEl.value.trim();
+      const code = inspectAccessCodeEl.value.trim();
       if (!code) {
         inspectError.textContent = 'Please enter the Demo Access Code.';
         inspectError.style.display = 'block';
@@ -2682,7 +3121,6 @@
       }
       setStoredItem('lc_code', code);
       inspectAccessCodeEl.value = code;
-      accessCodeEl.value = code;
 
       let photoFile = null;
       let displayUrl = null;
@@ -2768,7 +3206,7 @@
     btnInspect.addEventListener('click', handleInspect);
 
     /* =========================================================================
-       SECTION 2: Voice Negotiator Script (Unchanged functionality)
+       SECTION 2: Live Call Orchestrator (Milestone 6B Step 7)
        ========================================================================= */
 
     let ws = null;
@@ -2778,29 +3216,26 @@
     let playbackNode = null;
     let retryCount = 0;
 
-    const accessCodeEl = document.getElementById('accessCode');
-    const scenarioSelect = document.getElementById('scenarioSelect');
-    const btnStart = document.getElementById('btnStart');
+    const callBuyerName = document.getElementById('callBuyerName');
+    const callItemQty = document.getElementById('callItemQty');
+    const callOpeningQuote = document.getElementById('callOpeningQuote');
+    const callFloorPrice = document.getElementById('callFloorPrice');
+    const callPickupWindow = document.getElementById('callPickupWindow');
     const btnHangup = document.getElementById('btnHangup');
     const statusBadge = document.getElementById('statusBadge');
     const statusText = document.getElementById('statusText');
     const transcript = document.getElementById('transcript');
     const resultCard = document.getElementById('resultCard');
     const resultContent = document.getElementById('resultContent');
+    const resultNextAction = document.getElementById('resultNextAction');
 
-    // Sync access codes safely
+    // Access code memory on the single inspectAccessCodeEl field
     const savedCode = getStoredItem('lc_code', '');
     if (savedCode) {
-      accessCodeEl.value = savedCode;
       inspectAccessCodeEl.value = savedCode;
     }
     inspectAccessCodeEl.addEventListener('input', () => {
-      accessCodeEl.value = inspectAccessCodeEl.value;
       setStoredItem('lc_code', inspectAccessCodeEl.value.trim());
-    });
-    accessCodeEl.addEventListener('input', () => {
-      inspectAccessCodeEl.value = accessCodeEl.value;
-      setStoredItem('lc_code', accessCodeEl.value.trim());
     });
 
     function setStatus(text, type = '') {
@@ -2833,42 +3268,132 @@
       transcript.scrollTop = transcript.scrollHeight;
     }
 
-    async function startCall() {
-      const code = accessCodeEl.value.trim();
+    function getNextStepTargetLabel(batch) {
+      if (batch && batch.plans && batch.step_index + 1 < batch.plans.length) {
+        const nextPlan = batch.plans[batch.step_index + 1];
+        if (nextPlan.step === 'donate') return 'charities';
+        if (nextPlan.step === 'animal_feed') return 'cattle farms';
+        return nextPlan.step.replace(/_/g, ' ');
+      }
+      return 'next step';
+    }
+
+    async function advanceBatchStep(batchId, itemKey) {
+      const code = inspectAccessCodeEl.value.trim();
       if (!code) {
-        alert('Please enter the Demo Access Code.');
-        accessCodeEl.focus();
+        alert('Please enter your Demo Access Code first.');
+        inspectAccessCodeEl.focus();
+        return;
+      }
+      try {
+        const res = await fetch(`/demo/batches/${encodeURIComponent(batchId)}/next-step`, {
+          method: 'POST',
+          headers: {
+            'X-Demo-Access-Code': code
+          }
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          currentBatchesMap[itemKey] = updated;
+          await fetchScoutBuyers(itemKey, false);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          alert(errData.detail || 'Failed to advance step');
+        }
+      } catch (e) {
+        alert(e.message || 'Failed to advance step');
+      }
+    }
+
+    async function startCallForItem(itemKey, buyerId) {
+      const code = inspectAccessCodeEl.value.trim();
+      if (!code) {
+        alert('Please enter your Demo Access Code first.');
+        inspectAccessCodeEl.focus();
         return;
       }
       setStoredItem('lc_code', code);
 
-      btnStart.disabled = true;
+      if (!currentInspection || !currentInspection.inspection_id) {
+        alert('Please run a shelf inspection first.');
+        return;
+      }
+
+      const branchId = branchSelect.value || 'branch_jt';
+      const qty = quantityInputs[itemKey] != null ? quantityInputs[itemKey] : 20;
+      const staffChecked = !!staffCheckedMap[itemKey];
+
+      isCallInProgress = true;
+      renderResults(currentInspection, currentDisplayUrl);
+
+      const liveSection = document.getElementById('section-live-call');
+      if (liveSection) {
+        liveSection.scrollIntoView({ behavior: 'smooth' });
+      }
+
       btnHangup.disabled = false;
       setStatus('Starting session...', 'busy');
-      transcript.innerHTML = '';
+      transcript.replaceChildren();
       resultCard.classList.remove('visible');
 
       try {
-        const scenarioId = scenarioSelect.value;
-        const res = await fetch('/demo/sessions', {
+        const payload = {
+          inspection_id: currentInspection.inspection_id,
+          item_key: itemKey,
+          branch_id: branchId,
+          quantity: qty,
+          staff_checked: staffChecked,
+          buyer_id: buyerId || null
+        };
+
+        const res = await fetch('/demo/calls', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-Demo-Access-Code': code
           },
-          body: JSON.stringify({ scenario_id: scenarioId })
+          body: JSON.stringify(payload)
         });
 
         if (res.status === 401) {
           throw new Error('Invalid access code.');
         } else if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.detail || errData.error || 'Failed to initialize session');
+          throw new Error(errData.detail || errData.error || `Failed to create call (${res.status})`);
         }
 
-        const session = await res.json();
-        const { ws_url, token } = session;
+        const data = await res.json();
+        currentActiveCall = {
+          itemKey: itemKey,
+          batchId: data.batch_id,
+          callId: data.call_id,
+          buyerId: data.buyer ? data.buyer.buyer_id : buyerId
+        };
 
+        // Populate Call info panel
+        const bName = data.buyer ? data.buyer.name : 'Buyer';
+        callBuyerName.textContent = `${bName} (from Google Maps)`;
+
+        const itmName = data.deal ? data.deal.item : 'Produce';
+        const dealQ = data.deal ? data.deal.quantity : qty;
+        const dealU = data.deal ? data.deal.unit : 'kg';
+        callItemQty.textContent = `${itmName} · ${dealQ} ${dealU}`;
+
+        if (data.deal && data.deal.opening != null) {
+          callOpeningQuote.textContent = `Rs ${data.deal.opening} / ${dealU}`;
+        } else {
+          callOpeningQuote.textContent = 'Free donation';
+        }
+
+        if (data.deal && data.deal.floor != null) {
+          callFloorPrice.textContent = `floor Rs ${data.deal.floor} / ${dealU} (never told to the AI)`;
+        } else {
+          callFloorPrice.textContent = 'None (donation)';
+        }
+
+        callPickupWindow.textContent = (data.deal && data.deal.pickup_window) ? data.deal.pickup_window : 'Today';
+
+        // Initialize AudioContext and microphone in order
         audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
         await audioCtx.audioWorklet.addModule('/static/capture-worklet.js');
         await audioCtx.audioWorklet.addModule('/static/playback-worklet.js');
@@ -2884,13 +3409,14 @@
         micSource.connect(captureNode);
 
         setStatus('Connecting audio...', 'busy');
-        connectWebSocket(ws_url, token);
+        connectWebSocket(data.ws_url, data.token);
 
       } catch (err) {
         alert(err.message);
         setStatus('Ready');
-        btnStart.disabled = false;
         btnHangup.disabled = true;
+        isCallInProgress = false;
+        renderResults(currentInspection, currentDisplayUrl);
       }
     }
 
@@ -2949,9 +3475,8 @@
         }
       };
 
-      ws.onclose = (event) => {
+      ws.onclose = async (event) => {
         cleanupAudio();
-        btnStart.disabled = false;
         btnHangup.disabled = true;
 
         if (event.code === 4401) {
@@ -2966,12 +3491,181 @@
           setStatus('Call Ended');
           appendNotice(`Call closed (Code: ${event.code})`);
         }
+
+        if (currentActiveCall && currentActiveCall.batchId) {
+          await pollBatchUntilCompleted(currentActiveCall.batchId, currentActiveCall.callId);
+        } else {
+          isCallInProgress = false;
+          if (currentInspection) renderResults(currentInspection, currentDisplayUrl);
+        }
       };
 
       ws.onerror = () => {
         cleanupAudio();
         setStatus('Connection Error');
       };
+    }
+
+    async function pollBatchUntilCompleted(batchId, callId) {
+      const code = inspectAccessCodeEl.value.trim();
+      setStatus('Saving call result...', 'busy');
+      let attemptFound = false;
+      let batchData = null;
+
+      for (let i = 0; i < 8; i++) {
+        await new Promise(r => setTimeout(r, 1000));
+        try {
+          const res = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
+            headers: code ? { 'X-Demo-Access-Code': code } : {}
+          });
+          if (res.ok) {
+            batchData = await res.json();
+            const att = (batchData.attempts || []).find(a => a.call_id === callId);
+            if (att && att.call_status === 'completed') {
+              attemptFound = true;
+              break;
+            }
+          }
+        } catch (e) {
+          console.error('Error polling batch:', e);
+        }
+      }
+
+      isCallInProgress = false;
+      setStatus('Call Ended');
+
+      if (currentActiveCall && currentActiveCall.itemKey) {
+        if (batchData) {
+          currentBatchesMap[currentActiveCall.itemKey] = batchData;
+        }
+        renderResults(currentInspection, currentDisplayUrl);
+      }
+
+      if (attemptFound && batchData) {
+        renderCallResult(batchData, callId);
+      } else {
+        renderCallPendingResult(batchId, callId);
+      }
+    }
+
+    function renderCallResult(batchData, callId) {
+      resultCard.classList.add('visible');
+      resultContent.replaceChildren();
+      resultNextAction.replaceChildren();
+
+      const attempt = (batchData.attempts || []).find(a => a.call_id === callId) ||
+        (batchData.attempts && batchData.attempts[batchData.attempts.length - 1]);
+
+      if (attempt) {
+        const summary = document.createElement('div');
+        if (attempt.outcome === 'deal' || attempt.outcome === 'partial_deal') {
+          summary.textContent = `Deal agreed: ${attempt.agreed_quantity || 0} ${batchData.unit || 'kg'} @ Rs ${attempt.agreed_price || '—'} / ${batchData.unit || 'kg'}`;
+        } else if (attempt.outcome === 'declined') {
+          summary.textContent = 'Outcome: Declined by buyer';
+        } else if (attempt.outcome === 'call_back') {
+          summary.textContent = `Outcome: Call back ${attempt.callback_at ? 'at ' + attempt.callback_at : ''}`;
+        } else if (attempt.outcome === 'no_answer') {
+          summary.textContent = 'Outcome: No answer';
+        } else if (attempt.outcome === 'do_not_call') {
+          summary.textContent = 'Outcome: Buyer asked not to be called';
+        } else {
+          summary.textContent = `Outcome: ${(attempt.outcome || 'Completed').replace(/_/g, ' ')}`;
+        }
+        resultContent.appendChild(summary);
+
+        const stockInfo = document.createElement('div');
+        stockInfo.style.marginTop = '4px';
+        stockInfo.style.fontSize = '0.8rem';
+        stockInfo.style.color = '#94a3b8';
+        stockInfo.textContent = `Remaining batch stock: ${batchData.remaining_quantity} of ${batchData.total_quantity} ${batchData.unit || 'kg'}`;
+        resultContent.appendChild(stockInfo);
+      }
+
+      const act = batchData.next_action;
+      if (!act) return;
+
+      if (act.kind === 'call') {
+        const btnNext = document.createElement('button');
+        btnNext.type = 'button';
+        btnNext.className = 'btn-next-action';
+        const rank = act.buyer_rank || (batchData.attempts.length + 1);
+        btnNext.textContent = `Next buyer (#${rank})`;
+        btnNext.disabled = isCallInProgress;
+        btnNext.addEventListener('click', () => {
+          const scout = currentActiveCall ? scoutResultsMap[currentActiveCall.itemKey] : null;
+          let targetBuyerId = null;
+          if (scout && scout.buyers) {
+            const b = scout.buyers.find(x => x.rank === rank) || scout.buyers[rank - 1];
+            if (b) targetBuyerId = b.buyer_id;
+          }
+          startCallForItem(currentActiveCall.itemKey, targetBuyerId);
+        });
+        resultNextAction.appendChild(btnNext);
+      } else if (act.kind === 'next_step') {
+        const btnStep = document.createElement('button');
+        btnStep.type = 'button';
+        btnStep.className = 'btn-next-action btn-next-step';
+        const label = getNextStepTargetLabel(batchData);
+        btnStep.textContent = `Next step: find ${label}`;
+        btnStep.disabled = isCallInProgress;
+        btnStep.addEventListener('click', () => {
+          advanceBatchStep(batchData.batch_id, currentActiveCall.itemKey);
+        });
+        resultNextAction.appendChild(btnStep);
+      } else if (act.kind === 'sold_out') {
+        const chip = document.createElement('span');
+        chip.className = 'next-action-chip chip-sold';
+        chip.textContent = 'Sold out ✓';
+        resultNextAction.appendChild(chip);
+      } else if (act.kind === 'compost') {
+        const chip = document.createElement('span');
+        chip.className = 'next-action-chip chip-compost';
+        chip.textContent = 'Compost: needs manager approval';
+        resultNextAction.appendChild(chip);
+      } else if (act.kind === 'no_buyers') {
+        const chip = document.createElement('span');
+        chip.className = 'next-action-chip chip-no-buyer';
+        chip.textContent = 'No more buyers nearby';
+        resultNextAction.appendChild(chip);
+      } else if (act.kind === 'needs_search') {
+        const btnSearch = document.createElement('button');
+        btnSearch.type = 'button';
+        btnSearch.className = 'btn-next-action btn-search-again';
+        btnSearch.textContent = 'Search again';
+        btnSearch.disabled = isCallInProgress;
+        btnSearch.addEventListener('click', () => {
+          fetchScoutBuyers(currentActiveCall.itemKey, true);
+        });
+        resultNextAction.appendChild(btnSearch);
+      } else if (act.kind === 'busy') {
+        const chip = document.createElement('span');
+        chip.className = 'next-action-chip chip-busy';
+        chip.textContent = 'Call in progress…';
+        const btnRef = document.createElement('button');
+        btnRef.type = 'button';
+        btnRef.className = 'btn-scout-refresh';
+        btnRef.textContent = 'Refresh';
+        btnRef.addEventListener('click', () => {
+          pollBatchUntilCompleted(batchData.batch_id, callId);
+        });
+        resultNextAction.appendChild(chip);
+        resultNextAction.appendChild(btnRef);
+      }
+    }
+
+    function renderCallPendingResult(batchId, callId) {
+      resultCard.classList.add('visible');
+      resultContent.textContent = 'Saving the call result…';
+      resultNextAction.replaceChildren();
+
+      const btnRef = document.createElement('button');
+      btnRef.type = 'button';
+      btnRef.className = 'btn-scout-refresh';
+      btnRef.textContent = 'Refresh';
+      btnRef.addEventListener('click', () => {
+        pollBatchUntilCompleted(batchId, callId);
+      });
+      resultNextAction.appendChild(btnRef);
     }
 
     function handleBusyRetry(wsUrl, token) {
@@ -2993,7 +3687,6 @@
       }
       cleanupAudio();
       setStatus('Call Ended');
-      btnStart.disabled = false;
       btnHangup.disabled = true;
     }
 
@@ -3008,7 +3701,6 @@
       }
     }
 
-    btnStart.addEventListener('click', startCall);
     btnHangup.addEventListener('click', hangup);
   </script>
 </body>

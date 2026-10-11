@@ -11,7 +11,8 @@ from pydantic import AwareDatetime
 
 from lastcall_api.ladder.engine import step_prices
 from lastcall_api.scout.rank import sanitise_name
-from lastcall_shared.logging_utils import mask_phone
+from lastcall_api.scout.scout import ScoutNotApplicable
+from lastcall_shared.buyer_keys import mask_phone
 from lastcall_shared.models import (
     BatchRecord,
     Branch,
@@ -31,10 +32,6 @@ from lastcall_shared.models import (
 )
 
 PICKUP_HOURS = 4.0
-
-
-class ScoutNotApplicable(Exception):
-    """Raised when an item's decision step is not a buyer-facing Scout step."""
 
 
 class NeedsPrice(Exception):

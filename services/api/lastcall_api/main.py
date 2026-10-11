@@ -27,10 +27,17 @@ from lastcall_api.scout.scout import (
     ScoutTarget,
     run_scout,
 )
+from lastcall_api.orchestration.handoff import (
+    NeedsPrice,
+    build_call_record,
+    build_step_plans,
+    initial_quantity,
+)
+from lastcall_api.orchestration.loop import next_action
 from lastcall_shared.firestore_store import FirestoreStore
 from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.marts.loader import load_mart_rules
-from lastcall_shared.scenarios.loader import build_call, list_scenarios, load_scenario
+from lastcall_shared.models import BatchAttempt, BatchRecord, MartRules
 from lastcall_shared.session_tokens import mint
 from lastcall_shared.store import CallStore
 
@@ -146,60 +153,218 @@ async def get_demo_page():
     return FileResponse(html_path)
 
 
-@app.get("/demo/scenarios")
-async def get_demo_scenarios(x_demo_access_code: str | None = Header(default=None)):
-    """Returns available bargaining scenarios for the human tester, protected by access code."""
-    if not _verify_access_code(x_demo_access_code):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access code")
-
-    scenario_slugs = list_scenarios()
-    scenarios_data = []
-    for slug in scenario_slugs:
-        try:
-            data = load_scenario(slug)
-            scenarios_data.append(data)
-        except Exception:
-            pass
-    return {"scenarios": scenarios_data}
+BATCH_ID_REGEX = re.compile(r"^[a-z0-9_-]{1,60}__[a-z0-9_]{1,60}__[a-z0-9_]{1,30}$")
 
 
-class CreateSessionRequest(BaseModel):
-    scenario_id: str
+class CreateCallRequest(BaseModel):
+    inspection_id: str
+    item_key: str
+    branch_id: str | None = None
+    buyer_id: str | None = None
+    quantity: float | None = None
+    staff_checked: bool = False
 
 
-@app.post("/demo/sessions")
-async def create_demo_session(
-    req: CreateSessionRequest,
+async def _build_batch_response(
+    batch: BatchRecord,
+    store: CallStore,
+    rules: MartRules,
+    now_pkt: datetime,
+) -> dict:
+    scout = await store.get_scout_result(batch.batch_id)
+    scout_buyers = {b.buyer_id: b for b in scout.buyers} if scout else {}
+
+    attempt_call_ids = [a.call_id for a in batch.attempts]
+    calls = await store.get_calls(attempt_call_ids) if attempt_call_ids else {}
+    call_statuses = {cid: c.status for cid, c in calls.items()}
+
+    act = next_action(batch, scout, call_statuses, rules, now_pkt)
+
+    attempts_data = []
+    for a in batch.attempts:
+        call = calls.get(a.call_id)
+        candidate = scout_buyers.get(a.buyer_id)
+        name = candidate.name if candidate else f"Buyer #{a.rank}"
+        call_status = call.status if call else "pending"
+        res = call.result if call else None
+        attempts_data.append({
+            "call_id": a.call_id,
+            "buyer_id": a.buyer_id,
+            "name": name,
+            "rank": a.rank,
+            "type": a.buyer_type,
+            "step": a.step,
+            "call_status": call_status,
+            "outcome": res.outcome if res else None,
+            "agreed_price": res.agreed_price_per_unit if res else None,
+            "agreed_quantity": res.agreed_quantity if res else None,
+            "pickup_time": res.pickup_time.isoformat() if (res and res.pickup_time) else None,
+            "callback_at": res.callback_at.isoformat() if (res and res.callback_at) else None,
+        })
+
+    outside = False
+    if rules.calling_hours:
+        ch_tz = ZoneInfo(rules.calling_hours.timezone)
+        now_ch_time = now_pkt.astimezone(ch_tz).time()
+        outside = not (rules.calling_hours.start <= now_ch_time < rules.calling_hours.end)
+
+    current_step = batch.plans[batch.step_index].step if batch.step_index < len(batch.plans) else None
+
+    return {
+        "batch_id": batch.batch_id,
+        "remaining_quantity": batch.remaining_quantity,
+        "total_quantity": batch.total_quantity,
+        "unit": batch.unit,
+        "step_index": batch.step_index,
+        "current_step": current_step,
+        "plans": [p.model_dump() for p in batch.plans],
+        "attempts": attempts_data,
+        "next_action": {
+            "kind": act.kind,
+            "step": act.step,
+            "buyer_rank": act.buyer.rank if act.buyer else None,
+        },
+        "outside_calling_hours": outside,
+    }
+
+
+@app.post("/demo/calls")
+async def demo_create_call(
+    body: CreateCallRequest,
     request: Request,
     x_demo_access_code: str | None = Header(default=None),
 ):
-    """Initializes a new demo bargaining session, enforcing access code, per-IP limit, and daily cap."""
-    # 1. Access code check
+    # 1. Access code
     if not _verify_access_code(x_demo_access_code):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access code")
 
-    # 2. Per-IP rate limiting (configurable via IP_RATE_LIMIT_PER_HOUR, default 20 sessions per hour)
+    # 2. Validation
+    if not body.inspection_id or not re.match(r"^[a-z0-9_-]{1,60}$", body.inspection_id.strip()):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid inspection_id")
+    if not body.item_key or not re.match(r"^[a-z0-9_]{1,60}$", body.item_key.strip()):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid item_key")
+    if body.branch_id is not None and not re.match(r"^[a-z0-9_]{1,30}$", body.branch_id.strip()):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid branch_id")
+    if body.buyer_id is not None and not re.match(r"^places:[A-Za-z0-9_-]{1,300}$", body.buyer_id.strip()):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid buyer_id")
+    if body.quantity is not None and not (0 < body.quantity <= 1000):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="quantity must be > 0 and <= 1000")
+
+    # 3. IP bucket "call"
     settings = get_settings()
     ip_limit = int(os.getenv("IP_RATE_LIMIT_PER_HOUR", str(settings.IP_RATE_LIMIT_PER_HOUR)))
     await _check_ip_limit(
         request,
-        bucket="session",
+        bucket="call",
         limit=ip_limit,
-        detail=f"Hourly IP limit reached (max {ip_limit} sessions per hour)",
+        detail=f"Hourly IP limit reached (max {ip_limit} calls per hour)",
     )
 
-    # 3. Build and validate scenario call first (L3)
-    now_pkt = datetime.now(PKT)
-    try:
-        call, batch = build_call(req.scenario_id, now=now_pkt)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid scenario: {str(exc)}",
-        )
-
-    # 4. Daily session cap check (only incremented if scenario is valid)
+    # 4. Lookups
     store = _get_store()
+    ladder_result = await store.get_decisions(body.inspection_id.strip())
+    if not ladder_result or ladder_result.mart_id != "demo_mart":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Decisions not found")
+    decision = next((d for d in ladder_result.decisions if d.item_key == body.item_key.strip()), None)
+    if not decision:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Decision not found")
+
+    inspection = await store.get_inspection(body.inspection_id.strip())
+    if not inspection or inspection.mart_id != "demo_mart":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inspection not found")
+    item = next((it for it in inspection.items if it.item_key == body.item_key.strip()), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inspection item not found")
+
+    # 5. Branch & batch_id
+    rules = load_mart_rules("demo_mart")
+    try:
+        branch = rules.branch(body.branch_id.strip() if body.branch_id else None)
+    except KeyError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown branch_id '{body.branch_id}'")
+
+    batch_id = f"{body.inspection_id.strip()}__{body.item_key.strip()}__{branch.branch_id}"
+
+    # 6. Batch handling
+    now_pkt = datetime.now(PKT)
+    batch = await store.get_batch(batch_id)
+    if batch is None:
+        try:
+            plans, then_compost = build_step_plans(decision, rules)
+        except ScoutNotApplicable:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This item stays in store")
+        except NeedsPrice:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Enter the shelf price first")
+
+        if decision.on_hold and not body.staff_checked:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Waiting for staff check")
+
+        if body.quantity is not None:
+            qty = float(body.quantity)
+            qty_confirmed = True
+        else:
+            init_qty = initial_quantity(item)
+            if init_qty is None:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Enter the quantity")
+            qty = float(init_qty)
+            qty_confirmed = False
+
+        batch = BatchRecord(
+            batch_id=batch_id,
+            mart_id="demo_mart",
+            inspection_id=body.inspection_id.strip(),
+            item_key=body.item_key.strip(),
+            item=decision.name,
+            unit=decision.unit,
+            total_quantity=qty,
+            remaining_quantity=qty,
+            branch_id=branch.branch_id,
+            plans=plans,
+            then_compost=then_compost,
+            quantity_confirmed=qty_confirmed,
+            created_at=now_pkt,
+        )
+        batch = await store.create_batch(batch)
+
+    # 7. Scout result, attempts calls, next_action
+    scout = await store.get_scout_result(batch_id)
+    attempt_call_ids = [a.call_id for a in batch.attempts]
+    calls = await store.get_calls(attempt_call_ids) if attempt_call_ids else {}
+    call_statuses = {cid: c.status for cid, c in calls.items()}
+
+    action = next_action(batch, scout, call_statuses, rules, now_pkt)
+    if action.kind != "call":
+        detail_msgs = {
+            "sold": "This item is sold out",
+            "busy": "A call is already in progress for this item",
+            "needs_search": "Buyer search needed for this step",
+            "next_step": "Calls exhausted for this step; proceed to next step",
+            "compost_approval": "No buyers found; manager approval needed for compost",
+            "no_buyer": "No buyers found for this item",
+        }
+        msg = detail_msgs.get(action.kind, f"No call available ({action.kind})")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=msg)
+
+    # Determine candidate
+    if body.buyer_id is not None:
+        candidates = scout.buyers if scout else []
+        candidate = next((c for c in candidates if c.buyer_id == body.buyer_id.strip()), None)
+        if not candidate:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Buyer not on search list")
+        current_plan = batch.plans[batch.step_index]
+        called_in_step = {
+            a.buyer_id
+            for a in batch.attempts
+            if a.step == current_plan.step and call_statuses.get(a.call_id) in ("in_progress", "completed")
+        }
+        if body.buyer_id.strip() in called_in_step:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Buyer already called in this step")
+    else:
+        candidate = action.buyer
+        if not candidate:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="No buyer available")
+
+    # 8. Daily session cap check
     date_str = now_pkt.strftime("%Y-%m-%d")
     daily_cap = int(os.getenv("DEMO_DAILY_SESSION_CAP", "50"))
     allowed = await store.incr_daily_sessions(date_str, daily_cap)
@@ -210,21 +375,137 @@ async def create_demo_session(
             detail="Daily demo session cap reached",
         )
 
-    await store.create_call(call, batch)
+    # 9. Build record, create call, add attempt, mint token
+    plan = batch.plans[batch.step_index]
+    call_rec = build_call_record(
+        batch=batch,
+        plan=plan,
+        candidate=candidate,
+        decision=decision,
+        rules=rules,
+        branch=branch,
+        now=now_pkt,
+    )
+    await store.create_call(call_rec, batch)
 
-    # 5. Mint short-lived session token (120s)
-    settings = get_settings()
+    attempt = BatchAttempt(
+        call_id=call_rec.call_id,
+        buyer_id=candidate.buyer_id,
+        rank=candidate.rank,
+        buyer_type=candidate.buyer_type,
+        step=plan.step,
+        created_at=now_pkt,
+    )
+    await store.add_batch_attempt(batch.batch_id, attempt)
+
     signing_key = settings.APP_SIGNING_KEY.get_secret_value() if settings.APP_SIGNING_KEY else ""
-    token = mint(call_id=call.call_id, nonce=call.session_nonce, key=signing_key, ttl=120, now=now_pkt)
-
+    token = mint(call_id=call_rec.call_id, nonce=call_rec.session_nonce, key=signing_key, ttl=120, now=now_pkt)
     voice_ws_url = os.getenv("VOICE_WS_URL", "wss://lastcall-voice-dev.run.app/ws/call")
-    logger.info("demo_session_created", extra={"call_id": call.call_id, "scenario": req.scenario_id})
+
+    outside = False
+    if rules.calling_hours:
+        ch_tz = ZoneInfo(rules.calling_hours.timezone)
+        now_ch_time = now_pkt.astimezone(ch_tz).time()
+        outside = not (rules.calling_hours.start <= now_ch_time < rules.calling_hours.end)
+
+    logger.info(
+        "demo_call_created",
+        extra={
+            "call_id": call_rec.call_id,
+            "batch_id": batch.batch_id,
+            "step": plan.step,
+            "rank": candidate.rank,
+        },
+    )
 
     return {
-        "call_id": call.call_id,
+        "call_id": call_rec.call_id,
         "ws_url": voice_ws_url,
         "token": token,
+        "batch_id": batch.batch_id,
+        "buyer": candidate.public_view(),
+        "deal": {
+            "item": call_rec.brief.item,
+            "quantity": call_rec.brief.quantity,
+            "unit": call_rec.brief.quantity_unit,
+            "deal_type": call_rec.brief.deal_type,
+            "opening": call_rec.brief.opening_price_per_unit,
+            "floor": call_rec.brief.floor_price_per_unit,
+            "pickup_window": call_rec.brief.pickup_window,
+            "pickup_deadline": call_rec.brief.pickup_deadline.isoformat(),
+            "mart_name": call_rec.brief.mart.name,
+        },
+        "notes": {
+            "buyer_closed_now": bool(candidate.open_now is False),
+            "outside_calling_hours": outside,
+        },
     }
+
+
+@app.get("/demo/batches/{batch_id}")
+async def get_demo_batch(
+    batch_id: str,
+    x_demo_access_code: str | None = Header(default=None),
+):
+    if not _verify_access_code(x_demo_access_code):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access code")
+
+    if not BATCH_ID_REGEX.match(batch_id.strip()):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid batch_id format")
+
+    store = _get_store()
+    batch = await store.get_batch(batch_id.strip())
+    if not batch or batch.mart_id != "demo_mart":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
+
+    rules = load_mart_rules("demo_mart")
+    now_pkt = datetime.now(PKT)
+    return await _build_batch_response(batch, store, rules, now_pkt)
+
+
+@app.post("/demo/batches/{batch_id}/next-step")
+async def demo_batch_next_step(
+    batch_id: str,
+    x_demo_access_code: str | None = Header(default=None),
+):
+    if not _verify_access_code(x_demo_access_code):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access code")
+
+    if not BATCH_ID_REGEX.match(batch_id.strip()):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid batch_id format")
+
+    store = _get_store()
+    batch = await store.get_batch(batch_id.strip())
+    if not batch or batch.mart_id != "demo_mart":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
+
+    scout = await store.get_scout_result(batch_id.strip())
+    attempt_call_ids = [a.call_id for a in batch.attempts]
+    calls = await store.get_calls(attempt_call_ids) if attempt_call_ids else {}
+    call_statuses = {cid: c.status for cid, c in calls.items()}
+
+    now_pkt = datetime.now(PKT)
+    rules = load_mart_rules("demo_mart")
+    act = next_action(batch, scout, call_statuses, rules, now_pkt)
+
+    if act.kind != "next_step":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot advance step: next action is '{act.kind}'",
+        )
+
+    advanced = await store.advance_batch_step(batch_id.strip(), from_index=batch.step_index)
+    if not advanced:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Could not advance step; concurrent update",
+        )
+
+    updated_batch = await store.get_batch(batch_id.strip())
+    if not updated_batch:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
+
+    return await _build_batch_response(updated_batch, store, rules, now_pkt)
 
 
 @app.get("/demo/samples")
@@ -547,20 +828,33 @@ async def demo_scout(
 
     # 5. Target and branch resolution
     try:
-        target = ScoutTarget.from_decision(decision, body.inspection_id)
-    except ScoutNotApplicable:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This item stays in store; no buyers needed",
-        )
-
-    try:
         branch = rules.branch(body.branch_id)
     except KeyError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Buyer search isn't set up for this mart",
         )
+
+    batch_id = f"{body.inspection_id}__{body.item_key}__{branch.branch_id}"
+    batch = await store.get_batch(batch_id)
+    if batch is not None and batch.step_index < len(batch.plans):
+        current_plan = batch.plans[batch.step_index]
+        target = ScoutTarget(
+            inspection_id=body.inspection_id,
+            item_key=body.item_key,
+            item=decision.name,
+            condition=decision.buyer_condition or "",
+            step=current_plan.step,
+            buyer_types=tuple(current_plan.buyer_types),
+        )
+    else:
+        try:
+            target = ScoutTarget.from_decision(decision, body.inspection_id)
+        except ScoutNotApplicable:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This item stays in store; no buyers needed",
+            )
 
     # 6. Reuse within 1h (freshness check)
     key = f"{body.inspection_id}__{body.item_key}__{branch.branch_id}"

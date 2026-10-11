@@ -14,6 +14,7 @@ from lastcall_api.orchestration.handoff import (
     time_words,
 )
 from lastcall_api.orchestration.loop import NextAction, next_action
+from lastcall_shared import buyer_keys
 from lastcall_shared.models import (
     BatchAttempt,
     BatchRecord,
@@ -281,7 +282,7 @@ def test_build_call_record(demo_rules):
 
     # 2. Stored brief has NO full E.164 phone digits (+923001234567)
     assert "+923001234567" not in call_rec.brief.buyer.phone
-    assert "*" in call_rec.brief.buyer.phone
+    assert call_rec.brief.buyer.phone == buyer_keys.mask_phone("+923001234567")
 
     # 3. agent_view() JSON contains neither floor price nor phone digits
     view = call_rec.brief.agent_view()
@@ -498,3 +499,42 @@ def test_next_action_table_driven(demo_rules):
     b_no_buyer = b_compost.model_copy(update={"then_compost": False})
     act_no_buyer = next_action(b_no_buyer, scout_donate, {"cd": "completed"}, demo_rules, now)
     assert act_no_buyer.kind == "no_buyer"
+
+    # m1 (a): 5 completed calls in current step with buyers still on the list -> next_step
+    candidate6 = ScoutCandidate(
+        rank=6,
+        buyer_id="places:b6",
+        place_id="b6",
+        name="Buyer 6",
+        buyer_type="juice_shop",
+        phone="+923006666666",
+        distance_km=3.0,
+        open_now=True,
+        fit="likely",
+        reason="Nearby",
+    )
+    scout_with_remaining = scout_bulk.model_copy(
+        update={"buyers": [
+            ScoutCandidate(rank=i, buyer_id=f"places:b{i}", place_id=f"b{i}", name=f"Buyer {i}", buyer_type="juice_shop", phone=f"+92300111111{i}", distance_km=0.5, open_now=True, fit="likely", reason="Nearby")
+            for i in range(1, 7)
+        ]}
+    )
+    attempts_5 = [
+        BatchAttempt(call_id=f"c_{i}", buyer_id=f"places:b{i}", rank=i, buyer_type="juice_shop", step="bulk_sale", created_at=now)
+        for i in range(1, 6)
+    ]
+    statuses_5 = {f"c_{i}": "completed" for i in range(1, 6)}
+    b_5_completed = b_free.model_copy(update={"attempts": attempts_5})
+    act_5 = next_action(b_5_completed, scout_with_remaining, statuses_5, demo_rules, now)
+    assert act_5.kind == "next_step"
+    assert act_5.step == "donate"
+
+    # m1 (b): scout list for another step (donate list while on bulk_sale) -> needs_search
+    act_other_step = next_action(b_free, scout_donate, {}, demo_rules, now)
+    assert act_other_step.kind == "needs_search"
+
+    # m1 (c): empty buyer list -> next_step
+    scout_empty = scout_bulk.model_copy(update={"buyers": []})
+    act_empty = next_action(b_free, scout_empty, {}, demo_rules, now)
+    assert act_empty.kind == "next_step"
+    assert act_empty.step == "donate"
