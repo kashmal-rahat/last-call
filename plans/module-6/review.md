@@ -54,3 +54,70 @@ Method:
 - **Floor check in the brief test.** `"65" not in view_json` is a weak check on its own, but `agent_view()` drops the floor fields by construction (`extra="forbid"`), and the Module 2 floor-isolation test still passes.
 
 **Next:** fix R1, R2 and m1, run `uv run pytest`, then start 6B (Steps 6–8). No re-review is needed for these three unless a test fails.
+
+---
+
+# Round 2: review fixes and Milestone 6B code, before deploy (2026-10-11)
+
+Scope: commit `7945945`.
+
+Method:
+- read the diffs of `orchestration/handoff.py`, `test_orchestration.py`, `main.py`, `test_demo_routes.py`, and the call-flow parts of `static/index.html`
+- `uv run pytest`: **367 passed, 19 skipped**
+- `export_schemas.py` gives no diff
+
+**Verdict: the server side is correct and well tested. The page has three bugs that would break or mislead the judge flow (P1–P3), plus one smaller one (P4). Fix them, check by hand in a local run, then deploy. Don't deploy before P1–P3 are fixed.**
+
+## Round-1 fixes: verified
+- **R1:** there is now one `ScoutNotApplicable`, imported from `scout/scout.py`.
+- **R2:** `buyer_keys.mask_phone` is used, and the test compares the exact masked string.
+- **m1:** the three missing `next_action` branches are tested (5 calls used up, a list for another step, an empty list).
+
+## Endpoints: verified OK
+- **`POST /demo/calls`** follows the planned order: access code → validation → IP bucket `call` → decision and inspection lookup → branch → batch.
+  - An existing batch is used as it is.
+  - On creation it checks the step plans, the staff check and the quantity.
+  - Then `next_action`, with every other kind returning 409 in plain words, and a chosen buyer must be on the list and not already called.
+  - The daily cap is checked **last** (tested: a refusal doesn't use it up).
+  - Then the call record, `create_call`, `add_batch_attempt` and a 120 s token.
+  - The response has a masked phone only; the stored call has a masked phone, `city_style="lahore"` and a 24 h expiry (tested).
+- **`GET /demo/batches/{id}` and `POST …/next-step`:** access code, ID regex, `demo_mart` check. No phones; names come from the live scout list, else "Buyer #rank". `next-step` requires `next_step` and uses the transaction.
+- **`/demo/scout`** builds the target from the batch's current step when a batch exists (tested: after `next-step` it searches `charity`).
+- `/demo/sessions` and `/demo/scenarios` are gone, and the page has no stale references or `innerHTML`.
+- The call panel shows "(from Google Maps)". The WebSocket close handler polls the batch, as planned.
+
+## Must fix before deploy (page, `static/index.html`)
+- **P1. The page builds the wrong batch ID.**
+  - `loadBatchesForBranch` (~line 1877) and `fetchScoutBuyers` (~line 1937) use `` `${branchId}:${inspection_id}:${item_key}` ``. The server's ID is `{inspection_id}__{item_key}__{branch_id}`, and its regex rejects `:`, so both requests always return 400 and fail silently.
+  - **Effect:** after Find buyers, a branch switch or a re-render, the card never loads its batch. The called-buyer chips, "Remaining X of Y" and the next button disappear, and the card falls back to the no-batch view. It only looks right straight after a call, because the polling uses the server's `batch_id`.
+  - **Fix:** one helper, `batchIdFor(itemKey) = `${currentInspection.inspection_id}__${itemKey}__${branchSelect.value}``, used everywhere a batch ID is built.
+- **P2. The next-action kinds don't match the server.**
+  - Both renderers (~lines 2569–2583 and 3615–3629) check `sold_out`, `compost` and `no_buyers`. The server sends `sold`, `compost_approval` and `no_buyer`.
+  - **Effect:** after the last sale, the last step or an empty last step, the card shows **nothing**: no "Sold out ✓", no "Compost: needs manager approval", no "No more buyers nearby".
+  - **Fix:** use the server's names. Better still, render the action row from **one** function called from both places, so they can't drift apart again.
+- **P3. Quantity is always sent, so it is always marked "confirmed by staff", and it can be invented.**
+  - The field defaults to `Math.round(item.quantity.low)`, or **20** when `low` is 0. `startCallForItem` always sends it, falling back to 20 again.
+  - **Effect:** every batch gets `quantity_confirmed=True`, so the agent never says "taqreeban" for a photo estimate. A display with `low = 0` is offered as 20 units nobody counted, and rounding changes 2.5 dozen to 3.
+  - **Fix:**
+    - show `low` if above 0, else `high` if above 0, else an empty field (no rounding, no 20)
+    - track `quantityEdited[itemKey]`, and send `quantity` **only** when the judge changed the field; otherwise send `null` and let the server use `initial_quantity` (`quantity_confirmed=False`)
+    - with an empty field and no estimate, the server's 409 "Enter the quantity" shows as the banner
+  - Also remove the `branchSelect.value || 'branch_jt'` fallback (~line 3322). `branch_jt` doesn't exist; send the selected value, or `null` for the default.
+
+## Should fix (same pass)
+- **P4. Close codes that mean "no call happened" still poll for 8 s.**
+  - In `ws.onclose`, codes `1013` (busy, a retry is already scheduled), `4401` and `4409` also run `pollBatchUntilCompleted`. That waits 8 s and then shows "Saving the call result…" for a call that never started.
+  - With `1013` it can also re-enable the buttons while the retry connects.
+  - **Fix:** poll only for normal closes (no 4xxx code, not 1013). For `1013`, do nothing (the retry handles it). For 4401, 4409 and 4423, show the message, set `isCallInProgress=false` and re-render.
+
+## Notes (no change now)
+- **A 4423 close (lock taken) uses up a buyer.** `voice` has already set the call to `in_progress` (`start_session`) when `lock_batch` fails, and nothing marks it finished, so that buyer counts as called. This was already in Module 2. It only happens when two calls race for the same batch, which the endpoint's `busy` check makes rare. Record it for Module 9.
+- `/demo/calls` uses `^[a-z0-9_-]{1,60}$` for `inspection_id` rather than Module 4's `^insp_[a-z0-9_]{1,80}$`. Real IDs (`insp_YYYYMMDD_HHMMSS_xxxxxx`, 27 characters) pass, so it's fine as it is.
+
+## Before deploy
+1. Fix P1–P4, then `uv run pytest`.
+2. **Check locally by hand** (the page has no automated tests). Run the API, then:
+   - inspect the overripe sample, Find buyers, then reload the batch by switching the branch away and back: the chips and "Remaining X of Y" are still there (P1)
+   - call and decline until the step is used up: the "Next step" button appears; at the last step, the final chip appears (P2)
+   - in the network tab, the first `/demo/calls` has `"quantity": null` unless you edited the field (P3)
+3. The user commits; then follow plan Step 8 (deploy `api` **and** `voice`, then the manual checks).

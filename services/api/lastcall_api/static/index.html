@@ -1733,6 +1733,7 @@
     let currentBatchesMap = {};
     let staffCheckedMap = {};
     let quantityInputs = {};
+    let quantityEdited = {};
     let isCallInProgress = false;
     let currentActiveCall = null;
 
@@ -1866,15 +1867,21 @@
 
     loadBranches();
 
+    function batchIdFor(itemKey) {
+      if (!currentInspection || !currentInspection.inspection_id || !branchSelect.value) {
+        return null;
+      }
+      return `${currentInspection.inspection_id}__${itemKey}__${branchSelect.value}`;
+    }
+
     async function loadBatchesForBranch() {
       currentBatchesMap = {};
       if (!currentInspection || !currentInspection.inspection_id) return;
-      const branchId = branchSelect.value;
-      if (!branchId) return;
       const code = inspectAccessCodeEl.value.trim();
       const items = currentInspection.items || [];
       await Promise.all(items.map(async (item) => {
-        const batchId = `${branchId}:${currentInspection.inspection_id}:${item.item_key}`;
+        const batchId = batchIdFor(item.item_key);
+        if (!batchId) return;
         try {
           const res = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
             headers: code ? { 'X-Demo-Access-Code': code } : {}
@@ -1934,15 +1941,17 @@
           const data = await res.json();
           scoutResultsMap[itemKey] = data;
           scoutErrorsMap[itemKey] = null;
-          const batchId = `${branchId}:${currentInspection.inspection_id}:${itemKey}`;
-          try {
-            const bRes = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
-              headers: { 'X-Demo-Access-Code': code }
-            });
-            if (bRes.ok) {
-              currentBatchesMap[itemKey] = await bRes.json();
-            }
-          } catch (e) {}
+          const batchId = batchIdFor(itemKey);
+          if (batchId) {
+            try {
+              const bRes = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
+                headers: { 'X-Demo-Access-Code': code }
+              });
+              if (bRes.ok) {
+                currentBatchesMap[itemKey] = await bRes.json();
+              }
+            } catch (e) {}
+          }
         } else {
           scoutResultsMap[itemKey] = null;
           const errData = await res.json().catch(() => ({}));
@@ -2150,6 +2159,100 @@
       const votes = decision.profile_votes || 5;
       const uncText = formatUncertainFields(decision.profile_uncertain_fields);
       return `Produce profile: ${pName} · Gemini, ${votes} votes · ${uncText}`;
+    }
+
+    function getNextStepTargetLabel(batch) {
+      if (batch && batch.plans && batch.step_index + 1 < batch.plans.length) {
+        const nextPlan = batch.plans[batch.step_index + 1];
+        if (nextPlan.step === 'donate') return 'charities';
+        if (nextPlan.step === 'animal_feed') return 'cattle farms';
+        return nextPlan.step.replace(/_/g, ' ');
+      }
+      return 'next step';
+    }
+
+    function renderNextActionRow(container, batch, itemKey, buyers = []) {
+      container.replaceChildren();
+
+      if (batch && batch.next_action) {
+        const act = batch.next_action;
+        if (act.kind === 'call') {
+          const rank = act.buyer_rank || ((batch.attempts ? batch.attempts.length : 0) + 1);
+          const targetB = buyers.find(x => x.rank === rank) || buyers[rank - 1];
+          const bId = targetB ? targetB.buyer_id : null;
+          const bName = targetB ? targetB.name : '';
+          const btnCall = document.createElement('button');
+          btnCall.type = 'button';
+          btnCall.className = 'btn-start-calling';
+          btnCall.textContent = (batch.attempts && batch.attempts.length > 0)
+            ? `Next buyer (#${rank}${bName ? ' ' + bName : ''})`
+            : `Start calling #${rank}${bName ? ' ' + bName : ''}`;
+          btnCall.disabled = isCallInProgress;
+          btnCall.addEventListener('click', () => {
+            startCallForItem(itemKey, bId);
+          });
+          container.appendChild(btnCall);
+        } else if (act.kind === 'next_step') {
+          const btnStep = document.createElement('button');
+          btnStep.type = 'button';
+          btnStep.className = 'btn-next-action btn-next-step';
+          const label = getNextStepTargetLabel(batch);
+          btnStep.textContent = `Next step: find ${label}`;
+          btnStep.disabled = isCallInProgress;
+          btnStep.addEventListener('click', () => {
+            advanceBatchStep(batch.batch_id, itemKey);
+          });
+          container.appendChild(btnStep);
+        } else if (act.kind === 'sold') {
+          const chip = document.createElement('span');
+          chip.className = 'next-action-chip chip-sold';
+          chip.textContent = 'Sold out ✓';
+          container.appendChild(chip);
+        } else if (act.kind === 'compost_approval') {
+          const chip = document.createElement('span');
+          chip.className = 'next-action-chip chip-compost';
+          chip.textContent = 'Compost: needs manager approval';
+          container.appendChild(chip);
+        } else if (act.kind === 'no_buyer') {
+          const chip = document.createElement('span');
+          chip.className = 'next-action-chip chip-no-buyer';
+          chip.textContent = 'No more buyers nearby';
+          container.appendChild(chip);
+        } else if (act.kind === 'needs_search') {
+          const btnSearch = document.createElement('button');
+          btnSearch.type = 'button';
+          btnSearch.className = 'btn-next-action btn-search-again';
+          btnSearch.textContent = 'Search again';
+          btnSearch.disabled = isCallInProgress;
+          btnSearch.addEventListener('click', () => {
+            fetchScoutBuyers(itemKey, true);
+          });
+          container.appendChild(btnSearch);
+        } else if (act.kind === 'busy') {
+          const chip = document.createElement('span');
+          chip.className = 'next-action-chip chip-busy';
+          chip.textContent = 'Call in progress…';
+          const btnRef = document.createElement('button');
+          btnRef.type = 'button';
+          btnRef.className = 'btn-scout-refresh';
+          btnRef.textContent = 'Refresh';
+          btnRef.addEventListener('click', () => {
+            loadBatchesForBranch();
+          });
+          container.appendChild(chip);
+          container.appendChild(btnRef);
+        }
+      } else if (buyers && buyers.length > 0) {
+        const btnCall = document.createElement('button');
+        btnCall.type = 'button';
+        btnCall.className = 'btn-start-calling';
+        btnCall.textContent = `Start calling #1 ${buyers[0].name}`;
+        btnCall.disabled = isCallInProgress;
+        btnCall.addEventListener('click', () => {
+          startCallForItem(itemKey, buyers[0].buyer_id);
+        });
+        container.appendChild(btnCall);
+      }
     }
 
     // Safe card builder using textContent exclusively
@@ -2486,20 +2589,33 @@
               qtyLabel.textContent = `Batch quantity (${decision.unit || 'kg'}):`;
               const qtyInput = document.createElement('input');
               qtyInput.type = 'number';
-              qtyInput.min = '1';
-              qtyInput.max = '1000';
-              const defaultQty = quantityInputs[decision.item_key] != null
-                ? quantityInputs[decision.item_key]
-                : (item.quantity && item.quantity.low ? Math.round(item.quantity.low) : 20);
-              qtyInput.value = String(defaultQty);
-              quantityInputs[decision.item_key] = defaultQty;
+              qtyInput.min = '0.1';
+              qtyInput.step = 'any';
+
+              const low = (item.quantity && typeof item.quantity.low === 'number' && item.quantity.low > 0) ? item.quantity.low : 0;
+              const high = (item.quantity && typeof item.quantity.high === 'number' && item.quantity.high > 0) ? item.quantity.high : 0;
+              let defaultVal = '';
+              if (low > 0) {
+                defaultVal = String(low);
+              } else if (high > 0) {
+                defaultVal = String(high);
+              }
+
+              if (quantityInputs[decision.item_key] === undefined) {
+                quantityInputs[decision.item_key] = defaultVal;
+                quantityEdited[decision.item_key] = false;
+              }
+
+              qtyInput.value = quantityInputs[decision.item_key];
               qtyInput.disabled = isCallInProgress;
-              qtyInput.addEventListener('change', () => {
-                const v = parseFloat(qtyInput.value.trim());
-                if (!isNaN(v) && v > 0) {
-                  quantityInputs[decision.item_key] = v;
-                }
-              });
+
+              const onQtyChange = () => {
+                quantityInputs[decision.item_key] = qtyInput.value.trim();
+                quantityEdited[decision.item_key] = true;
+              };
+              qtyInput.addEventListener('input', onQtyChange);
+              qtyInput.addEventListener('change', onQtyChange);
+
               qtyRow.appendChild(qtyLabel);
               qtyRow.appendChild(qtyInput);
             }
@@ -2531,92 +2647,14 @@
             copyLine.textContent = 'In a real mart, the AI calls these in order on its own; here you play the buyer.';
             scoutContainer.appendChild(copyLine);
 
-            // Top action button row (Start calling #1 / Next buyer / Next step / status chips)
+            // Top action button row (rendered by shared renderNextActionRow)
             const actionRow = document.createElement('div');
             actionRow.style.display = 'flex';
             actionRow.style.flexWrap = 'wrap';
             actionRow.style.alignItems = 'center';
             actionRow.style.gap = '0.5rem';
             actionRow.style.marginTop = '0.4rem';
-
-            if (batch && batch.next_action) {
-              const act = batch.next_action;
-              if (act.kind === 'call') {
-                const rank = act.buyer_rank || (batch.attempts.length + 1);
-                const targetB = buyers.find(x => x.rank === rank) || buyers[rank - 1];
-                const bId = targetB ? targetB.buyer_id : null;
-                const bName = targetB ? targetB.name : '';
-                const btnCall = document.createElement('button');
-                btnCall.type = 'button';
-                btnCall.className = 'btn-start-calling';
-                btnCall.textContent = `Start calling #${rank} ${bName}`;
-                btnCall.disabled = isCallInProgress;
-                btnCall.addEventListener('click', () => {
-                  startCallForItem(decision.item_key, bId);
-                });
-                actionRow.appendChild(btnCall);
-              } else if (act.kind === 'next_step') {
-                const btnStep = document.createElement('button');
-                btnStep.type = 'button';
-                btnStep.className = 'btn-next-action btn-next-step';
-                const label = getNextStepTargetLabel(batch);
-                btnStep.textContent = `Next step: find ${label}`;
-                btnStep.disabled = isCallInProgress;
-                btnStep.addEventListener('click', () => {
-                  advanceBatchStep(batch.batch_id, decision.item_key);
-                });
-                actionRow.appendChild(btnStep);
-              } else if (act.kind === 'sold_out') {
-                const chip = document.createElement('span');
-                chip.className = 'next-action-chip chip-sold';
-                chip.textContent = 'Sold out ✓';
-                actionRow.appendChild(chip);
-              } else if (act.kind === 'compost') {
-                const chip = document.createElement('span');
-                chip.className = 'next-action-chip chip-compost';
-                chip.textContent = 'Compost: needs manager approval';
-                actionRow.appendChild(chip);
-              } else if (act.kind === 'no_buyers') {
-                const chip = document.createElement('span');
-                chip.className = 'next-action-chip chip-no-buyer';
-                chip.textContent = 'No more buyers nearby';
-                actionRow.appendChild(chip);
-              } else if (act.kind === 'needs_search') {
-                const btnSearch = document.createElement('button');
-                btnSearch.type = 'button';
-                btnSearch.className = 'btn-next-action btn-search-again';
-                btnSearch.textContent = 'Search again';
-                btnSearch.disabled = isCallInProgress;
-                btnSearch.addEventListener('click', () => {
-                  fetchScoutBuyers(decision.item_key, true);
-                });
-                actionRow.appendChild(btnSearch);
-              } else if (act.kind === 'busy') {
-                const chip = document.createElement('span');
-                chip.className = 'next-action-chip chip-busy';
-                chip.textContent = 'Call in progress…';
-                const btnRef = document.createElement('button');
-                btnRef.type = 'button';
-                btnRef.className = 'btn-scout-refresh';
-                btnRef.textContent = 'Refresh';
-                btnRef.addEventListener('click', () => {
-                  loadBatchesForBranch();
-                });
-                actionRow.appendChild(chip);
-                actionRow.appendChild(btnRef);
-              }
-            } else if (buyers.length > 0) {
-              const btnCall = document.createElement('button');
-              btnCall.type = 'button';
-              btnCall.className = 'btn-start-calling';
-              btnCall.textContent = `Start calling #1 ${buyers[0].name}`;
-              btnCall.disabled = isCallInProgress;
-              btnCall.addEventListener('click', () => {
-                startCallForItem(decision.item_key, buyers[0].buyer_id);
-              });
-              actionRow.appendChild(btnCall);
-            }
-
+            renderNextActionRow(actionRow, batch, decision.item_key, buyers);
             if (actionRow.childNodes.length > 0) {
               scoutContainer.appendChild(actionRow);
             }
@@ -3268,16 +3306,6 @@
       transcript.scrollTop = transcript.scrollHeight;
     }
 
-    function getNextStepTargetLabel(batch) {
-      if (batch && batch.plans && batch.step_index + 1 < batch.plans.length) {
-        const nextPlan = batch.plans[batch.step_index + 1];
-        if (nextPlan.step === 'donate') return 'charities';
-        if (nextPlan.step === 'animal_feed') return 'cattle farms';
-        return nextPlan.step.replace(/_/g, ' ');
-      }
-      return 'next step';
-    }
-
     async function advanceBatchStep(batchId, itemKey) {
       const code = inspectAccessCodeEl.value.trim();
       if (!code) {
@@ -3319,8 +3347,12 @@
         return;
       }
 
-      const branchId = branchSelect.value || 'branch_jt';
-      const qty = quantityInputs[itemKey] != null ? quantityInputs[itemKey] : 20;
+      const branchId = branchSelect.value || null;
+      let qty = null;
+      if (quantityEdited[itemKey]) {
+        const parsed = parseFloat(quantityInputs[itemKey]);
+        qty = (!isNaN(parsed) && parsed > 0) ? parsed : null;
+      }
       const staffChecked = !!staffCheckedMap[itemKey];
 
       isCallInProgress = true;
@@ -3375,7 +3407,7 @@
         callBuyerName.textContent = `${bName} (from Google Maps)`;
 
         const itmName = data.deal ? data.deal.item : 'Produce';
-        const dealQ = data.deal ? data.deal.quantity : qty;
+        const dealQ = data.deal ? data.deal.quantity : (qty || '—');
         const dealU = data.deal ? data.deal.unit : 'kg';
         callItemQty.textContent = `${itmName} · ${dealQ} ${dealU}`;
 
@@ -3412,6 +3444,7 @@
         connectWebSocket(data.ws_url, data.token);
 
       } catch (err) {
+        scoutErrorsMap[itemKey] = err.message;
         alert(err.message);
         setStatus('Ready');
         btnHangup.disabled = true;
@@ -3479,18 +3512,32 @@
         cleanupAudio();
         btnHangup.disabled = true;
 
-        if (event.code === 4401) {
-          setStatus('Auth Failed');
-          alert('WebSocket Auth failed (Code 4401)');
-        } else if (event.code === 4409) {
-          setStatus('Token Expired / Reused');
-          alert('Session token already used or expired (Code 4409)');
-        } else if (event.code === 1013) {
+        if (event.code === 1013) {
           setStatus('Server Busy');
-        } else {
-          setStatus('Call Ended');
-          appendNotice(`Call closed (Code: ${event.code})`);
+          return;
         }
+
+        if (event.code === 4401 || event.code === 4409 || event.code === 4423 || (event.code >= 4000 && event.code < 5000)) {
+          isCallInProgress = false;
+          if (event.code === 4401) {
+            setStatus('Auth Failed');
+            alert('WebSocket Auth failed (Code 4401)');
+          } else if (event.code === 4409) {
+            setStatus('Token Expired / Reused');
+            alert('Session token already used or expired (Code 4409)');
+          } else if (event.code === 4423) {
+            setStatus('Batch Locked');
+            alert('Call already in progress on this batch (Code 4423)');
+          } else {
+            setStatus('Call Failed');
+            alert(`Call closed with error code ${event.code}`);
+          }
+          if (currentInspection) renderResults(currentInspection, currentDisplayUrl);
+          return;
+        }
+
+        setStatus('Call Ended');
+        appendNotice(`Call closed (Code: ${event.code})`);
 
         if (currentActiveCall && currentActiveCall.batchId) {
           await pollBatchUntilCompleted(currentActiveCall.batchId, currentActiveCall.callId);
@@ -3581,76 +3628,9 @@
         resultContent.appendChild(stockInfo);
       }
 
-      const act = batchData.next_action;
-      if (!act) return;
-
-      if (act.kind === 'call') {
-        const btnNext = document.createElement('button');
-        btnNext.type = 'button';
-        btnNext.className = 'btn-next-action';
-        const rank = act.buyer_rank || (batchData.attempts.length + 1);
-        btnNext.textContent = `Next buyer (#${rank})`;
-        btnNext.disabled = isCallInProgress;
-        btnNext.addEventListener('click', () => {
-          const scout = currentActiveCall ? scoutResultsMap[currentActiveCall.itemKey] : null;
-          let targetBuyerId = null;
-          if (scout && scout.buyers) {
-            const b = scout.buyers.find(x => x.rank === rank) || scout.buyers[rank - 1];
-            if (b) targetBuyerId = b.buyer_id;
-          }
-          startCallForItem(currentActiveCall.itemKey, targetBuyerId);
-        });
-        resultNextAction.appendChild(btnNext);
-      } else if (act.kind === 'next_step') {
-        const btnStep = document.createElement('button');
-        btnStep.type = 'button';
-        btnStep.className = 'btn-next-action btn-next-step';
-        const label = getNextStepTargetLabel(batchData);
-        btnStep.textContent = `Next step: find ${label}`;
-        btnStep.disabled = isCallInProgress;
-        btnStep.addEventListener('click', () => {
-          advanceBatchStep(batchData.batch_id, currentActiveCall.itemKey);
-        });
-        resultNextAction.appendChild(btnStep);
-      } else if (act.kind === 'sold_out') {
-        const chip = document.createElement('span');
-        chip.className = 'next-action-chip chip-sold';
-        chip.textContent = 'Sold out ✓';
-        resultNextAction.appendChild(chip);
-      } else if (act.kind === 'compost') {
-        const chip = document.createElement('span');
-        chip.className = 'next-action-chip chip-compost';
-        chip.textContent = 'Compost: needs manager approval';
-        resultNextAction.appendChild(chip);
-      } else if (act.kind === 'no_buyers') {
-        const chip = document.createElement('span');
-        chip.className = 'next-action-chip chip-no-buyer';
-        chip.textContent = 'No more buyers nearby';
-        resultNextAction.appendChild(chip);
-      } else if (act.kind === 'needs_search') {
-        const btnSearch = document.createElement('button');
-        btnSearch.type = 'button';
-        btnSearch.className = 'btn-next-action btn-search-again';
-        btnSearch.textContent = 'Search again';
-        btnSearch.disabled = isCallInProgress;
-        btnSearch.addEventListener('click', () => {
-          fetchScoutBuyers(currentActiveCall.itemKey, true);
-        });
-        resultNextAction.appendChild(btnSearch);
-      } else if (act.kind === 'busy') {
-        const chip = document.createElement('span');
-        chip.className = 'next-action-chip chip-busy';
-        chip.textContent = 'Call in progress…';
-        const btnRef = document.createElement('button');
-        btnRef.type = 'button';
-        btnRef.className = 'btn-scout-refresh';
-        btnRef.textContent = 'Refresh';
-        btnRef.addEventListener('click', () => {
-          pollBatchUntilCompleted(batchData.batch_id, callId);
-        });
-        resultNextAction.appendChild(chip);
-        resultNextAction.appendChild(btnRef);
-      }
+      const scout = currentActiveCall ? scoutResultsMap[currentActiveCall.itemKey] : null;
+      const buyers = (scout && scout.buyers) ? scout.buyers : [];
+      renderNextActionRow(resultNextAction, batchData, currentActiveCall ? currentActiveCall.itemKey : null, buyers);
     }
 
     function renderCallPendingResult(batchId, callId) {
