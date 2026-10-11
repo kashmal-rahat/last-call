@@ -113,16 +113,19 @@ Plan: [plans/module-3/plan.md](../plans/module-3/plan.md) (D38–D42).
 - **Fallback:** a generic, cautious profile if Gemini can't write one
 - **Future (documented, not built):** manager "Correct this" on a decision; the next photo and call outcomes refine profiles
 
-## Module 4: Scout Agent
+## Module 4: Scout ("Google finds, Gemini screens, code decides")
 
-- **Input:** item, condition, quantity, mart location
-- **Output:** a ranked buyer list with name, type, phone number, distance, and why each fits
-- Works out which buyer types suit the item, searches Google Places, and puts past successful buyers first
-- Skips businesses that are closed now, have no phone number, are too far away, or are on the do-not-call list
-- Limits how often any one buyer gets called
-- Caches search results to keep costs low
-- **Manager reviews the buyer list before calls go out,** with a setting for "review every list" or "only new buyers"
-- **Start with a fixed list of test buyers** as a stand-in
+Plan: [plans/module-4/plan.md](../plans/module-4/plan.md) (D46–D51).
+
+- **Input:** what to find buyers for (from the Ladder decision in the demo, or a next step such as donate in Module 6): the step, buyer types and buyer condition, plus the chosen branch and the mart's rules
+- **Output:** up to 5 ranked buyers with name, type, phone number (E.164, masked on screen), distance, open now, and a reason each
+- **Search:** one Google Places Text Search per buyer type (at most 3), with phone and hours in the same request and a strict field mask
+- **Code filters:** skips businesses that aren't operating, are too far away, have no phone number, are on the do-not-call list (by place ID or by a hash of the phone), share a phone with a nearer listing, or were called in the last 24 h without a deal
+- **Gemini screening:** one structured call rates each remaining business likely, possible or unlikely for this produce and deal (e.g. drops national chains and milk shops listed as "dairy"); it judges only the specific business (the Ladder already chose the kinds of buyer), only reorders and drops, never bypasses a filter, and the card shows what it screened out and why
+- **Ranking:** past successful buyers first, then open or hours unknown before closed now (closed buyers are kept, so the list isn't empty at night; Module 6 skips them at call time), then fit, then distance
+- **Cost:** no cross-batch cache (Places policy allows storing only place IDs); every new batch searches fresh (new shops appear the same day); the per-batch list is reused for 1 h (one freshness rule); buyer history and do-not-call are kept; at most about $0.11 per Find buyers; demo cap 60 Places requests a day
+- **Judge demo:** a Find buyers button on off-shelf decision cards, with real business names, masked phones and "Google Maps" attribution; a branch selector (3 Lahore branches: Johar Town by default, Bahria Town, Gulberg) shows that the buyers really come from the chosen location; never dials
+- **Later:** the manager's buyer-list review ("review every list" or "only new buyers") comes with Module 5; the Call handoff with Module 6
 
 ## Module 5: Manager rules and screen
 
@@ -144,6 +147,13 @@ Plan: [plans/module-3/plan.md](../plans/module-3/plan.md) (D38–D42).
 - Waits for a quantity check (only when the estimate is unsure or the manager requires it), buyer list review and calling hours when those apply
 - Locks a batch during a call, with automatic release if a call fails
 - **Pickup follow-up:** staff mark the deal as collected and record the actual weight from the scale. At the pickup deadline, a missed pickup is recorded and the remaining stock goes back on the ladder.
+- **Handoff from the Scout (see [plans/module-4/plan.md](../plans/module-4/plan.md), "How Module 6 follows"):**
+    - batch ID = `{inspection_id}__{item_key}`; its buyer list is the Scout's `{batch_id}__{branch_id}`
+    - `build_deal_brief` from the decision, the chosen `ScoutCandidate.to_buyer_info()` and the mart rules (payment terms, calling hours, Lahore city style for the demo mart)
+    - per-step prices, so "no deal → next step" (e.g. donate, animal feed) has its own opening and floor
+    - `record_buyer_call` after every call, which feeds "past buyers first" and the 24 h cooldown
+    - fix first: `FirestoreStore.create_call` must create the batch only if absent (today it resets `remaining_quantity`)
+- **Judge demo:** a Call button on each buyer row starts the browser negotiation at the Ladder's prices, then "Next buyer" or "Next step"
 
 ## Module 7: Data and learning
 

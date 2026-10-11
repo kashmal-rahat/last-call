@@ -37,7 +37,7 @@ An AI system that watches a mart's fresh produce, decides the best way to recove
 |---|---|
 | Freshness Inspector | Judges each item in the picture |
 | Ladder | Decides the step and price for each item: Gemini writes a profile for each produce once (how long it lasts, who can use it), and code makes the decision consistently |
-| Scout Agent | Finds and ranks relevant nearby buyers |
+| Scout Agent | Finds relevant nearby buyers on Google Maps, has Gemini screen out unlikely ones, and ranks them in code with a reason each |
 | **Negotiator Agent** | Makes the call and closes the deal (the hero) |
 
 ## What makes it different
