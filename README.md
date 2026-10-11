@@ -148,4 +148,4 @@ uv run python scripts/check_scout.py
 | **2** | **Negotiator** | **Implemented and deployed** (pending native-speaker test) |
 | **1** | **Freshness Inspector** | **Implemented and deployed** (eval pending labels & decay photos) |
 | **3** | **Ladder** | **Implemented and deployed** (consensus profiles + deterministic decision engine) |
-| **4** | **Scout** | **Implemented** (code complete, ready for deploy at Step 11 🛑) |
+| **4** | **Scout** | **Implemented and deployed** (`8d6d16c`) |

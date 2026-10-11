@@ -258,3 +258,15 @@ Method: read the diffs of `scout/fit.py`, `scout/scout.py`, `scout/rank.py`, `ma
   This doc may become a slide, so it must match the run above it.
 
 **Verdict: the code is ready to deploy.** Fix R1 whenever convenient (a 1-minute doc edit), then follow the round-5 deploy checklist: commit everything including the untracked files, `./scripts/deploy.sh api`, and the Step 11 checks by hand.
+
+---
+
+# Round 7: deployed (2026-10-11)
+
+- Working tree clean; HEAD `8d6d16c`; **the live `/health` reports `8d6d16c`**, so the deploy matches the committed code.
+- Live: `/demo/branches` returns 3 branches with no coordinates; `/demo/scout` with a wrong access code → 401.
+- Live quotas: `SearchTextRequest` and `SearchNearbyRequest` are each at 250/day and 30/min.
+- R1 fixed: the bulk-sale contrast shows JuicePanda (0.6 km) for Johar Town.
+- The user tested `/demo` by hand.
+
+**Module 4 is complete.** The status rows in `plans/README.md` and `README.md` were updated to "implemented and deployed".
