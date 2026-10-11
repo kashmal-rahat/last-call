@@ -3334,6 +3334,7 @@
     }
 
     async function startCallForItem(itemKey, buyerId) {
+      retryCount = 0;
       const code = inspectAccessCodeEl.value.trim();
       if (!code) {
         alert('Please enter your Demo Access Code first.');
@@ -3509,13 +3510,13 @@
       };
 
       ws.onclose = async (event) => {
-        cleanupAudio();
-        btnHangup.disabled = true;
-
         if (event.code === 1013) {
           setStatus('Server Busy');
           return;
         }
+
+        cleanupAudio();
+        btnHangup.disabled = true;
 
         if (event.code === 4401 || event.code === 4409 || event.code === 4423 || (event.code >= 4000 && event.code < 5000)) {
           isCallInProgress = false;
@@ -3657,6 +3658,12 @@
       } else {
         alert('Server is currently at maximum concurrency. Please try again later.');
         cleanupAudio();
+        isCallInProgress = false;
+        btnHangup.disabled = true;
+        setStatus('Server Busy');
+        if (currentInspection) {
+          renderResults(currentInspection, currentDisplayUrl);
+        }
       }
     }
 

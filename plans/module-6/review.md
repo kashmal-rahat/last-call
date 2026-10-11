@@ -121,3 +121,51 @@ Method:
    - call and decline until the step is used up: the "Next step" button appears; at the last step, the final chip appears (P2)
    - in the network tab, the first `/demo/calls` has `"quantity": null` unless you edited the field (P3)
 3. The user commits; then follow plan Step 8 (deploy `api` **and** `voice`, then the manual checks).
+
+---
+
+# Round 3: P1–P4 re-check (2026-10-12)
+
+Scope: commit `3ab2143`. `uv run pytest`: **367 passed, 19 skipped**. The page's inline script passes `node --check`.
+
+| Item | Status | Checked |
+|---|---|---|
+| P1 | ✅ | One `batchIdFor(itemKey)` = `{inspection_id}__{item_key}__{branch_id}`, used by both the branch reload and the post-search batch fetch |
+| P2 | ✅ | One `renderNextActionRow(...)` with the server's names (`sold`, `compost_approval`, `no_buyer`), covering every kind including `needs_search` and `busy` |
+| P3 | ✅ | The field shows `low`, else `high`, else empty (no rounding, no 20). `quantity` is sent only after an edit, else `null`. The `branch_jt` fallback is gone |
+| P4 | ✅ | Only normal closes poll. 4xxx codes show the message, clear `isCallInProgress` and re-render. 1013 returns early |
+
+**Verdict: ready to deploy.** One small leftover, already in the Module 2 page, that is optional before deploy.
+
+## Optional (5 minutes; fine to do after deploy)
+- **B1. The busy-retry path still breaks the call.**
+  - On close code 1013, `ws.onclose` runs `cleanupAudio()` **before** returning. That stops the microphone and closes the `AudioContext`, so a retried connection has no audio in either direction.
+  - After the 3rd failed retry, `isCallInProgress` stays `true`, so every call button stays disabled until a page reload.
+  - `retryCount` is also never reset between calls.
+  - **When it happens:** only when a `voice` instance already has 4 live calls; rare with a few judges.
+  - **Fix:**
+    - for 1013, return **before** `cleanupAudio()`
+    - in `handleBusyRetry`'s give-up branch, also set `isCallInProgress = false` and re-render
+    - set `retryCount = 0` at the start of `startCallForItem`
+
+## Not reported by the agent
+- The three local manual checks from round 2 ("Before deploy", item 2) aren't in the report. They are repeated in plan Step 8's deployed checks, so do them there and watch for P1 (chips survive a branch switch) and P3 (`"quantity": null` in the network tab).
+
+## Next
+1. Optional B1, then `uv run pytest`.
+2. The user commits. Deploy **both** services (`./scripts/deploy.sh api` and `./scripts/deploy.sh voice`); `/health` shows HEAD on both.
+3. Plan Step 8 manual checks on the deployed `/demo`, and report the number of calls a full run used (cap 50/day).
+
+---
+
+# Round 4: B1 re-check (2026-10-12)
+
+Scope: uncommitted change to `static/index.html` (+10/−3). `uv run pytest`: **367 passed, 19 skipped**. The page's inline script passes `node --check`.
+
+- ✅ **1013:** `ws.onclose` now returns **before** `cleanupAudio()`, so the microphone and both audio nodes survive the retry. Every other close code keeps the old behaviour.
+- ✅ **Giving up after 3 retries:** the page cleans up the audio, clears `isCallInProgress`, disables Hang up, sets "Server Busy" and re-renders, so the buttons come back.
+- ✅ **`retryCount = 0`** at the start of `startCallForItem`.
+- ✅ **One listener:** `captureNode.port.onmessage` is only assigned (once per `onopen`); no listener is added on top, so a retry doesn't double the audio.
+- Note, no change needed: the retry starts only when the server's `{"type":"busy"}` message arrives before the 1013 close. `live_session.py` always sends it first, so this holds.
+
+**Verdict: Module 6 code is complete. Commit and deploy (plan Step 8).**
