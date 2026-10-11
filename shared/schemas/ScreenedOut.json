@@ -1,0 +1,36 @@
+{
+  "properties": {
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "buyer_type": {
+      "enum": [
+        "juice_shop",
+        "restaurant",
+        "bakery",
+        "charity",
+        "dairy_farm",
+        "other"
+      ],
+      "title": "Buyer Type",
+      "type": "string"
+    },
+    "distance_km": {
+      "title": "Distance Km",
+      "type": "number"
+    },
+    "why": {
+      "title": "Why",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "buyer_type",
+    "distance_km",
+    "why"
+  ],
+  "title": "ScreenedOut",
+  "type": "object"
+}

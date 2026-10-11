@@ -16,6 +16,7 @@ locals {
     "cloudfunctions.googleapis.com",
     "eventarc.googleapis.com",
     "cloudbilling.googleapis.com",
+    "places.googleapis.com",
   ]
 
   runtime_roles = [
@@ -191,9 +192,25 @@ resource "google_firestore_field" "calls_expire_at_ttl" {
   index_config {}
 }
 
+resource "google_firestore_field" "scout_results_expire_at_ttl" {
+  project    = var.project_id
+  database   = google_firestore_database.default.name
+  collection = "scout_results"
+  field      = "expire_at"
+
+  ttl_config {}
+  index_config {}
+}
+
 resource "google_project_iam_member" "api_sa_firestore" {
   project = var.project_id
   role    = "roles/datastore.user"
+  member  = "serviceAccount:${google_service_account.api_sa.email}"
+}
+
+resource "google_project_iam_member" "api_sa_serviceusage" {
+  project = var.project_id
+  role    = "roles/serviceusage.serviceUsageConsumer"
   member  = "serviceAccount:${google_service_account.api_sa.email}"
 }
 
@@ -201,6 +218,29 @@ resource "google_project_iam_member" "voice_sa_firestore" {
   project = var.project_id
   role    = "roles/datastore.user"
   member  = "serviceAccount:${google_service_account.voice_sa.email}"
+}
+
+# 6b. Places API Quota Overrides (Module 4)
+resource "google_service_usage_consumer_quota_override" "places_search_text_per_day" {
+  provider       = google-beta
+  project        = var.project_id
+  service        = "places.googleapis.com"
+  metric         = urlencode("places.googleapis.com/SearchTextRequest")
+  limit          = urlencode("/d/project")
+  override_value = "60"
+  force          = true
+  depends_on     = [google_project_service.services]
+}
+
+resource "google_service_usage_consumer_quota_override" "places_search_text_per_minute" {
+  provider       = google-beta
+  project        = var.project_id
+  service        = "places.googleapis.com"
+  metric         = urlencode("places.googleapis.com/SearchTextRequest")
+  limit          = urlencode("/min/project")
+  override_value = "10"
+  force          = true
+  depends_on     = [google_project_service.services]
 }
 
 # 7. Cloud Run API Service

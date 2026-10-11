@@ -1,0 +1,109 @@
+{
+  "properties": {
+    "mart_id": {
+      "title": "Mart Id",
+      "type": "string"
+    },
+    "buyer_id": {
+      "title": "Buyer Id",
+      "type": "string"
+    },
+    "place_id": {
+      "title": "Place Id",
+      "type": "string"
+    },
+    "calls": {
+      "default": 0,
+      "title": "Calls",
+      "type": "integer"
+    },
+    "deals": {
+      "default": 0,
+      "title": "Deals",
+      "type": "integer"
+    },
+    "last_called_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Called At"
+    },
+    "last_outcome": {
+      "anyOf": [
+        {
+          "enum": [
+            "deal",
+            "partial_deal",
+            "declined",
+            "call_back",
+            "wants_photo",
+            "wants_manager",
+            "do_not_call",
+            "no_answer"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Outcome"
+    },
+    "last_deal_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Deal At"
+    },
+    "last_deal_price": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Deal Price"
+    },
+    "last_deal_unit": {
+      "anyOf": [
+        {
+          "enum": [
+            "kg",
+            "dozen"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Deal Unit"
+    }
+  },
+  "required": [
+    "mart_id",
+    "buyer_id",
+    "place_id"
+  ],
+  "title": "BuyerHistory",
+  "type": "object"
+}

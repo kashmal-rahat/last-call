@@ -876,7 +876,9 @@ version = "0.1.0"
 source = { editable = "services/api" }
 dependencies = [
     { name = "fastapi" },
+    { name = "google-auth" },
     { name = "google-genai" },
+    { name = "httpx" },
     { name = "lastcall-shared" },
     { name = "pillow" },
     { name = "pydantic-settings" },
@@ -887,7 +889,9 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.110.0" },
+    { name = "google-auth", specifier = ">=2.20.0" },
     { name = "google-genai", specifier = ">=1.0" },
+    { name = "httpx", specifier = ">=0.27.0" },
     { name = "lastcall-shared", editable = "shared" },
     { name = "pillow", specifier = ">=10.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0" },

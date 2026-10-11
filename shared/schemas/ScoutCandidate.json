@@ -1,0 +1,125 @@
+{
+  "properties": {
+    "rank": {
+      "title": "Rank",
+      "type": "integer"
+    },
+    "buyer_id": {
+      "title": "Buyer Id",
+      "type": "string"
+    },
+    "place_id": {
+      "title": "Place Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "buyer_type": {
+      "enum": [
+        "juice_shop",
+        "restaurant",
+        "bakery",
+        "charity",
+        "dairy_farm",
+        "other"
+      ],
+      "title": "Buyer Type",
+      "type": "string"
+    },
+    "primary_type": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Primary Type"
+    },
+    "phone": {
+      "title": "Phone",
+      "type": "string"
+    },
+    "distance_km": {
+      "title": "Distance Km",
+      "type": "number"
+    },
+    "open_now": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Open Now"
+    },
+    "maps_uri": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Maps Uri"
+    },
+    "fit": {
+      "enum": [
+        "likely",
+        "possible",
+        "unlikely"
+      ],
+      "title": "Fit",
+      "type": "string"
+    },
+    "fit_why": {
+      "default": "",
+      "title": "Fit Why",
+      "type": "string"
+    },
+    "past_deals": {
+      "default": 0,
+      "title": "Past Deals",
+      "type": "integer"
+    },
+    "last_deal_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Deal At"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "rank",
+    "buyer_id",
+    "place_id",
+    "name",
+    "buyer_type",
+    "phone",
+    "distance_km",
+    "fit",
+    "reason"
+  ],
+  "title": "ScoutCandidate",
+  "type": "object"
+}

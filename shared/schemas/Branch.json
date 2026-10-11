@@ -1,0 +1,51 @@
+{
+  "$defs": {
+    "GeoPoint": {
+      "properties": {
+        "lat": {
+          "maximum": 90,
+          "minimum": -90,
+          "title": "Lat",
+          "type": "number"
+        },
+        "lng": {
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Lng",
+          "type": "number"
+        }
+      },
+      "required": [
+        "lat",
+        "lng"
+      ],
+      "title": "GeoPoint",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "branch_id": {
+      "title": "Branch Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "location": {
+      "title": "Location",
+      "type": "string"
+    },
+    "geo": {
+      "$ref": "#/$defs/GeoPoint"
+    }
+  },
+  "required": [
+    "branch_id",
+    "name",
+    "location",
+    "geo"
+  ],
+  "title": "Branch",
+  "type": "object"
+}

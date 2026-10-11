@@ -1,4 +1,5 @@
 import math
+import re
 from datetime import time, timedelta
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -10,6 +11,8 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+
+from lastcall_shared.buyer_keys import mask_phone
 
 # All timestamps are timezone-aware (e.g. "2026-10-06T18:00:00+05:00") so that
 # deadlines and calling hours can be enforced in code without guessing the zone.
@@ -616,6 +619,25 @@ class PriceEntry(BaseModel):
         return v
 
 
+class GeoPoint(BaseModel):
+    lat: Annotated[float, Field(ge=-90, le=90)]
+    lng: Annotated[float, Field(ge=-180, le=180)]
+
+
+class Branch(BaseModel):
+    branch_id: str  # ^[a-z0-9_]{1,30}$, e.g. "johar_town"
+    name: str  # "Demo Mart Johar Town" (no retailer brand)
+    location: str  # "Johar Town, Lahore, Pakistan" (becomes DealBrief.mart.location in Module 6)
+    geo: GeoPoint
+
+    @field_validator("branch_id")
+    @classmethod
+    def validate_branch_id(cls, v: str) -> str:
+        if not re.match(r"^[a-z0-9_]{1,30}$", v):
+            raise ValueError(f"branch_id must match '^[a-z0-9_]{{1,30}}$', got '{v}'")
+        return v
+
+
 class MartRules(BaseModel):
     mart_id: str
     mart: MartInfo
@@ -633,6 +655,22 @@ class MartRules(BaseModel):
     price_round_to: int = 5
     note: str = ""  # e.g. "Demo prices, not live market rates"
     prices: list[PriceEntry]
+
+    # Module 4 Scout configuration
+    branches: list[Branch] = Field(default_factory=list)
+    default_branch_id: str | None = None
+    scout_radius_km: float = 10.0
+    buyer_cooldown_hours: float = 24.0
+    scout_max_buyers: int = 5
+
+    def branch(self, branch_id: str | None = None) -> Branch:
+        target_id = branch_id if branch_id is not None else self.default_branch_id
+        if not target_id:
+            raise KeyError("No branch specified and no default branch configured")
+        for b in self.branches:
+            if b.branch_id == target_id:
+                return b
+        raise KeyError(f"Branch '{target_id}' not found")
 
     @property
     def overnight_hours(self) -> float:
@@ -679,6 +717,32 @@ class MartRules(BaseModel):
             raise ValueError(
                 f"feed_floor_pct ({self.feed_floor_pct}) must be less than feed_open_pct ({self.feed_open_pct})"
             )
+
+        if not (0.5 <= self.scout_radius_km <= 10.0):
+            raise ValueError(f"scout_radius_km must be between 0.5 and 10.0, got {self.scout_radius_km}")
+
+        if not (0.0 <= self.buyer_cooldown_hours <= 168.0):
+            raise ValueError(
+                f"buyer_cooldown_hours must be between 0.0 and 168.0, got {self.buyer_cooldown_hours}"
+            )
+
+        if not (1 <= self.scout_max_buyers <= 10):
+            raise ValueError(f"scout_max_buyers must be between 1 and 10, got {self.scout_max_buyers}")
+
+        if len(self.branches) > 10:
+            raise ValueError(f"At most 10 branches allowed, got {len(self.branches)}")
+
+        branch_ids = [b.branch_id for b in self.branches]
+        if len(set(branch_ids)) != len(branch_ids):
+            raise ValueError("Duplicate branch_id found in branches")
+
+        if self.branches:
+            if not self.default_branch_id:
+                raise ValueError("default_branch_id must be set when branches is non-empty")
+            if self.default_branch_id not in branch_ids:
+                raise ValueError(
+                    f"default_branch_id '{self.default_branch_id}' not found in branches"
+                )
 
         return self
 
@@ -754,4 +818,111 @@ class LadderResult(BaseModel):
     hours_until_closing: float
     decisions: list[LadderDecision]
     meta: LadderMeta
+
+
+# ==============================================================================
+# Module 4: Scout Domain Models and Types
+# ==============================================================================
+
+ScoutStep = Literal["bulk_sale", "donate", "animal_feed"]  # ladder steps that need buyers
+BuyerFit = Literal["likely", "possible", "unlikely"]
+SkipReason = Literal[
+    "not_operational",
+    "too_far",
+    "no_phone",
+    "do_not_call",
+    "cooldown",
+    "duplicate_phone",
+    "unlikely_fit",
+]  # "closed now" is a rank, not a skip (D50)
+
+
+class BuyerHistory(BaseModel):  # our own data; no Places content (D48)
+    mart_id: str
+    buyer_id: str  # "places:<place_id>"
+    place_id: str
+    calls: int = 0
+    deals: int = 0
+    last_called_at: AwareDatetime | None = None
+    last_outcome: CallOutcome | None = None
+    last_deal_at: AwareDatetime | None = None
+    last_deal_price: int | None = None
+    last_deal_unit: Unit | None = None
+
+
+class ScoutCandidate(BaseModel):
+    rank: int  # 1-based
+    buyer_id: str  # "places:<place_id>"
+    place_id: str
+    name: str  # sanitised: control chars removed, ≤ 80 chars
+    buyer_type: BuyerType  # the searched type it matched
+    primary_type: str | None = None
+    phone: str  # E.164, internal; never in API responses
+    distance_km: float  # 1 decimal
+    open_now: bool | None = None  # None = hours unknown; False = closed now (kept, ranked lower)
+    maps_uri: str | None = None
+    fit: BuyerFit
+    fit_why: str = ""  # Gemini, ≤ 100 chars
+    past_deals: int = 0
+    last_deal_at: AwareDatetime | None = None
+    reason: str  # facts line built in code
+
+    def to_buyer_info(self) -> BuyerInfo:
+        return BuyerInfo(
+            buyer_id=self.buyer_id,
+            name=self.name,
+            type=self.buyer_type,
+            phone=self.phone,
+        )
+
+    def public_view(self) -> dict:
+        d = self.model_dump(mode="json")
+        d.pop("phone", None)
+        d["phone_masked"] = mask_phone(self.phone)
+        return d
+
+
+class ScreenedOut(BaseModel):  # shown to judges: what Gemini excluded and why
+    name: str  # sanitised
+    buyer_type: BuyerType  # the type it was searched as
+    distance_km: float
+    why: str  # Gemini's reason, ≤ 100 chars
+
+
+class ScoutMeta(BaseModel):
+    latency_ms: int
+    places_requests: int = 0
+    places_results: int = 0
+    failed_searches: list[BuyerType] = Field(default_factory=list)
+    fit_calls: int = 0
+    fit_fallback: bool = False
+    fit_prompt_version: str = ""
+    input_tokens: int = 0
+    output_tokens: int = 0
+    reused: bool = False
+
+
+class ScoutResult(BaseModel):
+    schema_version: str = "1.0.0"
+    key: str  # f"{inspection_id}__{item_key}__{branch_id}" (= Module 6 batch ID + branch ID)
+    mart_id: str
+    inspection_id: str
+    item_key: str
+    branch_id: str  # the search centre; reuse requires the same branch
+    branch_name: str
+    step: ScoutStep
+    buyer_types: list[BuyerType]
+    searched_at: AwareDatetime
+    expire_at: AwareDatetime  # searched_at + SCOUT_LIST_TTL (1 h): reused until then, unusable after, then Firestore TTL deletes it
+    buyers: list[ScoutCandidate] = Field(default_factory=list)  # ≤ scout_max_buyers
+    skipped: dict[SkipReason, int] = Field(default_factory=dict)
+    screened_out: list[ScreenedOut] = Field(default_factory=list)  # up to 10 businesses Gemini rated unlikely, nearest first (no phone, no place ID)
+    meta: ScoutMeta
+    attribution: str = "Google Maps"
+
+    def public_view(self) -> dict:
+        d = self.model_dump(mode="json")
+        d["buyers"] = [b.public_view() for b in self.buyers]
+        return d
+
 

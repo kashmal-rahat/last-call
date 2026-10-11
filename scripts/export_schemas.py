@@ -32,6 +32,13 @@ from lastcall_shared.models import (
     PriceEntry,
     ProduceProfile,
     StageProfile,
+    Branch,
+    GeoPoint,
+    BuyerHistory,
+    ScoutCandidate,
+    ScreenedOut,
+    ScoutMeta,
+    ScoutResult,
 )
 
 MODELS = {
@@ -59,6 +66,13 @@ MODELS = {
     "LadderDecision": LadderDecision,
     "LadderMeta": LadderMeta,
     "LadderResult": LadderResult,
+    "Branch": Branch,
+    "GeoPoint": GeoPoint,
+    "BuyerHistory": BuyerHistory,
+    "ScoutCandidate": ScoutCandidate,
+    "ScreenedOut": ScreenedOut,
+    "ScoutMeta": ScoutMeta,
+    "ScoutResult": ScoutResult,
 }
 
 

@@ -1,9 +1,39 @@
 {
   "mart_id": "demo_mart",
   "mart": {
-    "name": "Demo Mart Clifton",
-    "location": "Karachi, Pakistan"
+    "name": "Demo Mart",
+    "location": "Lahore, Pakistan"
   },
+  "default_branch_id": "johar_town",
+  "branches": [
+    {
+      "branch_id": "johar_town",
+      "name": "Demo Mart Johar Town",
+      "location": "Johar Town, Lahore, Pakistan",
+      "geo": {
+        "lat": 31.448133,
+        "lng": 74.270334
+      }
+    },
+    {
+      "branch_id": "bahria_town",
+      "name": "Demo Mart Bahria Town",
+      "location": "Bahria Town, Lahore, Pakistan",
+      "geo": {
+        "lat": 31.371856,
+        "lng": 74.185805
+      }
+    },
+    {
+      "branch_id": "gulberg",
+      "name": "Demo Mart Gulberg",
+      "location": "Gulberg, Lahore, Pakistan",
+      "geo": {
+        "lat": 31.508754,
+        "lng": 74.345684
+      }
+    }
+  ],
   "timezone": "Asia/Karachi",
   "closing_time": "23:00",
   "opening_time": "09:00",

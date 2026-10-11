@@ -1,0 +1,353 @@
+{
+  "$defs": {
+    "ScoutCandidate": {
+      "properties": {
+        "rank": {
+          "title": "Rank",
+          "type": "integer"
+        },
+        "buyer_id": {
+          "title": "Buyer Id",
+          "type": "string"
+        },
+        "place_id": {
+          "title": "Place Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "buyer_type": {
+          "enum": [
+            "juice_shop",
+            "restaurant",
+            "bakery",
+            "charity",
+            "dairy_farm",
+            "other"
+          ],
+          "title": "Buyer Type",
+          "type": "string"
+        },
+        "primary_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Primary Type"
+        },
+        "phone": {
+          "title": "Phone",
+          "type": "string"
+        },
+        "distance_km": {
+          "title": "Distance Km",
+          "type": "number"
+        },
+        "open_now": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Open Now"
+        },
+        "maps_uri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maps Uri"
+        },
+        "fit": {
+          "enum": [
+            "likely",
+            "possible",
+            "unlikely"
+          ],
+          "title": "Fit",
+          "type": "string"
+        },
+        "fit_why": {
+          "default": "",
+          "title": "Fit Why",
+          "type": "string"
+        },
+        "past_deals": {
+          "default": 0,
+          "title": "Past Deals",
+          "type": "integer"
+        },
+        "last_deal_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Deal At"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rank",
+        "buyer_id",
+        "place_id",
+        "name",
+        "buyer_type",
+        "phone",
+        "distance_km",
+        "fit",
+        "reason"
+      ],
+      "title": "ScoutCandidate",
+      "type": "object"
+    },
+    "ScoutMeta": {
+      "properties": {
+        "latency_ms": {
+          "title": "Latency Ms",
+          "type": "integer"
+        },
+        "places_requests": {
+          "default": 0,
+          "title": "Places Requests",
+          "type": "integer"
+        },
+        "places_results": {
+          "default": 0,
+          "title": "Places Results",
+          "type": "integer"
+        },
+        "failed_searches": {
+          "items": {
+            "enum": [
+              "juice_shop",
+              "restaurant",
+              "bakery",
+              "charity",
+              "dairy_farm",
+              "other"
+            ],
+            "type": "string"
+          },
+          "title": "Failed Searches",
+          "type": "array"
+        },
+        "fit_calls": {
+          "default": 0,
+          "title": "Fit Calls",
+          "type": "integer"
+        },
+        "fit_fallback": {
+          "default": false,
+          "title": "Fit Fallback",
+          "type": "boolean"
+        },
+        "fit_prompt_version": {
+          "default": "",
+          "title": "Fit Prompt Version",
+          "type": "string"
+        },
+        "input_tokens": {
+          "default": 0,
+          "title": "Input Tokens",
+          "type": "integer"
+        },
+        "output_tokens": {
+          "default": 0,
+          "title": "Output Tokens",
+          "type": "integer"
+        },
+        "reused": {
+          "default": false,
+          "title": "Reused",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "latency_ms"
+      ],
+      "title": "ScoutMeta",
+      "type": "object"
+    },
+    "ScreenedOut": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "buyer_type": {
+          "enum": [
+            "juice_shop",
+            "restaurant",
+            "bakery",
+            "charity",
+            "dairy_farm",
+            "other"
+          ],
+          "title": "Buyer Type",
+          "type": "string"
+        },
+        "distance_km": {
+          "title": "Distance Km",
+          "type": "number"
+        },
+        "why": {
+          "title": "Why",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "buyer_type",
+        "distance_km",
+        "why"
+      ],
+      "title": "ScreenedOut",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "key": {
+      "title": "Key",
+      "type": "string"
+    },
+    "mart_id": {
+      "title": "Mart Id",
+      "type": "string"
+    },
+    "inspection_id": {
+      "title": "Inspection Id",
+      "type": "string"
+    },
+    "item_key": {
+      "title": "Item Key",
+      "type": "string"
+    },
+    "branch_id": {
+      "title": "Branch Id",
+      "type": "string"
+    },
+    "branch_name": {
+      "title": "Branch Name",
+      "type": "string"
+    },
+    "step": {
+      "enum": [
+        "bulk_sale",
+        "donate",
+        "animal_feed"
+      ],
+      "title": "Step",
+      "type": "string"
+    },
+    "buyer_types": {
+      "items": {
+        "enum": [
+          "juice_shop",
+          "restaurant",
+          "bakery",
+          "charity",
+          "dairy_farm",
+          "other"
+        ],
+        "type": "string"
+      },
+      "title": "Buyer Types",
+      "type": "array"
+    },
+    "searched_at": {
+      "format": "date-time",
+      "title": "Searched At",
+      "type": "string"
+    },
+    "expire_at": {
+      "format": "date-time",
+      "title": "Expire At",
+      "type": "string"
+    },
+    "buyers": {
+      "items": {
+        "$ref": "#/$defs/ScoutCandidate"
+      },
+      "title": "Buyers",
+      "type": "array"
+    },
+    "skipped": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "propertyNames": {
+        "enum": [
+          "not_operational",
+          "too_far",
+          "no_phone",
+          "do_not_call",
+          "cooldown",
+          "duplicate_phone",
+          "unlikely_fit"
+        ]
+      },
+      "title": "Skipped",
+      "type": "object"
+    },
+    "screened_out": {
+      "items": {
+        "$ref": "#/$defs/ScreenedOut"
+      },
+      "title": "Screened Out",
+      "type": "array"
+    },
+    "meta": {
+      "$ref": "#/$defs/ScoutMeta"
+    },
+    "attribution": {
+      "default": "Google Maps",
+      "title": "Attribution",
+      "type": "string"
+    }
+  },
+  "required": [
+    "key",
+    "mart_id",
+    "inspection_id",
+    "item_key",
+    "branch_id",
+    "branch_name",
+    "step",
+    "buyer_types",
+    "searched_at",
+    "expire_at",
+    "meta"
+  ],
+  "title": "ScoutResult",
+  "type": "object"
+}
