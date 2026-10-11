@@ -1,9 +1,10 @@
-"""Places API (New) client using ADC OAuth and Enterprise field masks (D47, D49)."""
+"""Places API (New) client using ADC OAuth and Enterprise field masks (D47, D49, D52)."""
 
 import asyncio
 from dataclasses import dataclass, field
 import math
 import random
+import time
 from typing import Any, Awaitable, Callable
 
 import httpx
@@ -12,6 +13,7 @@ from lastcall_shared.models import GeoPoint
 from lastcall_api.scout.specs import FIELD_MASK, SearchSpec
 
 PLACES_SEARCH_TEXT_URL = "https://places.googleapis.com/v1/places:searchText"
+PLACES_SEARCH_NEARBY_URL = "https://places.googleapis.com/v1/places:searchNearby"
 
 _credentials = None
 _token_lock = asyncio.Lock()
@@ -58,7 +60,7 @@ class PlaceRaw:
 
 
 def compute_bounding_rectangle(center: GeoPoint, radius_km: float) -> dict[str, Any]:
-    """Computes a bounding box rectangle around center for Places locationRestriction."""
+    """Computes a bounding box rectangle around center for Places Text Search locationRestriction."""
     delta_lat = radius_km / 111.32
     delta_lng = radius_km / (111.32 * math.cos(math.radians(center.lat)))
     return {
@@ -71,6 +73,19 @@ def compute_bounding_rectangle(center: GeoPoint, radius_km: float) -> dict[str, 
                 "latitude": center.lat + delta_lat,
                 "longitude": center.lng + delta_lng,
             },
+        }
+    }
+
+
+def compute_circle_restriction(center: GeoPoint, radius_km: float) -> dict[str, Any]:
+    """Computes a circle around center for Places Nearby Search locationRestriction."""
+    return {
+        "circle": {
+            "center": {
+                "latitude": center.lat,
+                "longitude": center.lng,
+            },
+            "radius": radius_km * 1000.0,
         }
     }
 
@@ -114,7 +129,7 @@ def parse_place_raw(p: dict[str, Any]) -> PlaceRaw:
 
 
 class PlacesClient:
-    """Client for Google Places API (New) Text Search."""
+    """Client for Google Places API (New) Text Search and Nearby Search."""
 
     def __init__(
         self,
@@ -131,9 +146,9 @@ class PlacesClient:
         spec: SearchSpec,
         center: GeoPoint,
         radius_km: float,
-        page_size: int,
+        deadline: float | None = None,
     ) -> list[PlaceRaw]:
-        """Runs a Text Search for spec around center within radius_km."""
+        """Runs a search for spec around center within radius_km (always 20 results)."""
         token = await self._token_provider()
         headers = {
             "Authorization": f"Bearer {token}",
@@ -142,19 +157,30 @@ class PlacesClient:
             "Content-Type": "application/json",
         }
 
-        body: dict[str, Any] = {
-            "textQuery": spec.text_query,
-            "pageSize": page_size,
-            "languageCode": "en",
-            "regionCode": "PK",
-            "rankPreference": spec.rank_preference,
-            "locationRestriction": compute_bounding_rectangle(center, radius_km),
-        }
-
-        if spec.included_type:
-            body["includedType"] = spec.included_type
-        if spec.strict_type_filtering is not None:
-            body["strictTypeFiltering"] = spec.strict_type_filtering
+        if spec.endpoint == "searchNearby":
+            url = PLACES_SEARCH_NEARBY_URL
+            body: dict[str, Any] = {
+                "includedTypes": [spec.included_type] if spec.included_type else [],
+                "maxResultCount": 20,
+                "rankPreference": spec.rank_preference,
+                "locationRestriction": compute_circle_restriction(center, radius_km),
+                "languageCode": "en",
+                "regionCode": "PK",
+            }
+        else:
+            url = PLACES_SEARCH_TEXT_URL
+            body = {
+                "textQuery": spec.text_query or "",
+                "pageSize": 20,
+                "languageCode": "en",
+                "regionCode": "PK",
+                "rankPreference": spec.rank_preference,
+                "locationRestriction": compute_bounding_rectangle(center, radius_km),
+            }
+            if spec.included_type:
+                body["includedType"] = spec.included_type
+            if spec.strict_type_filtering is not None:
+                body["strictTypeFiltering"] = spec.strict_type_filtering
 
         close_client = False
         client = self._http_client
@@ -165,12 +191,16 @@ class PlacesClient:
         try:
             attempt = 0
             while attempt < 2:
-                resp = await client.post(PLACES_SEARCH_TEXT_URL, headers=headers, json=body)
+                resp = await client.post(url, headers=headers, json=body)
                 if resp.status_code in (429, 500, 502, 503, 504) and attempt == 0:
-                    attempt += 1
-                    jitter = random.uniform(0.8, 1.2)
-                    await asyncio.sleep(1.0 * jitter)
-                    continue
+                    if deadline is not None and (deadline - time.monotonic()) < 9.0:
+                        # N1: retry only if at least 9 s remain
+                        pass
+                    else:
+                        attempt += 1
+                        jitter = random.uniform(0.8, 1.2)
+                        await asyncio.sleep(1.0 * jitter)
+                        continue
 
                 if resp.status_code >= 400:
                     try:

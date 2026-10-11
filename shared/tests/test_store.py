@@ -13,6 +13,10 @@ from lastcall_shared.models import (
     OutboxMessage,
     StaffTask,
     TranscriptEntry,
+    BuyerHistory,
+    ScoutCandidate,
+    ScoutMeta,
+    ScoutResult,
 )
 from lastcall_shared.scenarios.loader import build_call, list_scenarios, load_scenario
 from lastcall_shared.store import InMemoryStore
@@ -420,5 +424,146 @@ async def test_readings_lifecycle(store):
     assert fetched_again is not None
     assert fetched_again["zoomed_groups"] == 1
     assert fetched_again["test_num"] == 42
+
+
+@pytest.mark.asyncio
+async def test_scout_result_save_get_overwrite_and_expire(store):
+    now = datetime.now(timezone.utc)
+    future = now + timedelta(hours=1)
+    past = now - timedelta(minutes=5)
+
+    res = ScoutResult(
+        key="insp_001__banana__johar_town",
+        mart_id="demo_mart",
+        inspection_id="insp_001",
+        item_key="banana",
+        branch_id="johar_town",
+        branch_name="Demo Mart Johar Town",
+        step="bulk_sale",
+        buyer_types=["juice_shop"],
+        searched_at=now,
+        expire_at=future,
+        buyers=[
+            ScoutCandidate(
+                rank=1,
+                buyer_id="places:ChIJtest1",
+                place_id="ChIJtest1",
+                name="Juice Point",
+                buyer_type="juice_shop",
+                phone="+923001234567",
+                distance_km=1.2,
+                open_now=True,
+                fit="likely",
+                fit_why="Good fit",
+                reason="Juice shop · 1.2 km · open now",
+            )
+        ],
+        meta=ScoutMeta(latency_ms=500),
+    )
+
+    # 1. Save and get
+    await store.save_scout_result(res)
+    fetched = await store.get_scout_result("insp_001__banana__johar_town")
+    assert fetched is not None
+    assert fetched.key == "insp_001__banana__johar_town"
+    assert len(fetched.buyers) == 1
+    assert fetched.buyers[0].name == "Juice Point"
+
+    # 2. Overwrite
+    res_updated = res.model_copy(update={"step": "donate", "buyer_types": ["charity"]})
+    await store.save_scout_result(res_updated)
+    fetched_updated = await store.get_scout_result("insp_001__banana__johar_town")
+    assert fetched_updated is not None
+    assert fetched_updated.step == "donate"
+    assert fetched_updated.buyer_types == ["charity"]
+
+    # 3. Expired result reads as None
+    res_expired = res.model_copy(update={"key": "insp_001__banana__expired", "expire_at": past})
+    await store.save_scout_result(res_expired)
+    assert await store.get_scout_result("insp_001__banana__expired") is None
+
+
+@pytest.mark.asyncio
+async def test_buyer_histories_and_record_buyer_call(store):
+    now = datetime.now(timezone.utc)
+    t1 = now - timedelta(hours=2)
+    t2 = now - timedelta(hours=1)
+
+    # 1. get_buyer_histories with missing IDs returns only found ones
+    missing = await store.get_buyer_histories("demo_mart", ["places:not_exist_1", "places:not_exist_2"])
+    assert missing == {}
+
+    # 2. Record first call (declined)
+    await store.record_buyer_call(
+        mart_id="demo_mart",
+        buyer_id="places:ChIJ_buyer_1",
+        place_id="ChIJ_buyer_1",
+        outcome="declined",
+        at=t1,
+    )
+
+    hists = await store.get_buyer_histories("demo_mart", ["places:ChIJ_buyer_1", "places:ChIJ_other"])
+    assert "places:ChIJ_buyer_1" in hists
+    h1 = hists["places:ChIJ_buyer_1"]
+    assert h1.calls == 1
+    assert h1.deals == 0
+    assert h1.last_outcome == "declined"
+    assert h1.last_called_at == t1
+    assert h1.last_deal_at is None
+
+    # 3. Record second call (deal)
+    await store.record_buyer_call(
+        mart_id="demo_mart",
+        buyer_id="places:ChIJ_buyer_1",
+        place_id="ChIJ_buyer_1",
+        outcome="deal",
+        at=t2,
+        price=110,
+        unit="kg",
+    )
+
+    hists2 = await store.get_buyer_histories("demo_mart", ["places:ChIJ_buyer_1"])
+    h2 = hists2["places:ChIJ_buyer_1"]
+    assert h2.calls == 2
+    assert h2.deals == 1
+    assert h2.last_outcome == "deal"
+    assert h2.last_called_at == t2
+    assert h2.last_deal_at == t2
+    assert h2.last_deal_price == 110
+    assert h2.last_deal_unit == "kg"
+
+
+@pytest.mark.asyncio
+async def test_get_do_not_call_batch_read(store):
+    await store.add_do_not_call("demo_mart", "places:ChIJ_dnc_place")
+    await store.add_do_not_call("demo_mart", "phone:abcdef1234567890abcdef1234567890")
+
+    keys_to_query = [
+        "places:ChIJ_dnc_place",
+        "phone:abcdef1234567890abcdef1234567890",
+        "places:ChIJ_allowed_place",
+        "phone:not_in_dnc",
+    ]
+
+    dnc_found = await store.get_do_not_call("demo_mart", keys_to_query)
+    assert dnc_found == {
+        "places:ChIJ_dnc_place",
+        "phone:abcdef1234567890abcdef1234567890",
+    }
+
+
+@pytest.mark.asyncio
+async def test_incr_daily_sessions_with_amount(store):
+    date_key = f"2026-10-11-test-{uuid.uuid4().hex[:6]}"
+
+    # cap = 10
+    assert await store.incr_daily_sessions(date_key, cap=10, amount=3) is True  # total 3
+    assert await store.incr_daily_sessions(date_key, cap=10, amount=5) is True  # total 8
+    # 8 + 3 = 11 > 10, should fail without incrementing
+    assert await store.incr_daily_sessions(date_key, cap=10, amount=3) is False
+    # 8 + 2 = 10 <= 10, should succeed
+    assert await store.incr_daily_sessions(date_key, cap=10, amount=2) is True  # total 10
+    # At cap, even amount=1 should fail
+    assert await store.incr_daily_sessions(date_key, cap=10, amount=1) is False
 
 

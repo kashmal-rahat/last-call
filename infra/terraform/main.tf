@@ -227,7 +227,7 @@ resource "google_service_usage_consumer_quota_override" "places_search_text_per_
   service        = "places.googleapis.com"
   metric         = urlencode("places.googleapis.com/SearchTextRequest")
   limit          = urlencode("/d/project")
-  override_value = "60"
+  override_value = "250"
   force          = true
   depends_on     = [google_project_service.services]
 }
@@ -238,7 +238,29 @@ resource "google_service_usage_consumer_quota_override" "places_search_text_per_
   service        = "places.googleapis.com"
   metric         = urlencode("places.googleapis.com/SearchTextRequest")
   limit          = urlencode("/min/project")
-  override_value = "10"
+  override_value = "30"
+  force          = true
+  depends_on     = [google_project_service.services]
+}
+
+resource "google_service_usage_consumer_quota_override" "places_search_nearby_per_day" {
+  provider       = google-beta
+  project        = var.project_id
+  service        = "places.googleapis.com"
+  metric         = urlencode("places.googleapis.com/SearchNearbyRequest")
+  limit          = urlencode("/d/project")
+  override_value = "250"
+  force          = true
+  depends_on     = [google_project_service.services]
+}
+
+resource "google_service_usage_consumer_quota_override" "places_search_nearby_per_minute" {
+  provider       = google-beta
+  project        = var.project_id
+  service        = "places.googleapis.com"
+  metric         = urlencode("places.googleapis.com/SearchNearbyRequest")
+  limit          = urlencode("/min/project")
+  override_value = "30"
   force          = true
   depends_on     = [google_project_service.services]
 }

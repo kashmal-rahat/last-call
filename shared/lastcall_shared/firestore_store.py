@@ -20,6 +20,10 @@ from lastcall_shared.models import (
     TranscriptEntry,
     ProduceProfile,
     LadderResult,
+    BuyerHistory,
+    CallOutcome,
+    ScoutResult,
+    Unit,
 )
 
 
@@ -299,7 +303,7 @@ class FirestoreStore:
             }
         )
 
-    async def incr_daily_sessions(self, date: str, cap: int) -> bool:
+    async def incr_daily_sessions(self, date: str, cap: int, amount: int = 1) -> bool:
         doc_ref = self._col("daily_sessions").document(date)
 
         @firestore.async_transactional
@@ -308,9 +312,9 @@ class FirestoreStore:
             current = 0
             if snap.exists:
                 current = int((snap.to_dict() or {}).get("count", 0))
-            if current >= cap:
+            if current + amount > cap:
                 return False
-            transaction.set(doc_ref, {"count": current + 1}, merge=True)
+            transaction.set(doc_ref, {"count": current + amount}, merge=True)
             return True
 
         tx = self.client.transaction()
@@ -400,6 +404,103 @@ class FirestoreStore:
         except AlreadyExists:
             return False
 
+    async def save_scout_result(self, r: ScoutResult) -> None:
+        doc_ref = self._col("scout_results").document(r.key)
+        data = r.model_dump(mode="json")
+        # Store expire_at as a real datetime for Firestore TTL policy
+        data["expire_at"] = r.expire_at
+        await doc_ref.set(data)
+
+    async def get_scout_result(self, key: str) -> ScoutResult | None:
+        doc_ref = self._col("scout_results").document(key)
+        snap = await doc_ref.get()
+        if not snap.exists:
+            return None
+        data = snap.to_dict()
+        if not data:
+            return None
+        res = ScoutResult.model_validate(data)
+        if self._now() >= res.expire_at:
+            return None
+        return res
+
+    async def get_buyer_histories(self, mart_id: str, buyer_ids: list[str]) -> dict[str, BuyerHistory]:
+        if not buyer_ids:
+            return {}
+        doc_refs = [self._col("buyers").document(f"{mart_id}__{b_id}") for b_id in buyer_ids]
+        out: dict[str, BuyerHistory] = {}
+        async for snap in self.client.get_all(doc_refs):
+            if snap.exists:
+                data = snap.to_dict()
+                if data:
+                    bh = BuyerHistory.model_validate(data)
+                    out[bh.buyer_id] = bh
+        return out
+
+    async def record_buyer_call(
+        self,
+        mart_id: str,
+        buyer_id: str,
+        place_id: str,
+        outcome: CallOutcome,
+        at: AwareDatetime,
+        price: int | None = None,
+        unit: Unit | None = None,
+    ) -> None:
+        doc_ref = self._col("buyers").document(f"{mart_id}__{buyer_id}")
+
+        @firestore.async_transactional
+        async def _tx(transaction: firestore.AsyncTransaction) -> None:
+            snap = await doc_ref.get(transaction=transaction)
+            is_deal = outcome in ("deal", "partial_deal")
+            if snap.exists:
+                data = snap.to_dict() or {}
+                calls = data.get("calls", 0) + 1
+                deals = data.get("deals", 0) + (1 if is_deal else 0)
+                updates: dict[str, Any] = {
+                    "calls": calls,
+                    "deals": deals,
+                    "last_called_at": at,
+                    "last_outcome": outcome,
+                }
+                if is_deal:
+                    updates["last_deal_at"] = at
+                    updates["last_deal_price"] = price
+                    updates["last_deal_unit"] = unit
+                transaction.update(doc_ref, updates)
+            else:
+                new_data = {
+                    "mart_id": mart_id,
+                    "buyer_id": buyer_id,
+                    "place_id": place_id,
+                    "calls": 1,
+                    "deals": 1 if is_deal else 0,
+                    "last_called_at": at,
+                    "last_outcome": outcome,
+                    "last_deal_at": at if is_deal else None,
+                    "last_deal_price": price if is_deal else None,
+                    "last_deal_unit": unit if is_deal else None,
+                }
+                transaction.set(doc_ref, new_data)
+
+        tx = self.client.transaction()
+        await _tx(tx)
+
+    async def get_do_not_call(self, mart_id: str, keys: list[str]) -> set[str]:
+        if not keys:
+            return set()
+        doc_refs = [self._col("do_not_call").document(f"{mart_id}_{k}") for k in keys]
+        out: set[str] = set()
+        async for snap in self.client.get_all(doc_refs):
+            if snap.exists:
+                data = snap.to_dict() or {}
+                b_id = data.get("buyer_id")
+                if b_id:
+                    out.add(b_id)
+                else:
+                    out.add(snap.id[len(mart_id) + 1:])
+        return out
+
     async def clean_prefix(self) -> None:
         """Deletes all test documents created under collection_prefix."""
         if not self.collection_prefix:
@@ -417,6 +518,8 @@ class FirestoreStore:
             "produce_knowledge",
             "decisions",
             "inspector_readings",
+            "scout_results",
+            "buyers",
         ]
         for col_name in collections:
             col_ref = self._col(col_name)

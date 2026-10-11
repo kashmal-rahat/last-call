@@ -28,7 +28,7 @@ Generated: 2026-10-11 12:40:14 UTC
 
 | # | Name | Primary Type | Distance (km) | Phone Present | Open Now | Operational | Usable |
 |---|---|---|---|---|---|---|---|
-| 1 | Bismillah Fresh Juice & Dahi bhally | Johar Town Lahore | `juice_shop` | 1.32 km | Yes | Yes | OPERATIONAL | Yes |
+| 1 | Bismillah Fresh Juice & Dahi bhally \| Johar Town Lahore | `juice_shop` | 1.32 km | Yes | Yes | OPERATIONAL | Yes |
 | 2 | AH FRESHOP | `juice_shop` | 1.4 km | Yes | Yes | OPERATIONAL | Yes |
 | 3 | AB Juice Corner | `juice_shop` | 1.57 km | Yes | Yes | OPERATIONAL | Yes |
 | 4 | Tayyab Juice | `juice_shop` | 1.93 km | Yes | Yes | OPERATIONAL | Yes |
@@ -140,3 +140,57 @@ Generated: 2026-10-11 12:40:14 UTC
 | 8 | Haji Juice Corner | `juice_shop` | 6.77 km | Yes | Yes | OPERATIONAL | Yes |
 | 9 | Life Line Juice Corner | `juice_shop` | 7.24 km | Yes | Yes | OPERATIONAL | Yes |
 | 10 | Hafiz Fruit & Juice Corner | `juice_shop` | 7.67 km | Yes | Yes | OPERATIONAL | Yes |
+
+
+---
+
+## P1 & P2 Diagnostic Results (2026-10-11 12:56:51 UTC)
+
+### P1: Charity Query Variants (Johar Town, 10 km radius)
+
+| Query | Raw Count | With Phone | Open Now (T/F/?) | Usable (≤10km+phone) | Latency | Status |
+|---|---|---|---|---|---|---|
+| `welfare trust dastarkhwan` (A) | 2 | 2 | 1/0/1 | **1** | 1797ms | OK |
+| `dastarkhwan` (B) | 17 | 13 | 10/4/3 | **9** | 578ms | OK |
+
+#### P1-A Top Candidates (`welfare trust dastarkhwan`):
+
+| # | Name | Primary Type | Distance (km) | Phone Present | Open Now | Usable |
+|---|---|---|---|---|---|---|
+| 1 | Allah Walay Trust (Dasterkhawn) | `restaurant` | 2.07 km | Yes | Unknown | Yes |
+| 2 | Saylani Welfare Trust Charity | `association_or_organization` | 10.17 km | Yes | Yes | No |
+
+#### P1-B Top Candidates (`dastarkhwan`):
+
+| # | Name | Primary Type | Distance (km) | Phone Present | Open Now | Usable |
+|---|---|---|---|---|---|---|
+| 1 | Hyderabadi Dastarkhwan | `pakistani_restaurant` | 1.49 km | Yes | Yes | Yes |
+| 2 | Allah Walay Trust (Dasterkhawn) | `restaurant` | 2.07 km | Yes | Unknown | Yes |
+| 3 | Maan G Ka Dasterkhwan | `restaurant` | 2.89 km | Yes | Yes | Yes |
+| 4 | Thokar Dastarkhwan | `restaurant` | 3.31 km | No | Yes | No |
+| 5 | Bahria Dastarkhawan | `food` | 3.38 km | No | No | No |
+| 6 | Al Khidmat Dastarkhwan الخدمت دسترخواں منصورہ | `asian_restaurant` | 5.11 km | No | Unknown | No |
+| 7 | Online Dastarkhwan | `shipping_service` | 5.88 km | Yes | No | Yes |
+| 8 | Bahria Dastarkhwan | `restaurant` | 6.35 km | Yes | Yes | Yes |
+| 9 | MUSA CARE FOUNDATION DASTARKHWAN | `association_or_organization` | 7.19 km | Yes | No | Yes |
+| 10 | Bahria Dastarkhwan | `health` | 7.52 km | Yes | Yes | Yes |
+
+### P2: Gulberg Nearby Search Diagnostic (`searchNearby`, 5000m radius)
+- **Status Code**: 200
+- **Latency**: 487ms
+- **Raw Results Count**: 20
+- **Text Search Nearest Baseline**: 4.42 km (`Maulvi Juice Corner`)
+- **Nearby Search Nearest Distance**: 0.04 km
+
+| # | Name | Primary Type | Distance (km) | Phone Present | Open Now | Usable |
+|---|---|---|---|---|---|---|
+| 1 | Siddique Juice Corner | `juice_shop` | 0.04 km | No | Unknown | No |
+| 2 | Sajjan Allah Juice Corner | `juice_shop` | 0.05 km | Yes | Unknown | Yes |
+| 3 | Markhor Juice Point | `juice_shop` | 0.05 km | Yes | Unknown | Yes |
+| 4 | Manzoor Brothers Fresh Juice & Dry Fruit | `juice_shop` | 0.18 km | No | No | No |
+| 5 | Liberty Parking Juice Corner | `juice_shop` | 0.19 km | No | No | No |
+| 6 | Malee Juice Stand مالی جوس سٹینڈ | `juice_shop` | 0.19 km | No | Yes | No |
+| 7 | Hafiz juice corner | `juice_shop` | 0.23 km | No | No | No |
+| 8 | 786 Fruit Chat & Juice Corner | `juice_shop` | 0.3 km | No | Yes | No |
+| 9 | Taqwaa Juice Corner (Saraiki's) | `juice_shop` | 0.31 km | No | Unknown | No |
+| 10 | Bholli Juice Corner بھولی جوس کارنر | `juice_shop` | 0.44 km | Yes | Yes | Yes |

@@ -18,6 +18,10 @@ from lastcall_shared.models import (
     TranscriptEntry,
     ProduceProfile,
     LadderResult,
+    BuyerHistory,
+    CallOutcome,
+    ScoutResult,
+    Unit,
 )
 
 
@@ -42,7 +46,7 @@ class CallStore(Protocol):
     async def add_staff_task(self, task: StaffTask) -> None: ...
     async def get_staff_tasks(self, call_id: str | None = None) -> list[StaffTask]: ...
     async def finish_call(self, call_id: str, result: CallResult) -> None: ...
-    async def incr_daily_sessions(self, date: str, cap: int) -> bool: ...
+    async def incr_daily_sessions(self, date: str, cap: int, amount: int = 1) -> bool: ...
     async def save_inspection(self, result: FreshnessResult) -> None: ...
     async def get_inspection(self, inspection_id: str) -> FreshnessResult | None: ...
     async def get_latest_inspection(self, mart_id: str, shelf_id: str) -> FreshnessResult | None: ...
@@ -54,6 +58,20 @@ class CallStore(Protocol):
     async def get_decisions(self, inspection_id: str) -> LadderResult | None: ...
     async def get_reading(self, key: str) -> dict[str, Any] | None: ...
     async def create_reading(self, key: str, data: dict[str, Any]) -> bool: ...
+    async def save_scout_result(self, r: ScoutResult) -> None: ...
+    async def get_scout_result(self, key: str) -> ScoutResult | None: ...
+    async def get_buyer_histories(self, mart_id: str, buyer_ids: list[str]) -> dict[str, BuyerHistory]: ...
+    async def record_buyer_call(
+        self,
+        mart_id: str,
+        buyer_id: str,
+        place_id: str,
+        outcome: CallOutcome,
+        at: AwareDatetime,
+        price: int | None = None,
+        unit: Unit | None = None,
+    ) -> None: ...
+    async def get_do_not_call(self, mart_id: str, keys: list[str]) -> set[str]: ...
 
 
 class InMemoryStore:
@@ -74,6 +92,8 @@ class InMemoryStore:
         self.produce_knowledge: dict[str, ProduceProfile] = {}
         self.decisions: dict[str, LadderResult] = {}
         self.inspector_readings: dict[str, dict[str, Any]] = {}
+        self.scout_results: dict[str, ScoutResult] = {}
+        self.buyers: dict[tuple[str, str], BuyerHistory] = {}  # (mart_id, buyer_id) -> BuyerHistory
 
     def _now(self) -> datetime:
         if self.clock:
@@ -233,12 +253,12 @@ class InMemoryStore:
             call.result = result
             call.status = "completed"
 
-    async def incr_daily_sessions(self, date: str, cap: int) -> bool:
+    async def incr_daily_sessions(self, date: str, cap: int, amount: int = 1) -> bool:
         async with self._lock:
             current = self.daily_sessions.get(date, 0)
-            if current >= cap:
+            if current + amount > cap:
                 return False
-            self.daily_sessions[date] = current + 1
+            self.daily_sessions[date] = current + amount
             return True
 
     async def save_inspection(self, result: FreshnessResult) -> None:
@@ -297,4 +317,76 @@ class InMemoryStore:
                 return False
             self.inspector_readings[key] = copy.deepcopy(data)
             return True
+
+    async def save_scout_result(self, r: ScoutResult) -> None:
+        async with self._lock:
+            self.scout_results[r.key] = copy.deepcopy(r)
+
+    async def get_scout_result(self, key: str) -> ScoutResult | None:
+        async with self._lock:
+            r = self.scout_results.get(key)
+            if not r:
+                return None
+            if self._now() >= r.expire_at:
+                return None
+            return copy.deepcopy(r)
+
+    async def get_buyer_histories(self, mart_id: str, buyer_ids: list[str]) -> dict[str, BuyerHistory]:
+        async with self._lock:
+            out: dict[str, BuyerHistory] = {}
+            for b_id in buyer_ids:
+                hist = self.buyers.get((mart_id, b_id))
+                if hist:
+                    out[b_id] = copy.deepcopy(hist)
+            return out
+
+    async def record_buyer_call(
+        self,
+        mart_id: str,
+        buyer_id: str,
+        place_id: str,
+        outcome: CallOutcome,
+        at: AwareDatetime,
+        price: int | None = None,
+        unit: Unit | None = None,
+    ) -> None:
+        async with self._lock:
+            key = (mart_id, buyer_id)
+            existing = self.buyers.get(key)
+            is_deal = outcome in ("deal", "partial_deal")
+            if existing:
+                calls = existing.calls + 1
+                deals = existing.deals + (1 if is_deal else 0)
+                last_deal_at = at if is_deal else existing.last_deal_at
+                last_deal_price = price if is_deal else existing.last_deal_price
+                last_deal_unit = unit if is_deal else existing.last_deal_unit
+                self.buyers[key] = BuyerHistory(
+                    mart_id=mart_id,
+                    buyer_id=buyer_id,
+                    place_id=place_id,
+                    calls=calls,
+                    deals=deals,
+                    last_called_at=at,
+                    last_outcome=outcome,
+                    last_deal_at=last_deal_at,
+                    last_deal_price=last_deal_price,
+                    last_deal_unit=last_deal_unit,
+                )
+            else:
+                self.buyers[key] = BuyerHistory(
+                    mart_id=mart_id,
+                    buyer_id=buyer_id,
+                    place_id=place_id,
+                    calls=1,
+                    deals=1 if is_deal else 0,
+                    last_called_at=at,
+                    last_outcome=outcome,
+                    last_deal_at=at if is_deal else None,
+                    last_deal_price=price if is_deal else None,
+                    last_deal_unit=unit if is_deal else None,
+                )
+
+    async def get_do_not_call(self, mart_id: str, keys: list[str]) -> set[str]:
+        async with self._lock:
+            return {k for k in keys if (mart_id, k) in self.do_not_call}
 

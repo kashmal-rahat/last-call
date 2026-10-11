@@ -119,6 +119,25 @@ uv run python scripts/produce_profiles.py warm banana apple tomato cucumber guav
 uv run python scripts/produce_profiles.py show banana
 ```
 
+## Module 4: Scout
+
+Module 4 finds real commercial salvage buyers near the mart branch using Google Places (New) and screens them with Gemini 3.8 Flash (`gemini-3.8-flash` on Vertex AI). It targets commercial buyers matched to off-shelf produce stages: juice shops, bakeries, restaurants, cattle farms, and charities.
+
+- **Places search:** Nearby Search (`searchNearby`, circle restriction, `rankPreference: DISTANCE`) for typed buyers (`juice_shop`, `restaurant`, `bakery`); Text Search (`searchText`) for charities (`"dastarkhwan"`) and dairy farms (`"dairy farm cattle farm"`). Strict Enterprise field mask fetching name, types, location, phone, and opening hours in a single billable request.
+- **Code filters:** Deterministically skips non-operational businesses, candidates > 10 km straight-line, missing phone numbers, duplicate phone listings, do-not-call registrations (by place ID and keyed phone hash), or recent calls within 24 h. Closed businesses are ranked rather than skipped.
+- **Gemini fit screening:** Gemini Flash rates up to 40 candidates `likely`, `possible`, or `unlikely` with a short checkable reason. Excluded businesses are surfaced in a collapsible "Screened out by Gemini" panel.
+- **Find buyers panel on `/demo`:** Available on decision cards with off-shelf steps (`bulk_sale`, `donate`, `animal_feed`). Allows switching between 3 Lahore branches (Johar Town, Bahria Town, Gulberg). Displays top 5 ranked buyers with masked phone numbers (`+92 ••••••• 567`), distance, open status, fit reason, and Google Maps attribution.
+- **Cost & Quotas:** Zero cross-batch cache per Places policy; 1-hour reuse per item batch. Hard demo cap of 200 Places requests/day (Pacific time) and 60 requests/hour per IP; Google-side quotas set to 250/day and 30/min for each of Text Search and Nearby Search. Max cost per click is ≤ $0.11.
+
+Run Scout verification and probing scripts:
+```bash
+# Probe Google Places API capabilities and candidate density
+uv run python scripts/probe_places.py
+
+# End-to-end multi-target scout pipeline verification
+uv run python scripts/check_scout.py
+```
+
 ---
 
 ## Module Status
@@ -129,3 +148,4 @@ uv run python scripts/produce_profiles.py show banana
 | **2** | **Negotiator** | **Implemented and deployed** (pending native-speaker test) |
 | **1** | **Freshness Inspector** | **Implemented and deployed** (eval pending labels & decay photos) |
 | **3** | **Ladder** | **Implemented and deployed** (consensus profiles + deterministic decision engine) |
+| **4** | **Scout** | **Implemented** (code complete, ready for deploy at Step 11 🛑) |

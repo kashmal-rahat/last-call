@@ -119,11 +119,11 @@ Plan: [plans/module-4/plan.md](../plans/module-4/plan.md) (D46–D51).
 
 - **Input:** what to find buyers for (from the Ladder decision in the demo, or a next step such as donate in Module 6): the step, buyer types and buyer condition, plus the chosen branch and the mart's rules
 - **Output:** up to 5 ranked buyers with name, type, phone number (E.164, masked on screen), distance, open now, and a reason each
-- **Search:** one Google Places Text Search per buyer type (at most 3), with phone and hours in the same request and a strict field mask
+- **Search:** one Google Places search per buyer type (at most 3): Nearby Search (nearest first) for juice shops, restaurants and bakeries, Text Search for charities ("dastarkhwan") and dairy farms; phone and hours in the same request and a strict field mask
 - **Code filters:** skips businesses that aren't operating, are too far away, have no phone number, are on the do-not-call list (by place ID or by a hash of the phone), share a phone with a nearer listing, or were called in the last 24 h without a deal
 - **Gemini screening:** one structured call rates each remaining business likely, possible or unlikely for this produce and deal (e.g. drops national chains and milk shops listed as "dairy"); it judges only the specific business (the Ladder already chose the kinds of buyer), only reorders and drops, never bypasses a filter, and the card shows what it screened out and why
 - **Ranking:** past successful buyers first, then open or hours unknown before closed now (closed buyers are kept, so the list isn't empty at night; Module 6 skips them at call time), then fit, then distance
-- **Cost:** no cross-batch cache (Places policy allows storing only place IDs); every new batch searches fresh (new shops appear the same day); the per-batch list is reused for 1 h (one freshness rule); buyer history and do-not-call are kept; at most about $0.11 per Find buyers; demo cap 60 Places requests a day
+- **Cost:** no cross-batch cache (Places policy allows storing only place IDs); every new batch searches fresh (new shops appear the same day); the per-batch list is reused for 1 h (one freshness rule); buyer history and do-not-call are kept; at most about $0.11 per Find buyers; demo cap 200 Places requests a day (sized so it never blocks judging)
 - **Judge demo:** a Find buyers button on off-shelf decision cards, with real business names, masked phones and "Google Maps" attribution; a branch selector (3 Lahore branches: Johar Town by default, Bahria Town, Gulberg) shows that the buyers really come from the chosen location; never dials
 - **Later:** the manager's buyer-list review ("review every list" or "only new buyers") comes with Module 5; the Call handoff with Module 6
 

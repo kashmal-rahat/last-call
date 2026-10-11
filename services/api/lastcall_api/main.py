@@ -9,7 +9,7 @@ import os
 import re
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -21,6 +21,12 @@ from pydantic import BaseModel
 from lastcall_api.inspector.images import ImageError
 from lastcall_api.inspector.inspector import InspectorError, inspect_photo
 from lastcall_api.ladder.ladder import decide_inspection
+from lastcall_api.scout.scout import (
+    ScoutCapReached,
+    ScoutNotApplicable,
+    ScoutTarget,
+    run_scout,
+)
 from lastcall_shared.firestore_store import FirestoreStore
 from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.marts.loader import load_mart_rules
@@ -441,6 +447,172 @@ async def demo_decide(
     # 6. Save decisions and return
     await store.save_decisions(ladder_result)
     return ladder_result.model_dump(mode="json")
+
+
+class ScoutRequest(BaseModel):
+    inspection_id: str
+    item_key: str
+    branch_id: str | None = None
+    refresh: bool = False
+
+
+@app.get("/demo/branches")
+async def get_demo_branches():
+    """Returns available branches for demo_mart without coordinates (Step 9)."""
+    rules = load_mart_rules("demo_mart")
+    return {
+        "branches": [
+            {
+                "branch_id": b.branch_id,
+                "name": b.name,
+                "location": b.location,
+            }
+            for b in rules.branches
+        ],
+        "default_branch_id": rules.default_branch_id,
+    }
+
+
+@app.post("/demo/scout")
+async def demo_scout(
+    request: Request,
+    body: ScoutRequest,
+    x_demo_access_code: str | None = Header(default=None),
+):
+    """Executes buyer scout pipeline for a decision item (Step 9)."""
+    # 1. Access code check
+    if not _verify_access_code(x_demo_access_code):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access code")
+
+    # 2. Validation
+    if not body.inspection_id or not body.inspection_id.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="inspection_id is required",
+        )
+    if not re.match(r"^insp_[a-z0-9_]{1,80}$", body.inspection_id.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid inspection_id format '{body.inspection_id}', must match ^insp_[a-z0-9_]{{1,80}}$",
+        )
+    if not body.item_key or not body.item_key.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="item_key is required",
+        )
+    if not re.match(r"^[a-z0-9_]{1,60}$", body.item_key.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid item_key format '{body.item_key}', must match ^[a-z0-9_]{{1,60}}$",
+        )
+    rules = load_mart_rules("demo_mart")
+    if body.branch_id is not None:
+        if not re.match(r"^[a-z0-9_]{1,30}$", body.branch_id.strip()):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid branch_id format '{body.branch_id}', must match ^[a-z0-9_]{{1,30}}$",
+            )
+        known_branch_ids = {b.branch_id for b in rules.branches}
+        if body.branch_id not in known_branch_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unknown branch_id '{body.branch_id}'",
+            )
+
+    # 3. IP limit bucket 'scout'
+    settings = get_settings()
+    ip_limit = int(os.getenv("SCOUT_IP_LIMIT_PER_HOUR", str(settings.SCOUT_IP_LIMIT_PER_HOUR)))
+    await _check_ip_limit(
+        request,
+        bucket="scout",
+        limit=ip_limit,
+        detail=f"Hourly IP limit reached (max {ip_limit} buyer searches per hour)",
+    )
+
+    # 4. Decision lookup
+    store = _get_store()
+    ladder_result = await store.get_decisions(body.inspection_id)
+    if not ladder_result or ladder_result.mart_id != "demo_mart":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Decisions for inspection '{body.inspection_id}' not found",
+        )
+
+    decision = next((d for d in ladder_result.decisions if d.item_key == body.item_key), None)
+    if not decision:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Decision for item_key '{body.item_key}' not found in inspection '{body.inspection_id}'",
+        )
+
+    # 5. Target and branch resolution
+    try:
+        target = ScoutTarget.from_decision(decision, body.inspection_id)
+    except ScoutNotApplicable:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This item stays in store; no buyers needed",
+        )
+
+    try:
+        branch = rules.branch(body.branch_id)
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Buyer search isn't set up for this mart",
+        )
+
+    # 6. Reuse within 1h (freshness check)
+    key = f"{body.inspection_id}__{body.item_key}__{branch.branch_id}"
+    if not body.refresh:
+        existing = await store.get_scout_result(key)
+        if (
+            existing is not None
+            and existing.step == target.step
+            and list(existing.buyer_types) == list(target.buyer_types)
+        ):
+            existing.meta.reused = True
+            return existing.public_view()
+
+    # 7. Execute scout pipeline
+    scout_fn = getattr(app.state, "scout_fn", run_scout)
+    now_utc = datetime.now(timezone.utc)
+    pacific_tz = ZoneInfo("America/Los_Angeles")
+    pacific_date = now_utc.astimezone(pacific_tz).strftime("%Y-%m-%d")
+    daily_cap = int(os.getenv("DEMO_DAILY_PLACES_CAP", str(settings.DEMO_DAILY_PLACES_CAP)))
+
+    async def reserve_places(amount: int) -> bool:
+        counter_key = f"places-{pacific_date}"
+        return await store.incr_daily_sessions(counter_key, daily_cap, amount=amount)
+
+    try:
+        scout_result = await scout_fn(
+            target,
+            rules=rules,
+            branch=branch,
+            store=store,
+            now=now_utc,
+            reserve_places=reserve_places,
+        )
+    except ScoutCapReached:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Daily buyer-search limit reached",
+        )
+    except ScoutNotApplicable:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This item stays in store; no buyers needed",
+        )
+    except Exception as exc:
+        logger.error("scout_failed", extra={"error_class": exc.__class__.__name__})
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Buyer search failed, please try again",
+        )
+
+    # 8. Return public view (run_scout already saved to store)
+    return scout_result.public_view()
 
 
 if __name__ == "__main__":

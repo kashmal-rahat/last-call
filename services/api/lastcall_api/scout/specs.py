@@ -52,46 +52,52 @@ ATMOSPHERE_FIELDS = frozenset([
 @dataclass(frozen=True)
 class SearchSpec:
     buyer_type: BuyerType
-    text_query: str
+    endpoint: Literal["searchNearby", "searchText"]
+    text_query: str | None = None
     included_type: str | None = None
     strict_type_filtering: bool | None = None
     rank_preference: Literal["DISTANCE", "RELEVANCE"] = "DISTANCE"
+
+    def __post_init__(self):
+        if self.endpoint == "searchNearby":
+            if not self.included_type or not self.included_type.strip():
+                raise ValueError("endpoint 'searchNearby' requires a non-empty included_type")
+        elif self.endpoint == "searchText":
+            if not self.text_query or not self.text_query.strip():
+                raise ValueError("endpoint 'searchText' requires a non-empty text_query")
 
 
 SEARCH_SPECS: dict[BuyerType, SearchSpec] = {
     "juice_shop": SearchSpec(
         buyer_type="juice_shop",
-        text_query="juice shop",
+        endpoint="searchNearby",
         included_type="juice_shop",
-        strict_type_filtering=True,
         rank_preference="DISTANCE",
     ),
     "restaurant": SearchSpec(
         buyer_type="restaurant",
-        text_query="restaurant",
+        endpoint="searchNearby",
         included_type="restaurant",
-        strict_type_filtering=True,
         rank_preference="DISTANCE",
     ),
     "bakery": SearchSpec(
         buyer_type="bakery",
-        text_query="bakery",
+        endpoint="searchNearby",
         included_type="bakery",
-        strict_type_filtering=True,
         rank_preference="DISTANCE",
     ),
     "charity": SearchSpec(
         buyer_type="charity",
-        text_query="charity food bank welfare dastarkhwan",
+        endpoint="searchText",
+        text_query="dastarkhwan",
         included_type=None,
-        strict_type_filtering=None,
         rank_preference="RELEVANCE",
     ),
     "dairy_farm": SearchSpec(
         buyer_type="dairy_farm",
+        endpoint="searchText",
         text_query="dairy farm cattle farm",
         included_type=None,
-        strict_type_filtering=None,
         rank_preference="RELEVANCE",
     ),
 }

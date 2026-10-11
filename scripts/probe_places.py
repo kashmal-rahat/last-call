@@ -38,7 +38,7 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 def clean_name(s: str) -> str:
     cleaned = "".join(ch for ch in s if ch.isprintable() and ord(ch) >= 32)
-    return " ".join(cleaned.split())[:80]
+    return " ".join(cleaned.split())[:80].replace("|", "\\|")
 
 
 async def probe_request(
@@ -47,7 +47,6 @@ async def probe_request(
     branch_name: str,
     center: GeoPoint,
     radius_km: float = 10.0,
-    page_size: int = 20,
 ) -> dict:
     t0 = time.monotonic()
     error_msg = None
@@ -59,7 +58,6 @@ async def probe_request(
             spec=spec,
             center=center,
             radius_km=radius_km,
-            page_size=page_size,
         )
     except PlacesError as e:
         status = f"ERROR_{e.status_code}"
@@ -162,7 +160,7 @@ async def main():
     results = []
     for i, (spec, b_name, b_geo) in enumerate(targets, 1):
         print(f"[{i}/{len(targets)}] Probing {spec.buyer_type} at {b_name}...")
-        res = await probe_request(client, spec, b_name, b_geo, radius_km=10.0, page_size=20)
+        res = await probe_request(client, spec, b_name, b_geo, radius_km=10.0)
         results.append(res)
         print(f"    Status: {res['status']}, Count: {res['raw_count']}, Usable (≤10km+phone): {res['usable_within_10km']}, Latency: {res['latency_ms']}ms")
 
