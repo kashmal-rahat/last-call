@@ -226,9 +226,8 @@ async def end_text_call(call_id: str) -> CallResult:
             if "dropped" not in ctx.flags:
                 ctx.flags.append("dropped")
 
-    # If no deal, release batch lock
-    if outcome not in ("deal", "partial_deal"):
-        await ctx.store.release_batch(call.batch_id, call_id)
+    # Always release batch lock at the end of the call
+    await ctx.store.release_batch(call.batch_id, call_id)
 
     # Build CallResult
     result = CallResult(

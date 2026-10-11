@@ -259,7 +259,7 @@ async def handle_live_call_websocket(
             state={"call_id": call_id, "mart_id": call.mart_id},
         )
 
-        city_style = os.getenv("CITY_STYLE", "karachi")
+        city_style = call.city_style or os.getenv("CITY_STYLE", "karachi")
         agent = build_negotiator(
             model=settings.GEMINI_LIVE_MODEL,
             view=call.brief.agent_view(),
@@ -617,8 +617,7 @@ async def handle_live_call_websocket(
 
         if call and ctx:
             try:
-                if ctx.outcome not in ("deal", "partial_deal"):
-                    await actual_store.release_batch(call.batch_id, call_id)
+                await actual_store.release_batch(call.batch_id, call_id)
             except Exception:
                 pass
 

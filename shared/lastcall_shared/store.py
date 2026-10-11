@@ -7,6 +7,7 @@ from typing import Any, Protocol
 from pydantic import AwareDatetime
 
 from lastcall_shared.models import (
+    BatchAttempt,
     BatchRecord,
     CallRecord,
     CallResult,
@@ -30,6 +31,10 @@ class CallStore(Protocol):
 
     async def create_call(self, record: CallRecord, batch: BatchRecord) -> None: ...
     async def get_call(self, call_id: str) -> CallRecord | None: ...
+    async def get_calls(self, call_ids: list[str]) -> dict[str, CallRecord]: ...
+    async def create_batch(self, batch: BatchRecord) -> BatchRecord: ...
+    async def add_batch_attempt(self, batch_id: str, attempt: BatchAttempt) -> None: ...
+    async def advance_batch_step(self, batch_id: str, from_index: int) -> bool: ...
     async def get_batch(self, batch_id: str) -> BatchRecord | None: ...
     async def get_deal(self, call_id: str) -> DealRecord | None: ...
     async def start_session(self, call_id: str, nonce: str) -> bool: ...
@@ -111,6 +116,38 @@ class InMemoryStore:
         async with self._lock:
             return self.calls.get(call_id)
 
+    async def get_calls(self, call_ids: list[str]) -> dict[str, CallRecord]:
+        async with self._lock:
+            out: dict[str, CallRecord] = {}
+            for c_id in call_ids:
+                c = self.calls.get(c_id)
+                if c:
+                    out[c_id] = copy.deepcopy(c)
+            return out
+
+    async def create_batch(self, batch: BatchRecord) -> BatchRecord:
+        async with self._lock:
+            if batch.batch_id in self.batches:
+                return copy.deepcopy(self.batches[batch.batch_id])
+            self.batches[batch.batch_id] = copy.deepcopy(batch)
+            return copy.deepcopy(batch)
+
+    async def add_batch_attempt(self, batch_id: str, attempt: BatchAttempt) -> None:
+        async with self._lock:
+            batch = self.batches.get(batch_id)
+            if batch:
+                batch.attempts.append(copy.deepcopy(attempt))
+
+    async def advance_batch_step(self, batch_id: str, from_index: int) -> bool:
+        async with self._lock:
+            batch = self.batches.get(batch_id)
+            if not batch:
+                return False
+            if batch.step_index == from_index:
+                batch.step_index += 1
+                return True
+            return False
+
     async def get_batch(self, batch_id: str) -> BatchRecord | None:
         async with self._lock:
             return self.batches.get(batch_id)
@@ -175,7 +212,12 @@ class InMemoryStore:
                 batch.locked_by_call = None
                 batch.locked_until = None
                 if batch.status == "in_negotiation":
-                    batch.status = "finding_buyers"
+                    if 0 < batch.remaining_quantity < batch.total_quantity:
+                        batch.status = "partly_sold"
+                    elif batch.remaining_quantity == 0:
+                        batch.status = "sold"
+                    else:
+                        batch.status = "finding_buyers"
 
     async def save_deal_tx(self, call_id: str, deal: DealRecord, quantity: float) -> tuple[bool, str | None]:
         async with self._lock:

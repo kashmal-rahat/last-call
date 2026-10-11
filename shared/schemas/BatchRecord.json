@@ -1,4 +1,102 @@
 {
+  "$defs": {
+    "BatchAttempt": {
+      "properties": {
+        "call_id": {
+          "title": "Call Id",
+          "type": "string"
+        },
+        "buyer_id": {
+          "title": "Buyer Id",
+          "type": "string"
+        },
+        "rank": {
+          "title": "Rank",
+          "type": "integer"
+        },
+        "buyer_type": {
+          "enum": [
+            "juice_shop",
+            "restaurant",
+            "bakery",
+            "charity",
+            "dairy_farm",
+            "other"
+          ],
+          "title": "Buyer Type",
+          "type": "string"
+        },
+        "step": {
+          "enum": [
+            "bulk_sale",
+            "donate",
+            "animal_feed"
+          ],
+          "title": "Step",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "call_id",
+        "buyer_id",
+        "rank",
+        "buyer_type",
+        "step",
+        "created_at"
+      ],
+      "title": "BatchAttempt",
+      "type": "object"
+    },
+    "StepPlan": {
+      "properties": {
+        "step": {
+          "enum": [
+            "bulk_sale",
+            "donate",
+            "animal_feed"
+          ],
+          "title": "Step",
+          "type": "string"
+        },
+        "buyer_types": {
+          "items": {
+            "enum": [
+              "juice_shop",
+              "restaurant",
+              "bakery",
+              "charity",
+              "dairy_farm",
+              "other"
+            ],
+            "type": "string"
+          },
+          "title": "Buyer Types",
+          "type": "array"
+        },
+        "opening_price": {
+          "title": "Opening Price",
+          "type": "integer"
+        },
+        "floor_price": {
+          "title": "Floor Price",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "step",
+        "buyer_types",
+        "opening_price",
+        "floor_price"
+      ],
+      "title": "StepPlan",
+      "type": "object"
+    }
+  },
   "properties": {
     "batch_id": {
       "title": "Batch Id",
@@ -76,6 +174,60 @@
       ],
       "default": null,
       "title": "Locked Until"
+    },
+    "branch_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Branch Id"
+    },
+    "plans": {
+      "items": {
+        "$ref": "#/$defs/StepPlan"
+      },
+      "title": "Plans",
+      "type": "array"
+    },
+    "step_index": {
+      "default": 0,
+      "title": "Step Index",
+      "type": "integer"
+    },
+    "then_compost": {
+      "default": false,
+      "title": "Then Compost",
+      "type": "boolean"
+    },
+    "quantity_confirmed": {
+      "default": false,
+      "title": "Quantity Confirmed",
+      "type": "boolean"
+    },
+    "attempts": {
+      "items": {
+        "$ref": "#/$defs/BatchAttempt"
+      },
+      "title": "Attempts",
+      "type": "array"
+    },
+    "created_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Created At"
     }
   },
   "required": [

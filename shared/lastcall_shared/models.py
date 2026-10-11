@@ -486,6 +486,25 @@ def init_negotiation(brief: DealBrief, policy: NegotiationPolicy) -> Negotiation
     )
 
 
+ScoutStep = Literal["bulk_sale", "donate", "animal_feed"]  # ladder steps that need buyers
+
+
+class StepPlan(BaseModel):
+    step: ScoutStep
+    buyer_types: list[BuyerType]
+    opening_price: int  # 0 for donate
+    floor_price: int  # 0 for donate; internal, never sent to the agent or the page's agent view
+
+
+class BatchAttempt(BaseModel):
+    call_id: str
+    buyer_id: str  # "places:<id>"; no name or phone (D48)
+    rank: int
+    buyer_type: BuyerType
+    step: ScoutStep
+    created_at: AwareDatetime
+
+
 class BatchRecord(BaseModel):
     batch_id: str
     mart_id: str
@@ -506,6 +525,13 @@ class BatchRecord(BaseModel):
     ] = "finding_buyers"
     locked_by_call: str | None = None
     locked_until: AwareDatetime | None = None
+    branch_id: str | None = None
+    plans: list[StepPlan] = Field(default_factory=list)
+    step_index: int = 0
+    then_compost: bool = False
+    quantity_confirmed: bool = False
+    attempts: list[BatchAttempt] = Field(default_factory=list)
+    created_at: AwareDatetime | None = None
 
 
 class DealRecord(BaseModel):
@@ -561,6 +587,8 @@ class CallRecord(BaseModel):
     created_at: AwareDatetime
     expire_at: AwareDatetime | None = None
     usage: UsageRecord = Field(default_factory=UsageRecord)
+    channel: Literal["browser", "phone"] = "browser"
+    city_style: str | None = None  # None → CITY_STYLE env (scenarios unchanged)
 
     @model_validator(mode="after")
     def set_default_expire_at(self) -> "CallRecord":
@@ -662,6 +690,11 @@ class MartRules(BaseModel):
     scout_radius_km: float = 10.0
     buyer_cooldown_hours: float = 24.0
     scout_max_buyers: int = 5
+
+    # Module 6 Orchestration configuration
+    payment_terms: str = "Cash on pickup"
+    calling_hours: CallingHours = Field(default_factory=lambda: CallingHours(start=time(9, 0), end=time(21, 0), timezone="Asia/Karachi"))
+    city_style: Literal["karachi", "lahore", "islamabad"] = "karachi"
 
     def branch(self, branch_id: str | None = None) -> Branch:
         target_id = branch_id if branch_id is not None else self.default_branch_id
@@ -824,7 +857,7 @@ class LadderResult(BaseModel):
 # Module 4: Scout Domain Models and Types
 # ==============================================================================
 
-ScoutStep = Literal["bulk_sale", "donate", "animal_feed"]  # ladder steps that need buyers
+# ScoutStep defined above with StepPlan and BatchRecord
 BuyerFit = Literal["likely", "possible", "unlikely"]
 SkipReason = Literal[
     "not_operational",

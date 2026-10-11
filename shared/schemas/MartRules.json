@@ -27,6 +27,31 @@
       "title": "Branch",
       "type": "object"
     },
+    "CallingHours": {
+      "properties": {
+        "start": {
+          "format": "time",
+          "title": "Start",
+          "type": "string"
+        },
+        "end": {
+          "format": "time",
+          "title": "End",
+          "type": "string"
+        },
+        "timezone": {
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "timezone"
+      ],
+      "title": "CallingHours",
+      "type": "object"
+    },
     "GeoPoint": {
       "properties": {
         "lat": {
@@ -212,6 +237,24 @@
       "default": 5,
       "title": "Scout Max Buyers",
       "type": "integer"
+    },
+    "payment_terms": {
+      "default": "Cash on pickup",
+      "title": "Payment Terms",
+      "type": "string"
+    },
+    "calling_hours": {
+      "$ref": "#/$defs/CallingHours"
+    },
+    "city_style": {
+      "default": "karachi",
+      "enum": [
+        "karachi",
+        "lahore",
+        "islamabad"
+      ],
+      "title": "City Style",
+      "type": "string"
     }
   },
   "required": [

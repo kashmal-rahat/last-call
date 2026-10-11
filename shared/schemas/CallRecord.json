@@ -625,6 +625,27 @@
     },
     "usage": {
       "$ref": "#/$defs/UsageRecord"
+    },
+    "channel": {
+      "default": "browser",
+      "enum": [
+        "browser",
+        "phone"
+      ],
+      "title": "Channel",
+      "type": "string"
+    },
+    "city_style": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "City Style"
     }
   },
   "required": [

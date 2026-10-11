@@ -39,9 +39,13 @@ from lastcall_shared.models import (
     ScreenedOut,
     ScoutMeta,
     ScoutResult,
+    StepPlan,
+    BatchAttempt,
 )
 
 MODELS = {
+    "StepPlan": StepPlan,
+    "BatchAttempt": BatchAttempt,
     "FreshnessResult": FreshnessResult,
     "DealBrief": DealBrief,
     "AgentDealBrief": AgentDealBrief,

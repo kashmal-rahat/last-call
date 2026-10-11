@@ -1,0 +1,44 @@
+{
+  "properties": {
+    "step": {
+      "enum": [
+        "bulk_sale",
+        "donate",
+        "animal_feed"
+      ],
+      "title": "Step",
+      "type": "string"
+    },
+    "buyer_types": {
+      "items": {
+        "enum": [
+          "juice_shop",
+          "restaurant",
+          "bakery",
+          "charity",
+          "dairy_farm",
+          "other"
+        ],
+        "type": "string"
+      },
+      "title": "Buyer Types",
+      "type": "array"
+    },
+    "opening_price": {
+      "title": "Opening Price",
+      "type": "integer"
+    },
+    "floor_price": {
+      "title": "Floor Price",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "step",
+    "buyer_types",
+    "opening_price",
+    "floor_price"
+  ],
+  "title": "StepPlan",
+  "type": "object"
+}

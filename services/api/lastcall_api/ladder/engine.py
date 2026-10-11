@@ -91,6 +91,19 @@ def ceil_to(x: float, base: int = 5) -> int:
     return int(math.ceil(x / base)) * base
 
 
+def step_prices(step: str, shelf_price: int, rules: MartRules) -> tuple[int, int]:
+    """Computes (opening_price, floor_price) for a ladder step."""
+    if step == "bulk_sale":
+        floor = max(rules.price_round_to, ceil_to(shelf_price * rules.bulk_floor_pct / 100.0, rules.price_round_to))
+        opening = max(floor, round_to(shelf_price * rules.bulk_open_pct / 100.0, rules.price_round_to))
+        return opening, floor
+    if step == "animal_feed":
+        floor = max(rules.price_round_to, ceil_to(shelf_price * rules.feed_floor_pct / 100.0, rules.price_round_to))
+        opening = max(floor, round_to(shelf_price * rules.feed_open_pct / 100.0, rules.price_round_to))
+        return opening, floor
+    return 0, 0
+
+
 def find_price(rules: MartRules, name: str, unit: Unit) -> int | None:
     """Finds shelf price in rules.prices matching aliases using names_match."""
     for entry in rules.prices:
@@ -288,16 +301,8 @@ def decide_item(
         if chosen_step == "discount":
             assert discount_pct is not None
             discounted_price = round_to(shelf_price * (100 - discount_pct) / 100.0, rules.price_round_to)
-        elif chosen_step == "bulk_sale":
-            floor = max(rules.price_round_to, ceil_to(shelf_price * rules.bulk_floor_pct / 100.0, rules.price_round_to))
-            opening = max(floor, round_to(shelf_price * rules.bulk_open_pct / 100.0, rules.price_round_to))
-            floor_price = floor
-            opening_price = opening
-        elif chosen_step == "animal_feed":
-            floor = max(rules.price_round_to, ceil_to(shelf_price * rules.feed_floor_pct / 100.0, rules.price_round_to))
-            opening = max(floor, round_to(shelf_price * rules.feed_open_pct / 100.0, rules.price_round_to))
-            floor_price = floor
-            opening_price = opening
+        elif chosen_step in ("bulk_sale", "animal_feed"):
+            opening_price, floor_price = step_prices(chosen_step, shelf_price, rules)
 
     # Step 8: Buyer types
     buyer_types: list[BuyerType] = []

@@ -37,6 +37,9 @@ from lastcall_shared.models import (
     LadderDecision,
     LadderMeta,
     LadderResult,
+    ScoutStep,
+    StepPlan,
+    BatchAttempt,
 )
 from lastcall_shared.config import Settings, get_settings
 from lastcall_shared.logging_utils import (
@@ -83,6 +86,9 @@ __all__ = [
     "LadderDecision",
     "LadderMeta",
     "LadderResult",
+    "ScoutStep",
+    "StepPlan",
+    "BatchAttempt",
     "CloudLoggingJsonFormatter",
     "mask_phone",
     "mask_pii_in_text",

@@ -37,6 +37,13 @@
   "timezone": "Asia/Karachi",
   "closing_time": "23:00",
   "opening_time": "09:00",
+  "city_style": "lahore",
+  "payment_terms": "Cash on pickup",
+  "calling_hours": {
+    "start": "09:00",
+    "end": "21:00",
+    "timezone": "Asia/Karachi"
+  },
   "bulk_pickup_hours": 2.0,
   "discount_window_hours": 6.0,
   "max_discount_pct": 40,

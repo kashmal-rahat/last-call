@@ -1,0 +1,52 @@
+{
+  "properties": {
+    "call_id": {
+      "title": "Call Id",
+      "type": "string"
+    },
+    "buyer_id": {
+      "title": "Buyer Id",
+      "type": "string"
+    },
+    "rank": {
+      "title": "Rank",
+      "type": "integer"
+    },
+    "buyer_type": {
+      "enum": [
+        "juice_shop",
+        "restaurant",
+        "bakery",
+        "charity",
+        "dairy_farm",
+        "other"
+      ],
+      "title": "Buyer Type",
+      "type": "string"
+    },
+    "step": {
+      "enum": [
+        "bulk_sale",
+        "donate",
+        "animal_feed"
+      ],
+      "title": "Step",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "call_id",
+    "buyer_id",
+    "rank",
+    "buyer_type",
+    "step",
+    "created_at"
+  ],
+  "title": "BatchAttempt",
+  "type": "object"
+}

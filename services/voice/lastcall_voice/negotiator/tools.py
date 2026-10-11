@@ -287,7 +287,11 @@ async def record_outcome(
     now = ctx.clock() if ctx.clock else datetime.now(PKT)
 
     if outcome == "do_not_call":
-        await ctx.store.add_do_not_call(call.mart_id, call.brief.buyer.buyer_id)
+        if getattr(call, "channel", "browser") == "browser" and call.brief.buyer.buyer_id.startswith("places:"):
+            if "dnc_roleplay_not_recorded" not in ctx.flags:
+                ctx.flags.append("dnc_roleplay_not_recorded")
+        else:
+            await ctx.store.add_do_not_call(call.mart_id, call.brief.buyer.buyer_id)
     elif outcome == "wants_manager":
         task = StaffTask(
             mart_id=call.mart_id,

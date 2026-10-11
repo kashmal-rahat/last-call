@@ -9,6 +9,7 @@ from google.api_core.exceptions import AlreadyExists
 
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import (
+    BatchAttempt,
     BatchRecord,
     CallRecord,
     CallResult,
@@ -59,18 +60,65 @@ class FirestoreStore:
 
         call_data = record.model_dump(mode="json")
         # Ensure expire_at is set as a real datetime for Firestore TTL policy
-        call_data["expire_at"] = record.created_at + timedelta(days=30)
+        call_data["expire_at"] = record.expire_at
         await call_ref.set(call_data)
 
         # Batch write if not exists
         batch_data = batch.model_dump(mode="json")
-        await batch_ref.set(batch_data, merge=True)
+        try:
+            await batch_ref.create(batch_data)
+        except AlreadyExists:
+            pass
 
     async def get_call(self, call_id: str) -> CallRecord | None:
         snap = await self._col("calls").document(call_id).get()
         if not snap.exists:
             return None
         return CallRecord.model_validate(snap.to_dict())
+
+    async def get_calls(self, call_ids: list[str]) -> dict[str, CallRecord]:
+        if not call_ids:
+            return {}
+        doc_refs = [self._col("calls").document(c_id) for c_id in call_ids]
+        out: dict[str, CallRecord] = {}
+        async for snap in self.client.get_all(doc_refs):
+            if snap.exists:
+                data = snap.to_dict()
+                if data:
+                    out[snap.id] = CallRecord.model_validate(data)
+        return out
+
+    async def create_batch(self, batch: BatchRecord) -> BatchRecord:
+        batch_ref = self._col("batches").document(batch.batch_id)
+        batch_data = batch.model_dump(mode="json")
+        try:
+            await batch_ref.create(batch_data)
+            return batch
+        except AlreadyExists:
+            snap = await batch_ref.get()
+            return BatchRecord.model_validate(snap.to_dict())
+
+    async def add_batch_attempt(self, batch_id: str, attempt: BatchAttempt) -> None:
+        batch_ref = self._col("batches").document(batch_id)
+        await batch_ref.update({"attempts": firestore.ArrayUnion([attempt.model_dump(mode="json")])})
+
+    async def advance_batch_step(self, batch_id: str, from_index: int) -> bool:
+        batch_ref = self._col("batches").document(batch_id)
+
+        @firestore.async_transactional
+        async def _tx(transaction: firestore.AsyncTransaction) -> bool:
+            snap = await batch_ref.get(transaction=transaction)
+            if not snap.exists:
+                return False
+            data = snap.to_dict() or {}
+            current_idx = int(data.get("step_index", 0))
+            if current_idx == from_index:
+                transaction.update(batch_ref, {"step_index": current_idx + 1})
+                return True
+            return False
+
+        tx = self.client.transaction()
+        return await _tx(tx)
 
     async def get_batch(self, batch_id: str) -> BatchRecord | None:
         snap = await self._col("batches").document(batch_id).get()
@@ -172,7 +220,17 @@ class FirestoreStore:
                 return
             data = snap.to_dict() or {}
             if data.get("locked_by_call") == call_id:
-                new_status = "finding_buyers" if data.get("status") == "in_negotiation" else data.get("status")
+                status = data.get("status")
+                new_status = status
+                if status == "in_negotiation":
+                    rem = float(data.get("remaining_quantity", 0.0))
+                    total = float(data.get("total_quantity", 0.0))
+                    if 0 < rem < total:
+                        new_status = "partly_sold"
+                    elif rem == 0:
+                        new_status = "sold"
+                    else:
+                        new_status = "finding_buyers"
                 transaction.update(
                     batch_ref,
                     {

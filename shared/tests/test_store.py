@@ -7,6 +7,9 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from lastcall_shared.models import (
+    BatchAttempt,
+    BatchRecord,
+    CallRecord,
     CallResult,
     DealRecord,
     FreshnessResult,
@@ -565,5 +568,211 @@ async def test_incr_daily_sessions_with_amount(store):
     assert await store.incr_daily_sessions(date_key, cap=10, amount=2) is True  # total 10
     # At cap, even amount=1 should fail
     assert await store.incr_daily_sessions(date_key, cap=10, amount=1) is False
+
+
+@pytest.mark.asyncio
+async def test_create_call_twice_after_deal_leaves_remaining_quantity_reduced(store):
+    call1, batch1 = build_call("easy_yes", now=NOW)
+    # Ensure fresh IDs
+    uid = uuid.uuid4().hex[:8]
+    call1.call_id = f"call_{uid}_1"
+    batch1.batch_id = f"batch_{uid}"
+    batch1.total_quantity = 100.0
+    batch1.remaining_quantity = 100.0
+
+    # 1. Create call and lock batch
+    await store.create_call(call1, batch1)
+    lock_until = datetime.now(timezone.utc) + timedelta(minutes=10)
+    assert await store.lock_batch(batch1.batch_id, call1.call_id, lock_until) is True
+
+    # 2. Record a partial deal of 30 units
+    deal = DealRecord(
+        mart_id=call1.mart_id,
+        call_id=call1.call_id,
+        batch_id=batch1.batch_id,
+        buyer_id=call1.brief.buyer.buyer_id,
+        deal_type="sale",
+        price_per_unit=150,
+        unit="kg",
+        quantity=30.0,
+        pickup_time=NOW + timedelta(hours=2),
+        pickup_deadline=call1.brief.pickup_deadline,
+        payment_terms="Cash",
+        status="agreed",
+        created_at=NOW,
+    )
+    ok, err = await store.save_deal_tx(call1.call_id, deal, 30.0)
+    assert ok is True
+    assert err is None
+
+    # Check remaining quantity is 70
+    b = await store.get_batch(batch1.batch_id)
+    assert b.remaining_quantity == 70.0
+
+    # 3. Create a second call using the original batch1 object (which has remaining_quantity=100)
+    call2, _ = build_call("easy_yes", now=NOW)
+    call2.call_id = f"call_{uid}_2"
+    call2.batch_id = batch1.batch_id
+    await store.create_call(call2, batch1)
+
+    # 4. Verify batch in store STILL has remaining_quantity == 70.0 (not reset to 100)
+    b_after = await store.get_batch(batch1.batch_id)
+    assert b_after.remaining_quantity == 70.0
+
+
+@pytest.mark.asyncio
+async def test_call_record_expire_at_24h_stored(store):
+    call, batch = build_call("easy_yes", now=NOW)
+    uid = uuid.uuid4().hex[:8]
+    call.call_id = f"call_expire_{uid}"
+    batch.batch_id = f"batch_expire_{uid}"
+    custom_expire = call.created_at + timedelta(hours=24)
+    call.expire_at = custom_expire
+
+    await store.create_call(call, batch)
+    fetched = await store.get_call(call.call_id)
+    assert fetched is not None
+    assert fetched.expire_at == custom_expire
+
+
+@pytest.mark.asyncio
+async def test_release_batch_after_partial_deal(store):
+    call, batch = build_call("easy_yes", now=NOW)
+    uid = uuid.uuid4().hex[:8]
+    call.call_id = f"call_rel_{uid}"
+    batch.batch_id = f"batch_rel_{uid}"
+    batch.total_quantity = 100.0
+    batch.remaining_quantity = 100.0
+
+    await store.create_call(call, batch)
+    lock_until = datetime.now(timezone.utc) + timedelta(minutes=10)
+    await store.lock_batch(batch.batch_id, call.call_id, lock_until)
+
+    deal = DealRecord(
+        mart_id=call.mart_id,
+        call_id=call.call_id,
+        batch_id=batch.batch_id,
+        buyer_id=call.brief.buyer.buyer_id,
+        deal_type="sale",
+        price_per_unit=150,
+        unit="kg",
+        quantity=40.0,
+        pickup_time=NOW + timedelta(hours=2),
+        pickup_deadline=call.brief.pickup_deadline,
+        payment_terms="Cash",
+        status="agreed",
+        created_at=NOW,
+    )
+    ok, err = await store.save_deal_tx(call.call_id, deal, 40.0)
+    assert ok is True
+    assert err is None
+
+    # Release the batch
+    await store.release_batch(batch.batch_id, call.call_id)
+
+    # Check status is partly_sold and lock is cleared
+    b = await store.get_batch(batch.batch_id)
+    assert b.status == "partly_sold"
+    assert b.locked_by_call is None
+    assert b.locked_until is None
+
+    # A second call can lock it at once
+    new_lock = datetime.now(timezone.utc) + timedelta(minutes=5)
+    assert await store.lock_batch(batch.batch_id, "call_second", new_lock) is True
+
+
+@pytest.mark.asyncio
+async def test_advance_batch_step_transaction(store):
+    uid = uuid.uuid4().hex[:8]
+    batch = BatchRecord(
+        batch_id=f"batch_step_{uid}",
+        mart_id="demo_mart",
+        inspection_id=f"insp_{uid}",
+        item_key="item_k",
+        item="banana",
+        unit="dozen",
+        total_quantity=50.0,
+        remaining_quantity=50.0,
+        step_index=0,
+    )
+    await store.create_batch(batch)
+
+    # advance from 0 -> succeeds once
+    assert await store.advance_batch_step(batch.batch_id, from_index=0) is True
+    # duplicate advance from 0 -> fails
+    assert await store.advance_batch_step(batch.batch_id, from_index=0) is False
+
+    # advance from 1 -> succeeds
+    assert await store.advance_batch_step(batch.batch_id, from_index=1) is True
+
+    b = await store.get_batch(batch.batch_id)
+    assert b.step_index == 2
+
+
+@pytest.mark.asyncio
+async def test_create_batch_does_not_overwrite(store):
+    uid = uuid.uuid4().hex[:8]
+    batch1 = BatchRecord(
+        batch_id=f"batch_dup_{uid}",
+        mart_id="demo_mart",
+        inspection_id=f"insp_{uid}",
+        item_key="item_k",
+        item="mango",
+        unit="kg",
+        total_quantity=80.0,
+        remaining_quantity=80.0,
+        step_index=0,
+    )
+    stored1 = await store.create_batch(batch1)
+    assert stored1.remaining_quantity == 80.0
+
+    # Attempt to overwrite with different values
+    batch2 = BatchRecord(
+        batch_id=f"batch_dup_{uid}",
+        mart_id="demo_mart",
+        inspection_id=f"insp_{uid}",
+        item_key="item_k",
+        item="mango",
+        unit="kg",
+        total_quantity=80.0,
+        remaining_quantity=10.0,
+        step_index=2,
+    )
+    stored2 = await store.create_batch(batch2)
+    assert stored2.remaining_quantity == 80.0
+    assert stored2.step_index == 0
+
+    fetched = await store.get_batch(batch1.batch_id)
+    assert fetched.remaining_quantity == 80.0
+    assert fetched.step_index == 0
+
+
+@pytest.mark.asyncio
+async def test_batch_attempts_and_get_calls(store):
+    uid = uuid.uuid4().hex[:8]
+    call, batch = build_call("easy_yes", now=NOW)
+    call.call_id = f"call_att_{uid}"
+    batch.batch_id = f"batch_att_{uid}"
+    await store.create_call(call, batch)
+
+    attempt = BatchAttempt(
+        call_id=call.call_id,
+        buyer_id="places:ChIJ_test_123",
+        rank=1,
+        buyer_type="juice_shop",
+        step="bulk_sale",
+        created_at=NOW,
+    )
+    await store.add_batch_attempt(batch.batch_id, attempt)
+
+    b = await store.get_batch(batch.batch_id)
+    assert len(b.attempts) == 1
+    assert b.attempts[0].buyer_id == "places:ChIJ_test_123"
+
+    calls_map = await store.get_calls([call.call_id, "non_existent_call"])
+    assert call.call_id in calls_map
+    assert "non_existent_call" not in calls_map
+    assert calls_map[call.call_id].call_id == call.call_id
+
 
 

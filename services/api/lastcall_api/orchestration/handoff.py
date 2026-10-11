@@ -1,0 +1,229 @@
+"""Handoff helpers: step plans, pickup window, and CallRecord creation (Milestone 6A Step 3).
+
+Pure functions converting ladder decisions and scout candidates into batch step plans
+and role-play call records.
+"""
+
+from datetime import datetime, timedelta
+import uuid
+from zoneinfo import ZoneInfo
+from pydantic import AwareDatetime
+
+from lastcall_api.ladder.engine import step_prices
+from lastcall_api.scout.rank import sanitise_name
+from lastcall_shared.logging_utils import mask_phone
+from lastcall_shared.models import (
+    BatchRecord,
+    Branch,
+    BuyerInfo,
+    BuyerType,
+    CallRecord,
+    DealBrief,
+    ItemAssessment,
+    LadderDecision,
+    MartInfo,
+    MartRules,
+    NegotiationPolicy,
+    ScoutCandidate,
+    ScoutStep,
+    StepPlan,
+    init_negotiation,
+)
+
+PICKUP_HOURS = 4.0
+
+
+class ScoutNotApplicable(Exception):
+    """Raised when an item's decision step is not a buyer-facing Scout step."""
+
+
+class NeedsPrice(Exception):
+    """Raised when an item needs a shelf price before calling buyers."""
+
+
+def build_step_plans(decision: LadderDecision, rules: MartRules) -> tuple[list[StepPlan], bool]:
+    """Builds step plans and determines if compost follows.
+
+    Returns:
+        (plans, then_compost)
+    """
+    scout_steps = {"bulk_sale", "donate", "animal_feed"}
+    if decision.step not in scout_steps:
+        raise ScoutNotApplicable(f"Decision step '{decision.step}' is not a scout step")
+
+    if decision.needs_price:
+        raise NeedsPrice(f"Shelf price needed for item '{decision.name}'")
+
+    steps_to_plan: list[ScoutStep] = [decision.step]  # type: ignore[list-item]
+    for s in decision.next_steps:
+        if s in scout_steps:
+            steps_to_plan.append(s)  # type: ignore[arg-type]
+
+    then_compost = "compost" in decision.next_steps
+
+    plans: list[StepPlan] = []
+    for s in steps_to_plan:
+        if s == "bulk_sale":
+            buyer_types: list[BuyerType] = list(decision.buyer_types)
+            opening, floor = step_prices("bulk_sale", decision.shelf_price, rules)
+        elif s == "donate":
+            buyer_types = ["charity"]
+            opening, floor = 0, 0
+        elif s == "animal_feed":
+            buyer_types = ["dairy_farm"]
+            opening, floor = step_prices("animal_feed", decision.shelf_price, rules)
+        else:
+            buyer_types = []
+            opening, floor = 0, 0
+
+        plans.append(
+            StepPlan(
+                step=s,
+                buyer_types=buyer_types,
+                opening_price=opening,
+                floor_price=floor,
+            )
+        )
+
+    return plans, then_compost
+
+
+def initial_quantity(item: ItemAssessment) -> float | None:
+    """Returns low estimate if > 0, else high if > 0, else None."""
+    if item.quantity:
+        if item.quantity.low > 0:
+            return float(item.quantity.low)
+        if item.quantity.high > 0:
+            return float(item.quantity.high)
+    return None
+
+
+def pickup_window(rules: MartRules, now: datetime) -> tuple[datetime, datetime]:
+    """Calculates pickup window (start, deadline) in the mart timezone (D56).
+
+    If the mart is open with at least bulk_pickup_hours left, pickup runs from now
+    to min(now + 4 h, closing); otherwise from the next opening to opening + 4 h.
+    """
+    tz = ZoneInfo(rules.timezone)
+    now_local = now.astimezone(tz)
+
+    today_open = now_local.replace(
+        hour=rules.opening_time.hour,
+        minute=rules.opening_time.minute,
+        second=0,
+        microsecond=0,
+    )
+    today_close = now_local.replace(
+        hour=rules.closing_time.hour,
+        minute=rules.closing_time.minute,
+        second=0,
+        microsecond=0,
+    )
+
+    if today_open <= now_local < today_close:
+        hours_left = (today_close - now_local).total_seconds() / 3600.0
+        if hours_left >= rules.bulk_pickup_hours:
+            start = now_local
+            deadline = min(now_local + timedelta(hours=PICKUP_HOURS), today_close)
+            return start, deadline
+
+        # Less than bulk_pickup_hours remaining before closing -> tomorrow opening
+        next_open = today_open + timedelta(days=1)
+        deadline = next_open + timedelta(hours=PICKUP_HOURS)
+        return next_open, deadline
+    elif now_local < today_open:
+        # Before opening today -> today opening
+        next_open = today_open
+        deadline = next_open + timedelta(hours=PICKUP_HOURS)
+        return next_open, deadline
+    else:
+        # After closing today -> tomorrow opening
+        next_open = today_open + timedelta(days=1)
+        deadline = next_open + timedelta(hours=PICKUP_HOURS)
+        return next_open, deadline
+
+
+def time_words(dt: AwareDatetime) -> str:
+    """Formats aware datetime in natural language including date and hour."""
+    hour = dt.strftime("%I").lstrip("0")
+    minute = dt.strftime("%M")
+    ampm = dt.strftime("%p")
+    time_str = f"{hour}:{minute} {ampm}" if minute != "00" else f"{hour} {ampm}"
+    return f"{dt.strftime('%d %B')}, {time_str}"
+
+
+def build_call_record(
+    *,
+    batch: BatchRecord,
+    plan: StepPlan,
+    candidate: ScoutCandidate,
+    decision: LadderDecision,
+    rules: MartRules,
+    branch: Branch,
+    now: datetime,
+) -> CallRecord:
+    """Constructs a CallRecord for a browser role-play call."""
+    call_id = f"call_{uuid.uuid4().hex}"
+    nonce = uuid.uuid4().hex
+
+    start, deadline = pickup_window(rules, now)
+    window_str = f"{time_words(start)} to {time_words(deadline)}"
+
+    raw_buyer = candidate.to_buyer_info()
+    buyer = BuyerInfo(
+        buyer_id=raw_buyer.buyer_id,
+        name=sanitise_name(raw_buyer.name),
+        type=raw_buyer.type,
+        phone=mask_phone(raw_buyer.phone),
+    )
+
+    deal_type = "donation" if plan.step == "donate" else "sale"
+
+    brief = DealBrief(
+        mart_id=batch.mart_id,
+        batch_id=batch.batch_id,
+        call_id=call_id,
+        deal_type=deal_type,
+        item=decision.name,
+        condition=decision.buyer_condition,
+        quantity=batch.remaining_quantity,
+        quantity_unit=decision.unit,
+        quantity_confirmed_by_staff=batch.quantity_confirmed,
+        buyer=buyer,
+        opening_price_per_unit=plan.opening_price,
+        opening_price_unit=decision.unit,
+        floor_price_per_unit=plan.floor_price,
+        floor_price_unit=decision.unit,
+        market_rate_per_unit=decision.shelf_price,
+        currency="PKR",
+        pickup_window=window_str,
+        pickup_deadline=deadline,
+        mart=MartInfo(name=branch.name, location=branch.location),
+        payment_terms=rules.payment_terms,
+        language="ur",
+        calling_hours=rules.calling_hours,
+    )
+
+    policy = NegotiationPolicy()
+    negotiation = init_negotiation(brief, policy)
+
+    now_utc = now if now.tzinfo else now.replace(tzinfo=ZoneInfo("UTC"))
+    if candidate.buyer_id.startswith("places:"):
+        expire_at = now_utc + timedelta(hours=24)
+    else:
+        expire_at = now_utc + timedelta(days=30)
+
+    return CallRecord(
+        call_id=call_id,
+        mart_id=batch.mart_id,
+        batch_id=batch.batch_id,
+        brief=brief,
+        policy=policy,
+        negotiation=negotiation,
+        status="pending",
+        session_nonce=nonce,
+        created_at=now_utc,
+        expire_at=expire_at,
+        channel="browser",
+        city_style=rules.city_style,
+    )
