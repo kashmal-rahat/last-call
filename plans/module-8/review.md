@@ -163,3 +163,72 @@ Scope: uncommitted changes to `index.html` and `demo.css`. `uv run pytest`: **36
 - `uv run pytest`: **367 passed, 19 skipped**; `node --check`: OK.
 - **Committed and deployed:** live `/health` reports `a7cfc28`, and the working tree is clean. **`a7cfc28` is the 8C baseline** and the Cloud Run rollback point. It also ships the Module 6 text fixes.
 - **Next:** the user's quick live check (one voice call; Sections 1–3), then the 8C prompt.
+
+---
+
+# Round 5: Milestone 8C, the ES-module refactor (2026-10-12)
+
+Scope: commit `cc27443` against the baseline `a7cfc28`. Live `/health` still reports `a7cfc28`, so **8C is committed but not deployed yet**.
+
+Method:
+- `uv run pytest`: **369 passed, 19 skipped** (+1 frontend wrapper, +1 cache-header test); `node --test`: **21 passed**
+- `node --check` on every module
+- a **normalising diff of all 54 functions** against the baseline. It ignores only the allowed edits: the `state.` and `dom.` prefixes, toast for `alert`, CSS-class lines, emoji/`icon()`, logged catches
+- import/export resolution, top-level code and bare-reference checks across the modules
+
+**Verdict: approved. The refactor is mechanical, as required. Two small fixes (m1, m2), then deploy.**
+
+## Verified
+- **All 54 functions are present.** 42 are identical after normalising. The rest differ only in allowed edits (styles to classes, text nodes next to icons, comments) or in the small items below. **Every call and logic function is identical:**
+  - `connectWebSocket`, `startCallForItem`, `handleBusyRetry`, `hangup`, `cleanupAudio`, `pollBatchUntilCompleted`
+  - `fetchScoutBuyers`, `triggerDecide`, `advanceBatchStep`, `updateShelfLock`, `batchIdFor`, `loadBatchesForBranch`
+  The only text changes are emoji removed from two notices ("Interrupted", "Tool: …").
+- **Module safety:**
+  - every named import resolves to an export
+  - every module that uses `dom.`/`state.` imports them
+  - no module except `main.js` runs code at load
+  - no shared variable is used without its `state.` prefix
+- **Page checks:**
+  - `index.html` has exactly one `<script type="module" src="/static/js/main.js">` and **no `style=` attributes**
+  - no `alert(`, `innerHTML`, `outerHTML` or `insertAdjacentHTML` in `static/js/`
+  - `.style.` only for `display` (53) and geometry (`top`, `left`, `width` ×2, `height`)
+- **New code is correct:**
+  - `computeImpact` is pure, ignores pending attempts, rounds quantities to 2 decimals and revenue to whole rupees
+  - `icon()` builds SVG with `createElementNS` (`aria-hidden`); the toast is `aria-live="polite"`
+  - closing-time buttons have `aria-pressed`
+- **Cache headers:** the `Cache-Control: no-cache` middleware for `/static/*` and `/demo` has a test.
+- **Package file:** `static/js/package.json` (`{"type": "module"}`) is present.
+
+## Fix before deploy (2 minutes)
+- **m1. The pytest wrapper fails instead of skipping when Node isn't installed.** `subprocess.run(["node", …])` raises `FileNotFoundError`. Add `if shutil.which("node") is None: pytest.skip("node not installed")` (plan Step 11).
+- **m2. `getFindBuyersLabel` changed behaviour.** For a bulk sale it now returns "Find buyers on Google Maps" instead of "Find juice shops & bakeries", and the other labels gained "on Google Maps". The rule was "unchanged".
+  - **Fix:** restore the baseline strings ("Find juice shops & bakeries", "Find cattle farms", "Find charities", "Find buyers") and update the matching assertions in `format.test.mjs`.
+
+## Notes (no change needed)
+- `resetShelfId` no longer updates the shelf-ID text itself; `main.js` does it right after the call (line ~30). There's only one caller, so the behaviour is the same.
+- `handleInspect` now shows a toast when the access code or the photo is missing. That's an improvement and consistent with the toast rule.
+- `progressTrack` is looked up in both `dom.js` and `main.js`. Harmless; tidy it when convenient.
+- **Not reported by the agent:** the local voice call (Step 12, item 2). The call functions are proven identical, so the remaining risk is browser-only (module loading). The user's live check covers it.
+
+## Next
+1. Fix m1 and m2, then run `uv run pytest`.
+2. The user commits and deploys the API; check `/health`.
+3. **Live check:**
+   - no console errors on load (DevTools → Console)
+   - **one voice call** (you hear the agent, it hears you, Hang up, result)
+   - decline → the card moves to #2
+   - the lock and New shelf
+   - a toast instead of a pop-up (click Inspect with no photo)
+   - Network tab: `main.js` returns `Cache-Control: no-cache`
+4. If anything breaks, roll back to the `a7cfc28` revision in Cloud Run.
+
+---
+
+# Round 6: m1 and m2 re-check (2026-10-12)
+
+`uv run pytest`: **369 passed, 19 skipped**.
+
+- ✅ **m1:** `test_frontend_js.py` imports `shutil` and `pytest`, and skips with "node not installed" when `shutil.which("node")` is None.
+- ✅ **m2:** `getFindBuyersLabel` is back to the baseline strings ("Find juice shops & bakeries", "Find cattle farms", "Find charities", "Find buyers"), and `format.test.mjs` asserts all four.
+
+**Verdict: 8C is done. The user commits and deploys the API** (live is still `a7cfc28`), then runs the live check from round 5 "Next". Rollback: Cloud Run revision `a7cfc28`.

@@ -187,9 +187,10 @@ export function formatProfileLine(decision) {
 }
 
 export function getFindBuyersLabel(step) {
-  if (step === 'donate') return 'Find charities on Google Maps';
-  if (step === 'animal_feed') return 'Find cattle farms on Google Maps';
-  return 'Find buyers on Google Maps';
+  if (step === 'bulk_sale') return 'Find juice shops & bakeries';
+  if (step === 'animal_feed') return 'Find cattle farms';
+  if (step === 'donate') return 'Find charities';
+  return 'Find buyers';
 }
 
 // getNextStepTargetLabel (from 63109cf verbatim)

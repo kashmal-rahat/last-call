@@ -232,10 +232,11 @@ test('formatProfileLine: formats shelf life, batch, and sensitivity', () => {
   );
 });
 
-test('getFindBuyersLabel: donate -> charities, animal_feed -> cattle farms, default -> buyers', () => {
-  assert.equal(getFindBuyersLabel('donate'), 'Find charities on Google Maps');
-  assert.equal(getFindBuyersLabel('animal_feed'), 'Find cattle farms on Google Maps');
-  assert.equal(getFindBuyersLabel('bulk_sale'), 'Find buyers on Google Maps');
+test('getFindBuyersLabel: bulk_sale -> juice shops & bakeries, animal_feed -> cattle farms, donate -> charities, default -> buyers', () => {
+  assert.equal(getFindBuyersLabel('bulk_sale'), 'Find juice shops & bakeries');
+  assert.equal(getFindBuyersLabel('animal_feed'), 'Find cattle farms');
+  assert.equal(getFindBuyersLabel('donate'), 'Find charities');
+  assert.equal(getFindBuyersLabel('unknown'), 'Find buyers');
 });
 
 test('getNextStepTargetLabel: donate -> charities, animal_feed -> cattle farms, other -> underscored replaced', () => {
