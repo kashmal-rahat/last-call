@@ -107,4 +107,4 @@ If any of these conflict, **ask the user. Don't choose silently.**
 | 1: Freshness Inspector | [module-1/plan.md](module-1/plan.md) | Implemented and deployed (cleanup 2026-10-10). Follow-up F1 (same-photo reading cache, D45) implemented and deployed ([results](module-1/results/followup-reading-cache.md)). Pending: eval once labels and home decay photos arrive. |
 | 3: Ladder | [module-3/plan.md](module-3/plan.md) | Implemented and deployed (3B, 2026-10-10) |
 | 4: Scout | [module-4/plan.md](module-4/plan.md) | Implemented and deployed (`8d6d16c`, 2026-10-11; [review](module-4/review.md) rounds 1–6, manual demo test by the user). The Call handoff is Module 6 (D51) |
-| 6: Orchestration and the Call handoff | [module-6/plan.md](module-6/plan.md) | Plan approved 2026-10-11 (D53–D57). Not started |
+| 6: Orchestration and the Call handoff | [module-6/plan.md](module-6/plan.md) | Implemented and deployed (2026-10-12; [review](module-6/review.md) rounds 1–7, deployed checks by the user, all passed). Pending: small page text fixes (donation chip "Donated", "All stock placed", remove the 404 batch lookups before the first call) |

@@ -211,3 +211,31 @@ Scope: uncommitted change to `static/index.html` (it replaces the per-branch-pro
   - `renderResults` during the inspection no longer re-enables the button.
 
 **Verdict: Module 6 code is complete.** The user commits everything (page, D58, docs, this review) and deploys the API only. Then test 9 (lock) and the remaining plan Step 8 checks on the deployed `/demo`.
+
+---
+
+# Round 7: deployed checks by the user (2026-10-12)
+
+All plan Step 8 checks were run by the user on the deployed `/demo` (screenshots in the chat).
+
+| Check | Result |
+|---|---|
+| Find buyers, Start calling, Lahori greeting at the opening price | ✅ |
+| Decline → Next buyer #2; partial deal (0.65 dozen @ Rs 110) → next buyer offered at once | ✅ |
+| "Don't call again" → "Asked not to be called"; **no `do_not_call` collection exists** in Firestore, so nothing was written (D55) | ✅ |
+| Next step → Find charities → donation deal; stock reaches 0 | ✅ |
+| Last hour → discount, no call buttons | ✅ |
+| Lock (D58): branch, closing time and shelf price disabled after calls; New shelf unlocks | ✅ |
+| `/demo/calls` payload `quantity: null`; response has `phone_masked` only; a network search for the last digits finds only masked forms; `/demo/branches` has no coordinates | ✅ |
+| `calls/{id}`: channel browser, city_style lahore, masked phone, `expire_at` = `created_at` + 24 h, `quantity_confirmed_by_staff` false | ✅ |
+| `batches/{id}`: `quantity_confirmed` false, lock released, plans 110/65 → 0/0 → 25/10 (the worked example) | ✅ |
+| Calls used today: `daily_sessions/2026-10-12` count = 10 (cap 50) | noted |
+
+**Pending (page text, no server change):**
+- the donation chip shows "Deal 0.8 dozen @ Rs —"; it should be "Donated 0.8 dozen"
+- "Sold out ✓" should be "All stock placed ✓"
+- remove the 404 batch lookups after decide and after the first Find buyers
+
+**Note:** `test_daily_sessions` in the production database is a leftover from a live contract-test run. It is harmless and can be deleted.
+
+**Module 6: implemented and deployed.**

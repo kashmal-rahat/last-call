@@ -2064,7 +2064,7 @@
           scoutResultsMap[itemKey] = data;
           scoutErrorsMap[itemKey] = null;
           const batchId = batchIdFor(itemKey);
-          if (batchId) {
+          if (batchId && currentBatchesMap[itemKey]) {
             try {
               const bRes = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
                 headers: { 'X-Demo-Access-Code': code }
@@ -2328,7 +2328,7 @@
         } else if (act.kind === 'sold') {
           const chip = document.createElement('span');
           chip.className = 'next-action-chip chip-sold';
-          chip.textContent = 'Sold out ✓';
+          chip.textContent = 'All stock placed ✓';
           container.appendChild(chip);
         } else if (act.kind === 'compost_approval') {
           const chip = document.createElement('span');
@@ -2847,7 +2847,12 @@
                   if (att.call_status === 'completed') {
                     if (att.outcome === 'deal' || att.outcome === 'partial_deal') {
                       chip.className = 'buyer-status-chip chip-deal';
-                      chip.textContent = `Deal ${att.agreed_quantity || 0} ${batch.unit || 'kg'} @ Rs ${att.agreed_price || '—'}`;
+                      if (att.step === 'donate' || att.agreed_price === 0) {
+                        chip.textContent = `Donated ${att.agreed_quantity || 0} ${batch.unit || 'kg'}`;
+                      } else {
+                        const priceStr = att.agreed_price == null ? '—' : att.agreed_price;
+                        chip.textContent = `Deal ${att.agreed_quantity || 0} ${batch.unit || 'kg'} @ Rs ${priceStr}`;
+                      }
                     } else if (att.outcome === 'declined') {
                       chip.className = 'buyer-status-chip chip-declined';
                       chip.textContent = 'Declined';
@@ -3242,7 +3247,6 @@
           currentLadderResult = await res.json();
           decideError.style.display = 'none';
           decideError.textContent = '';
-          loadBatchesForBranch();
         } else {
           currentLadderResult = null;
           const errData = await res.json().catch(() => ({}));
@@ -3745,7 +3749,12 @@
       if (attempt) {
         const summary = document.createElement('div');
         if (attempt.outcome === 'deal' || attempt.outcome === 'partial_deal') {
-          summary.textContent = `Deal agreed: ${attempt.agreed_quantity || 0} ${batchData.unit || 'kg'} @ Rs ${attempt.agreed_price || '—'} / ${batchData.unit || 'kg'}`;
+          if (attempt.step === 'donate' || attempt.agreed_price === 0) {
+            summary.textContent = `Donated ${attempt.agreed_quantity || 0} ${batchData.unit || 'kg'}`;
+          } else {
+            const priceStr = attempt.agreed_price == null ? '—' : attempt.agreed_price;
+            summary.textContent = `Deal agreed: ${attempt.agreed_quantity || 0} ${batchData.unit || 'kg'} @ Rs ${priceStr} / ${batchData.unit || 'kg'}`;
+          }
         } else if (attempt.outcome === 'declined') {
           summary.textContent = 'Outcome: Declined by buyer';
         } else if (attempt.outcome === 'call_back') {
