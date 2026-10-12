@@ -3,7 +3,7 @@
 import { state } from './state.js';
 import * as dom from './dom.js';
 import { setStoredItem } from './storage.js';
-import { showToast } from './ui.js';
+import { showToast, scriptClass } from './ui.js';
 import { updateShelfLock } from './lock.js';
 import { renderResults } from './reading.js';
 import { renderNextActionRow } from './buyers.js';
@@ -26,6 +26,8 @@ export function appendMessage(speaker, text) {
   speakerSpan.textContent = speaker === 'agent' ? 'AI Assistant (Mart)' : 'You (Buyer)';
 
   const textSpan = document.createElement('div');
+  const sClass = scriptClass(text);
+  if (sClass) textSpan.className = sClass;
   textSpan.textContent = text;
 
   msg.appendChild(speakerSpan);
@@ -386,7 +388,7 @@ export function renderCallResult(batchData, callId) {
 
   const scout = state.currentActiveCall ? state.scoutResultsMap[state.currentActiveCall.itemKey] : null;
   const buyers = (scout && scout.buyers) ? scout.buyers : [];
-  renderNextActionRow(dom.resultNextAction, batchData, state.currentActiveCall ? state.currentActiveCall.itemKey : null, buyers);
+  renderNextActionRow(dom.resultNextAction, batchData, state.currentActiveCall ? state.currentActiveCall.itemKey : null, buyers, true);
 }
 
 export function renderCallPendingResult(batchId, callId) {

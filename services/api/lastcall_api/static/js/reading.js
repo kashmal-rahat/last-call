@@ -196,20 +196,25 @@ export function renderItemsList(data) {
     titleGroup.appendChild(nameSpan);
 
     const stageChip = document.createElement('span');
-    stageChip.className = `chip chip-stage stage-${item.stage}`;
-    stageChip.textContent = item.stage;
+    stageChip.className = 'chip chip-neutral chip-stage';
+    const dot = document.createElement('span');
+    dot.className = `dot dot-${item.stage}`;
+    stageChip.appendChild(dot);
+    const stageCap = item.stage ? item.stage.charAt(0).toUpperCase() + item.stage.slice(1) : '';
+    stageChip.appendChild(document.createTextNode(stageCap));
     titleGroup.appendChild(stageChip);
 
     if (item.stage_level) {
+      const cleanLevel = String(item.stage_level).replace(/^L/i, '').toLowerCase();
       const lvlSpan = document.createElement('span');
-      lvlSpan.className = 'font-mono text-muted text-xs';
-      lvlSpan.textContent = `L${item.stage_level}`;
+      lvlSpan.className = 'item-stage-level';
+      lvlSpan.textContent = `${cleanLevel} stage`;
       titleGroup.appendChild(lvlSpan);
     }
 
     if (item.needs_staff_check) {
       const alertChip = document.createElement('span');
-      alertChip.className = 'chip chip-amber';
+      alertChip.className = 'chip chip-warning';
       alertChip.textContent = 'Staff Check';
       titleGroup.appendChild(alertChip);
     }
@@ -225,21 +230,21 @@ export function renderItemsList(data) {
 
     // Degradation Score Indicator
     const scoreWrap = document.createElement('div');
-    scoreWrap.className = 'score-wrap';
+    scoreWrap.className = 'item-score-block';
 
-    const scoreBar = document.createElement('div');
-    scoreBar.className = 'score-bar-bg';
+    const scoreNum = document.createElement('div');
+    scoreNum.className = 'item-score-num';
+    scoreNum.textContent = item.score != null ? String(Math.round(item.score)) : '—';
+    scoreWrap.appendChild(scoreNum);
+
+    const scoreBarTrack = document.createElement('div');
+    scoreBarTrack.className = 'item-score-bar-track';
 
     const scoreFill = document.createElement('div');
-    scoreFill.className = `score-bar-fill stage-${item.stage}`;
+    scoreFill.className = `item-score-bar-fill fill-${item.stage}`;
     scoreFill.style.width = Math.min(100, Math.max(0, item.score || 0)) + '%';
-    scoreBar.appendChild(scoreFill);
-    scoreWrap.appendChild(scoreBar);
-
-    const scoreVal = document.createElement('span');
-    scoreVal.className = 'font-mono text-muted text-xs';
-    scoreVal.textContent = `${item.score != null ? Math.round(item.score) : '—'}/100`;
-    scoreWrap.appendChild(scoreVal);
+    scoreBarTrack.appendChild(scoreFill);
+    scoreWrap.appendChild(scoreBarTrack);
 
     header.appendChild(scoreWrap);
     row.appendChild(header);
@@ -276,45 +281,44 @@ export function renderItemsList(data) {
         issuesWrap.className = 'issues-chips';
         item.issues.forEach(iss => {
           const chip = document.createElement('span');
-          chip.className = 'issue-chip';
+          chip.className = 'chip chip-neutral';
           chip.textContent = iss.replace(/_/g, ' ');
           issuesWrap.appendChild(chip);
         });
         details.appendChild(issuesWrap);
       }
 
-      // Stock and Observed Count
-      const stockRow = document.createElement('div');
-      stockRow.className = 'stock-row';
+      // Definition Grid: 2-column grid of Observed, Estimated stock, Confidence, Change
+      const defGrid = document.createElement('div');
+      defGrid.className = 'item-def-grid';
 
-      if (item.observed) {
-        const obsSpan = document.createElement('span');
-        obsSpan.textContent = `Observed count: ${formatObserved(item.observed)}`;
-        stockRow.appendChild(obsSpan);
+      const addGridItem = (lblText, valText) => {
+        const cell = document.createElement('div');
+        cell.className = 'item-def-cell';
+        const lbl = document.createElement('div');
+        lbl.className = 'item-def-label';
+        lbl.textContent = lblText;
+        cell.appendChild(lbl);
+        const val = document.createElement('div');
+        val.className = 'item-def-value';
+        val.textContent = valText || '—';
+        cell.appendChild(val);
+        defGrid.appendChild(cell);
+      };
+
+      addGridItem('Observed', formatObserved(item.observed) || '—');
+      addGridItem('Estimated stock', formatQuantity(item.quantity) || '—');
+
+      let confWord = '—';
+      if (item.confidence_level) {
+        confWord = item.confidence_level.charAt(0).toUpperCase() + item.confidence_level.slice(1).toLowerCase() + ' confidence';
+      } else if (item.confidence != null) {
+        confWord = item.confidence >= 0.8 ? 'High confidence' : (item.confidence >= 0.6 ? 'Medium confidence' : 'Low confidence');
       }
+      addGridItem('Confidence', confWord);
+      addGridItem('Change', item.change_notes || '—');
 
-      if (item.quantity) {
-        const qtySpan = document.createElement('span');
-        qtySpan.textContent = `Estimated stock: ${formatQuantity(item.quantity)}`;
-        stockRow.appendChild(qtySpan);
-      }
-
-      if (item.confidence != null) {
-        const confSpan = document.createElement('span');
-        confSpan.className = 'font-mono text-muted';
-        confSpan.textContent = `Confidence: ${Math.round(item.confidence * 100)}%`;
-        stockRow.appendChild(confSpan);
-      }
-
-      details.appendChild(stockRow);
-
-      // Change Notes (Progression)
-      if (item.change_notes) {
-        const noteDiv = document.createElement('div');
-        noteDiv.className = 'change-notes-banner';
-        noteDiv.textContent = `Progression: ${item.change_notes}`;
-        details.appendChild(noteDiv);
-      }
+      details.appendChild(defGrid);
 
       // Staff Check Reasons
       if (item.needs_staff_check && item.staff_reasons && item.staff_reasons.length > 0) {
@@ -345,12 +349,12 @@ export function renderResults(data, imgSrc) {
   }
   dom.bboxOverlay.replaceChildren();
 
-  // Bounding Boxes on photo
+  // Bounding Boxes on photo (D1: transparent fill, stage-colored border, white pill label with dot)
   if (data && data.items && data.items.length > 0) {
     data.items.forEach(item => {
       if (!item.position) return;
       const box = document.createElement('div');
-      box.className = `bbox-rect stage-${item.stage}`;
+      box.className = `bbox-rect box-${item.stage}`;
       box.dataset.itemKey = item.item_key;
       box.style.top = (item.position.ymin * 100) + '%';
       box.style.left = (item.position.xmin * 100) + '%';
@@ -362,8 +366,12 @@ export function renderResults(data, imgSrc) {
       }
 
       const label = document.createElement('span');
-      label.className = `bbox-label stage-${item.stage}`;
-      label.textContent = item.name;
+      label.className = 'bbox-label';
+      const dot = document.createElement('span');
+      dot.className = `dot dot-${item.stage}`;
+      label.appendChild(dot);
+      const nameTxt = document.createTextNode(item.name);
+      label.appendChild(nameTxt);
       box.appendChild(label);
 
       box.addEventListener('click', (e) => {

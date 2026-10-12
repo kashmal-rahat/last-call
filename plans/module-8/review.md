@@ -232,3 +232,58 @@ Method:
 - ✅ **m2:** `getFindBuyersLabel` is back to the baseline strings ("Find juice shops & bakeries", "Find cattle farms", "Find charities", "Find buyers"), and `format.test.mjs` asserts all four.
 
 **Verdict: 8C is done. The user commits and deploys the API** (live is still `a7cfc28`), then runs the live check from round 5 "Next". Rollback: Cloud Run revision `a7cfc28`.
+
+---
+
+# Round 7: Milestone 8D, premium polish (code review; 2026-10-12)
+
+Scope: uncommitted changes against `fb78667` (live). `uv run pytest`: **369 passed, 19 skipped**; `node --test`: **21 passed**. Every function was diffed against `fb78667`.
+
+**Verdict: the code is right, with one regression (R1, 5 minutes). The visual result still needs screenshots; the agent's were not shared with the reviewer.**
+
+## Verified in code
+- **Logic untouched.** Only renderers changed: `renderItemsList`, `renderActiveBuyers`, `renderNextActionRow`, `createPriceCard`, `appendMessage`, `renderResults`. `renderResults` changed only in the bounding-box markup, and `icon()` only in size and stroke. Every logic function (the call, decide, buyer search, lock, polling) is byte-identical.
+- **D1:** `.bbox-rect` has `background: transparent` and a 2 px border; the classes are split into `.box-<stage>` (border) and `.dot-<stage>` (dots); the label is a pill with a dot.
+- **D2:** one Google Fonts `<link>` (Inter, Plus Jakarta Sans, JetBrains Mono, Noto Nastaliq Urdu, `display=swap`).
+- **D3:** `scriptClass()` is applied to names and transcript text.
+- **D4:** meta lines are built as "Type · 0.2 km · +92 ••••••• 984".
+- **D5:** the level reads "<level> stage".
+- **D6:** in the Buyers section, the next-action row shows "Next to call: #n" text instead of a second button.
+- **D7:** "<Level> confidence" in words.
+- **D8:** mono is in 11 places (to check visually).
+- **Section titles and subtitles** follow the spec. Section 3 reads "What happens to produce…", and could name the active item.
+- **Spacing:** 48 px between sections, 32 px card padding.
+
+## Fix before deploy
+- **R1. The Live-call result lost its "Next buyer" button.**
+  - `renderNextActionRow` now always prints "Next to call: #n" text for a `call` action. It is also used for the result strip under the live call (`call.js:391`), so after a decline the judge sees only text there and must scroll back up to the Buyers section to continue.
+  - **Fix:** add a parameter, `renderNextActionRow(container, batch, itemKey, buyers = [], showCallButton = false)`.
+    - With `showCallButton = true`, a `call` action renders a button "Next buyer · #<rank> <name>" (indigo), which calls `startCallForItem(itemKey, <that buyer's id>)`.
+    - `call.js` passes `true`; the Buyers section keeps `false` (its highlighted card has the button).
+
+## Small (optional)
+- Section 3 subtitle: "What happens to <active item name>, …" instead of "produce" (set it in `renderActiveDecision`).
+
+## Next
+1. Fix R1, then run `uv run pytest`.
+2. **Screenshots** (from the agent's report, or the user after deploy) at 1280 px and 375 px:
+   - Section 2 with Shelf C (the boxes must show the photo)
+   - the Buyers section after one declined call
+   - the Live-call result showing "Next buyer"
+   - Impact after a deal
+   The reviewer checks them against the 8D spec.
+3. The user commits and deploys the API. Rollback: `fb78667`.
+
+---
+
+# Round 8: R1 re-check (2026-10-12)
+
+`uv run pytest`: **369 passed, 19 skipped**; `node --test`: **21 passed**. The function diff against `fb78667`: **no logic function changed and none removed**; changes are limited to renderers, plus one new element reference in `dom.js` (`decisionSectionSubtitle`).
+
+- ✅ **R1:**
+  - `renderNextActionRow(..., showCallButton = false)`; with `true`, a `call` action renders "Next buyer · #<rank> <name>" (disabled during a call) and calls `startCallForItem(itemKey, <buyer id>)`
+  - `call.js` passes `true` with the live buyer list; the Buyers section keeps the text-only version
+  - if the buyer can't be matched, the id is undefined and the server picks the next buyer, which is safe
+- ✅ **Optional subtitle:** Section 3 reads "What happens to <item>, with prices set by the mart's rules."
+
+**Verdict: the 8D code is complete.** The user commits and deploys the API (rollback `fb78667`), then sends the screenshots listed in round 7 "Next" for the visual check against the 8D spec.

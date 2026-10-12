@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Last Call — Autonomous Produce Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Noto+Nastaliq+Urdu:wght@400&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/demo.css">
 </head>
 <body>
@@ -70,10 +73,13 @@
       <div class="section-head">
         <div class="section-head-left">
           <div class="section-circle">1</div>
-          <h2>Shelf Intake &amp; Store Setup</h2>
+          <div class="section-title-group">
+            <h2>Shelf setup</h2>
+            <p class="section-subtitle">Choose a branch, the time of day and a shelf photo.</p>
+          </div>
         </div>
         <div class="shelf-id-group">
-          <span class="chip chip-slate font-mono" id="shelfIdDisplay">demo_...</span>
+          <span class="chip font-mono" id="shelfIdDisplay">demo_...</span>
           <button type="button" id="btnNewShelf" class="btn-text">New shelf</button>
         </div>
       </div>
@@ -153,9 +159,12 @@
       <div class="section-head">
         <div class="section-head-left">
           <div class="section-circle">2</div>
-          <h2>AI Shelf Reading &amp; Multi-Item Freshness</h2>
+          <div class="section-title-group">
+            <h2>AI shelf reading</h2>
+            <p class="section-subtitle">Gemini judges the freshness of every item on the shelf.</p>
+          </div>
         </div>
-        <span id="itemsSummaryCount" class="chip chip-slate">0 items detected</span>
+        <span id="itemsSummaryCount" class="chip">0 items detected</span>
       </div>
 
       <!-- Warning Banners -->
@@ -188,10 +197,13 @@
       <div class="section-head">
         <div class="section-head-left">
           <div class="section-circle">3</div>
-          <h2>AI Valuation &amp; Routing Strategy</h2>
-          <span id="decisionActiveProduceChip" class="chip chip-emerald">—</span>
+          <div class="section-title-group">
+            <h2>Decision</h2>
+            <p class="section-subtitle" id="decisionSectionSubtitle">What happens to produce, with prices set by the mart's rules.</p>
+          </div>
+          <span id="decisionActiveProduceChip" class="chip">—</span>
         </div>
-        <span id="decisionRunwayChip" class="chip chip-amber">—</span>
+        <span id="decisionRunwayChip" class="chip">—</span>
       </div>
 
       <!-- Loading Skeleton for Decision -->
@@ -203,17 +215,17 @@
       <div id="decisionContent">
         <!-- Ladder Stepper Trail -->
         <div class="stepper-trail" id="ladderStepper">
-          <div class="stepper-item" data-step="keep">1. Keep</div>
+          <div class="stepper-item ladder-step" data-step="keep">1. Keep</div>
           <span class="stepper-arrow">→</span>
-          <div class="stepper-item" data-step="discount">2. Store Discount</div>
+          <div class="stepper-item ladder-step" data-step="discount">2. Store Discount</div>
           <span class="stepper-arrow">→</span>
-          <div class="stepper-item" data-step="bulk_sale">3. Bulk B2B Sale</div>
+          <div class="stepper-item ladder-step" data-step="bulk_sale">3. Bulk B2B Sale</div>
           <span class="stepper-arrow">→</span>
-          <div class="stepper-item" data-step="donate">4. Charity Donation</div>
+          <div class="stepper-item ladder-step" data-step="donate">4. Charity Donation</div>
           <span class="stepper-arrow">→</span>
-          <div class="stepper-item" data-step="animal_feed">5. Animal Feed</div>
+          <div class="stepper-item ladder-step" data-step="animal_feed">5. Animal Feed</div>
           <span class="stepper-arrow">→</span>
-          <div class="stepper-item" data-step="compost">6. Compost</div>
+          <div class="stepper-item ladder-step" data-step="compost">6. Compost</div>
         </div>
 
         <!-- Price Cards Grid -->
@@ -232,7 +244,7 @@
             <label for="activeItemShelfPriceInput" class="price-override-label">
               Shelf price:
             </label>
-            <input type="number" id="activeItemShelfPriceInput" class="price-override-input" min="1" max="100000" placeholder="Price">
+            <input type="number" id="activeItemShelfPriceInput" class="price-override-input font-mono" min="1" max="100000" placeholder="Price">
             <button type="button" id="btnActiveItemRedecide" class="btn-ghost">Re-decide</button>
           </div>
         </div>
@@ -244,9 +256,12 @@
       <div class="section-head">
         <div class="section-head-left">
           <div class="section-circle">4</div>
-          <h2>Nearby Commercial Buyers</h2>
+          <div class="section-title-group">
+            <h2>Buyers</h2>
+            <p class="section-subtitle">Real nearby businesses from Google Maps, screened by Gemini.</p>
+          </div>
         </div>
-        <span id="buyersHeadChip" class="chip chip-slate">0 buyers · Johar Town</span>
+        <span id="buyersHeadChip" class="chip">0 buyers · Johar Town</span>
       </div>
 
       <div id="buyersContent">
@@ -297,9 +312,10 @@
       <div class="call-header-bar">
         <div class="call-title-group">
           <div class="section-circle section-circle-call">5</div>
-          <h2 class="call-header-title">
-            Live Voice Call Simulation (Play the Buyer)
-          </h2>
+          <div class="section-title-group">
+            <h2 class="call-header-title">Live call</h2>
+            <p class="section-subtitle section-subtitle-dark">The AI negotiates in Urdu; you play the buyer.</p>
+          </div>
           <span id="callStatusBadge" class="chip chip-emerald">
             <span class="status-dot"></span>
             <span id="callStatusText">Connecting…</span> · <span id="callDuration">00:00</span>
@@ -372,9 +388,12 @@
       <div class="section-head">
         <div class="section-head-left">
           <div class="section-circle">6</div>
-          <h2>Live Recovery Impact &amp; Waste Diversion</h2>
+          <div class="section-title-group">
+            <h2>Impact</h2>
+            <p class="section-subtitle">What your calls on this shelf recovered.</p>
+          </div>
         </div>
-        <span class="chip chip-slate">Demo Role-Play</span>
+        <span class="chip">Demo Role-Play</span>
       </div>
 
       <div class="impact-grid" id="impactGrid">
@@ -403,7 +422,7 @@
           <div class="impact-metric-value" id="impactDeals">0 Deals</div>
         </div>
       </div>
-      <div id="impactHint" class="font-mono text-muted">
+      <div id="impactHint" class="text-muted">
         Start a call to see the impact here
       </div>
 

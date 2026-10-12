@@ -344,3 +344,129 @@ This is a MECHANICAL refactor, not a rewrite:
 - Step 12: uv run pytest; run the API locally and make one real voice call; report the baseline commit, files and line counts, screenshots at 1280 and 375 px, and the function-to-file list. If you can't run it locally, say so.
 No commits, no deploy. If the same test fails twice for the same reason, stop and report. Don't change logic to fix anything; ask.
 ````
+
+---
+
+# Milestone 8D: premium visual polish (added 2026-10-12, replaces 8B Step 8 items 1–2)
+
+> **Why:** the user tested the deployed flow (`fb78667`), which works, but the page looks "childish". The screenshots show **bugs** (filled boxes over the photo, fonts not loaded, text run together) plus **style** problems (saturated pills, monospace everywhere, jargon titles, crowded rows, two call buttons). 8D fixes both.
+>
+> **Scope:** `demo.css`, `index.html` markup, and the **renderer** functions only: `renderItemsList`, `highlightActiveBox`, `renderActiveDecision`, `createPriceCard`, `renderActiveBuyers`, `renderNextActionRow`, `renderImpact`, `renderCallResult`, `appendMessage`, `appendNotice`, `updateProgressBar`. **Logic functions stay byte-identical** apart from class names; the reviewer diffs them again. No server change.
+
+## Bugs to fix (seen in the user's screenshots)
+- **D1. The bounding boxes are filled with solid colour and hide the photo.**
+  - Cause: `.stage-*` sets `background-color`, and those classes are also put on `.bbox-rect`.
+  - Fix:
+    - **boxes have no fill**: `background: transparent`, a 2 px stage-coloured border, 6 px radius
+    - the label is a small white pill at the top-left with a stage-coloured dot and the name
+    - the active box gets a 3 px border and a soft shadow
+  - Split the classes: `.dot-<stage>` for dots, `.box-<stage>` for box borders; never one class for both.
+- **D2. The web fonts are never loaded.** `index.html` has no Google Fonts `<link>`, so Inter and Plus Jakarta Sans fall back to system fonts. Add one `<link>` with `display=swap` for:
+  - Inter 400/500/600
+  - Plus Jakarta Sans 600/700
+  - JetBrains Mono 500
+  - Noto Nastaliq Urdu 400
+- **D3. Business names render in a serif font** (they use the Urdu font).
+  - Only text that contains Urdu or Arabic script uses Noto Nastaliq Urdu. Add a helper `scriptClass(text)` in `ui.js` that returns `'urdu'` when `/[؀-ۿ]/.test(text)`, and apply it to the transcript bubbles and to name spans.
+  - Everything else uses Inter.
+- **D4. Text runs together.** Examples: "bananaoverripeLmid", "…15–25 piecesEstimated stock…dozenConfidence", "0.2 km☎ +92 … 984View on Google Maps".
+  - Every meta line uses separate elements with gaps (`gap: 6–12px`) or the separator " · ".
+  - The item details become a small definition grid of label/value pairs (see the spec).
+- **D5. The stray "L" before the level** ("Lmid", "Llate"). Show the level as muted text: "mid stage", "late stage", "early stage".
+- **D6. Two call buttons for the same buyer.** "Start calling #1 B4 Bakers" sits above the card that has "Start call · you play the buyer".
+  - When the highlighted card is shown, the next-action row shows **no** call button; it shows only non-call actions (Next step, Search again, All stock placed…).
+- **D7. "Confidence: 90%" looks like invented precision.** Show `confidence_level` in words: "High confidence", "Medium confidence", "Low confidence".
+- **D8. Monospace overused** (levels, scores, the footer, "Screened out by Gemini" at 18 px). Mono is only for the shelf ID and prices inside price cards. Numbers elsewhere use Inter with `font-variant-numeric: tabular-nums`.
+
+## Premium visual spec (follow exactly)
+
+**Colour (calm, two accents)**
+
+| Use | Value |
+|---|---|
+| Canvas | `#F8FAFC` |
+| Cards | `#FFFFFF`, border `#E5E7EB` |
+| Dividers | `#F1F5F9` |
+| Text | primary `#0F172A`, secondary `#475569`, muted `#94A3B8` |
+| Brand (primary buttons, positive numbers) | emerald `#047857`; hover `#065F46`; tint `#ECFDF5` |
+| AI and call (call buttons, live-call accents, the AI fit chip) | indigo `#4F46E5`; tint `#EEF2FF` |
+| Status (dots and small text only, **never large fills**) | fresh `#10B981`, ripening `#84CC16`, overripe `#F59E0B`, spoiled `#F97316`, unsafe `#EF4444`, warning text `#B45309` on `#FFFBEB`, danger text `#B91C1C` on `#FEF2F2` |
+
+No gradients, glows, saturated filled pills or emoji anywhere.
+
+**Typography**
+
+| Element | Style |
+|---|---|
+| Section titles | Plus Jakarta Sans 600, 20/28, `#0F172A` |
+| Section subtitles | Inter 400, 14/20, `#475569` |
+| Card titles and item or buyer names | Inter 600, 16/24 |
+| Body | Inter 400, 14/22 |
+| Labels | Inter 500, 12/16, uppercase, letter-spacing 0.04em, `#94A3B8` |
+| Meta | Inter 400, 13/20, `#475569` |
+| Big numbers (price cards, impact) | Plus Jakarta Sans 700, 28/34, tabular |
+
+**Spacing (8-point grid)**
+- page max width 1040 px; side gutter 24 px on desktop, 16 px on mobile
+- **48 px between sections**; card padding **32 px** on desktop, **20 px** on mobile
+- 24 px between blocks inside a card, 12 px between rows, 8 px between chips
+- line-height at least 1.5 for body text
+
+**Shapes**
+- cards: 16 px radius, 1 px border, shadow `0 1px 2px rgba(15,23,42,0.04)`
+- buttons: 10 px radius, height 40 px (44 px on mobile)
+- chips: 6 px radius, height 22 px, padding 0 8 px
+
+**Components**
+- **Section head:** a small neutral number badge (24 px circle, `#F1F5F9`, text `#475569`), the title, one-line subtitle under it, an optional right-side muted chip. Titles and subtitles:
+  1. "Shelf setup": "Choose a branch, the time of day and a shelf photo."
+  2. "AI shelf reading": "Gemini judges the freshness of every item on the shelf."
+  3. "Decision": "What happens to <item>, with prices set by the mart's rules."
+  4. "Buyers": "Real nearby businesses from Google Maps, screened by Gemini."
+  5. "Live call": "The AI negotiates in Urdu; you play the buyer."
+  6. "Impact": "What your calls on this shelf recovered."
+- **Chips (neutral by default):** `#F1F5F9` background, `#334155` text, 12 px weight 500.
+  - Stage chips are neutral with a 6 px coloured **dot** before the word ("● Overripe").
+  - The fit chip is indigo tint ("Likely").
+  - Status chips: deal = emerald tint, declined/no answer = neutral, asked not to be called = danger tint, on hold = warning tint.
+  - **At most 3 chips in a row.**
+- **Item row** (Section 2):
+  - line 1: name (16/600), stage chip with dot, "mid stage" (muted), and on the right the score as "46" (600) with a 64 px thin bar under it in the stage colour
+  - the active item expands into evidence text (14/22), neutral issue tags, and a **2-column grid**: Observed · Estimated stock · Confidence · Change (labels in the label style)
+  - staff-check as one warning-tint line with an icon
+- **Price cards** (Section 3): three equal cards, label on top (label style), the big number, "/dozen" in meta style; the floor card has a lock icon and "Never told to the AI" as its label. Above them, the ladder stepper is a thin row of steps with dots: the active step in emerald text with an emerald underline, "Next" steps in secondary text, steps not allowed in muted text.
+- **Buyer card** (Section 4):
+  - line 1: rank badge ("#1", neutral) + name (16/600) + up to 2 chips (fit, open status)
+  - line 2 (meta, 13/20): "Bakery · 0.2 km · +92 ••••••• 984", with "View on Google Maps ↗" at the end of the line in indigo text
+  - line 3: Gemini's reason (14/22, secondary)
+  - action: the highlighted card has the indigo full-width button "Start call · you play the buyer"; other rows have a right-aligned ghost button "Play this buyer" or their status chip, in a fixed-width right column so they line up
+- **Buyer footer:** one line in meta style: "Results from Google Maps · Near Demo Mart Johar Town · within 10 km · Searched just now", with a small ghost "Refresh" on the right of the same line. Under it, "Skipped: 17 no phone · 4 unlikely fit" (meta, muted) and "Screened out by Gemini (4)" as a normal 14 px disclosure.
+- **Live call panel:** dark `#0F172A` surface, 16 px radius, 32 px padding; info tiles on `#1E293B` with the label style in `#94A3B8` and values in white; transcript bubbles with 14/22 text (agent `#1E293B`, buyer indigo `#4F46E5`); tool notices as small muted lines.
+- **Impact:** 6 metric tiles in a 3 × 2 grid (2 × 3 on mobile): a label, then the big number; the role-play note in muted meta under the grid.
+- **Icons:** 16 px, stroke 1.75, `currentColor`, muted; always 6 px from their text.
+- **Motion:** only 150 ms colour, border and shadow transitions; the waveform during a call.
+
+## Verify and report (🛑)
+1. `uv run pytest` and `node --test` green; the static test still passes (no `innerHTML`, no `alert`, no inline looks-styles).
+2. **The reviewer re-diffs every logic function against `fb78667`.** Only renderers may change.
+3. **Screenshots at 1280 px and 375 px** of:
+   - Section 1
+   - Section 2 with "Tomatoes, Cucumbers & Guavas (Shelf C)" (5 items: boxes must show the photo)
+   - Section 3 for a bulk sale
+   - Section 4 with a buyer list after one declined call
+   - Section 5 during a call
+   - Section 6 after a deal
+4. A short checklist confirming D1–D8 with the screenshot that shows each.
+
+### 8D prompt for the coding agent
+````text
+Implement Milestone 8D in plans/module-8/plan.md for "Last Call" in /Users/kashmalrahat/AI-Builder-Cup/last-call. Read the 8D section fully first, then design/stitch/desktop/screen.png for the intended feel.
+
+Scope: services/api/lastcall_api/static/demo.css, static/index.html markup, and ONLY the renderer functions listed in 8D (renderItemsList, highlightActiveBox, renderActiveDecision, createPriceCard, renderActiveBuyers, renderNextActionRow, renderImpact, renderCallResult, appendMessage, appendNotice, updateProgressBar), plus a scriptClass(text) helper in ui.js. Every other function must stay byte-identical apart from class names; the reviewer will diff them against fb78667. No server change.
+
+1. Fix bugs D1–D8 exactly as written: no-fill bounding boxes (split .dot-<stage> and .box-<stage> classes), add the Google Fonts <link>, Urdu font only for Urdu-script text via scriptClass, no run-together text, "mid stage" instead of "Lmid", one call button (no call button in the next-action row while the highlighted card is shown), confidence in words, mono only for the shelf ID and price-card prices.
+2. Apply the "Premium visual spec" exactly: colours, typography, 8-point spacing (48 px between sections, 32 px card padding), shapes, and each component description, including the section titles and subtitles.
+3. Keep textContent only; no innerHTML, alert or inline looks-styles (only display and top/left/width/height inline).
+4. Run uv run pytest and node --test. Report the screenshots at 1280 px and 375 px listed in "Verify and report", and the D1–D8 checklist.
+No commits, no deploy.
+````

@@ -3,7 +3,7 @@
 import { state } from './state.js';
 import * as dom from './dom.js';
 import { getFindBuyersLabel, getNextStepTargetLabel } from './format.js';
-import { icon, showToast } from './ui.js';
+import { icon, showToast, scriptClass } from './ui.js';
 import { batchIdFor, loadBatchesForBranch } from './lock.js';
 import { renderResults } from './reading.js';
 import { startCallForItem } from './call.js';
@@ -82,7 +82,7 @@ export async function fetchScoutBuyers(itemKey, refresh = false) {
   }
 }
 
-export function renderNextActionRow(container, batch, itemKey, buyers = []) {
+export function renderNextActionRow(container, batch, itemKey, buyers = [], showCallButton = false) {
   container.replaceChildren();
 
   if (batch && batch.next_action) {
@@ -90,19 +90,24 @@ export function renderNextActionRow(container, batch, itemKey, buyers = []) {
     if (act.kind === 'call') {
       const rank = act.buyer_rank || ((batch.attempts ? batch.attempts.length : 0) + 1);
       const targetB = buyers.find(x => x.rank === rank) || buyers[rank - 1];
-      const bId = targetB ? targetB.buyer_id : null;
       const bName = targetB ? targetB.name : '';
-      const btnCall = document.createElement('button');
-      btnCall.type = 'button';
-      btnCall.className = 'btn-primary';
-      btnCall.textContent = (batch.attempts && batch.attempts.length > 0)
-        ? `Next buyer (#${rank}${bName ? ' ' + bName : ''})`
-        : `Start calling #${rank}${bName ? ' ' + bName : ''}`;
-      btnCall.disabled = state.isCallInProgress;
-      btnCall.addEventListener('click', () => {
-        startCallForItem(itemKey, bId);
-      });
-      container.appendChild(btnCall);
+      if (showCallButton) {
+        const btnCall = document.createElement('button');
+        btnCall.type = 'button';
+        btnCall.className = 'btn-ai';
+        btnCall.textContent = `Next buyer · #${rank}${bName ? ' ' + bName : ''}`;
+        btnCall.disabled = state.isCallInProgress;
+        const targetBId = targetB ? targetB.buyer_id : null;
+        btnCall.addEventListener('click', () => {
+          startCallForItem(itemKey, targetBId);
+        });
+        container.appendChild(btnCall);
+      } else {
+        const prompt = document.createElement('span');
+        prompt.className = 'next-action-prompt text-secondary';
+        prompt.textContent = `Next to call: #${rank}${bName ? ' ' + bName : ''}`;
+        container.appendChild(prompt);
+      }
     } else if (act.kind === 'next_step') {
       const btnStep = document.createElement('button');
       btnStep.type = 'button';
@@ -154,15 +159,22 @@ export function renderNextActionRow(container, batch, itemKey, buyers = []) {
       container.appendChild(btnRef);
     }
   } else if (buyers && buyers.length > 0) {
-    const btnCall = document.createElement('button');
-    btnCall.type = 'button';
-    btnCall.className = 'btn-primary';
-    btnCall.textContent = `Start calling #1 ${buyers[0].name}`;
-    btnCall.disabled = state.isCallInProgress;
-    btnCall.addEventListener('click', () => {
-      startCallForItem(itemKey, buyers[0].buyer_id);
-    });
-    container.appendChild(btnCall);
+    if (showCallButton) {
+      const btnCall = document.createElement('button');
+      btnCall.type = 'button';
+      btnCall.className = 'btn-ai';
+      btnCall.textContent = `Next buyer · #1 ${buyers[0].name}`;
+      btnCall.disabled = state.isCallInProgress;
+      btnCall.addEventListener('click', () => {
+        startCallForItem(itemKey, buyers[0].buyer_id);
+      });
+      container.appendChild(btnCall);
+    } else {
+      const prompt = document.createElement('span');
+      prompt.className = 'next-action-prompt text-secondary';
+      prompt.textContent = `Next to call: #1 ${buyers[0].name}`;
+      container.appendChild(prompt);
+    }
   }
 }
 
@@ -227,7 +239,7 @@ export function renderActiveBuyers() {
   dom.buyerQuantityControl.replaceChildren();
   if (batch) {
     const badge = document.createElement('span');
-    badge.className = 'chip chip-slate font-mono';
+    badge.className = 'chip chip-slate';
     badge.textContent = `Remaining: ${batch.remaining_quantity} of ${batch.total_quantity} ${batch.unit || 'kg'}`;
     dom.buyerQuantityControl.appendChild(badge);
   } else {
@@ -321,7 +333,7 @@ export function renderActiveBuyers() {
   dom.buyersListContainer.replaceChildren();
   if (scoutResult && buyers.length === 0) {
     const emptyMsg = document.createElement('div');
-    emptyMsg.className = 'font-mono text-muted py-6';
+    emptyMsg.className = 'text-muted py-6';
     emptyMsg.textContent = 'No suitable buyers found nearby';
     dom.buyersListContainer.appendChild(emptyMsg);
   } else if (buyers.length > 0) {
@@ -338,24 +350,20 @@ export function renderActiveBuyers() {
       bTitleGroup.className = 'flex items-center gap-2 flex-wrap';
 
       const rankBadge = document.createElement('span');
-      rankBadge.className = 'chip chip-indigo';
+      rankBadge.className = 'chip chip-slate';
       rankBadge.textContent = `#${highlightedBuyer.rank || 1} · Next to call`;
       bTitleGroup.appendChild(rankBadge);
 
       const bName = document.createElement('span');
-      bName.className = 'buyer-heading-name';
+      const sClass = scriptClass(highlightedBuyer.name);
+      bName.className = 'buyer-heading-name' + (sClass ? ' ' + sClass : '');
       bName.dir = 'auto';
       bName.textContent = highlightedBuyer.name;
       bTitleGroup.appendChild(bName);
 
-      const typeChip = document.createElement('span');
-      typeChip.className = 'chip chip-slate';
-      typeChip.textContent = (highlightedBuyer.buyer_type || '').replace(/_/g, ' ');
-      bTitleGroup.appendChild(typeChip);
-
       const fitChip = document.createElement('span');
       if (highlightedBuyer.fit === 'likely') {
-        fitChip.className = 'chip chip-emerald';
+        fitChip.className = 'chip chip-indigo';
         fitChip.textContent = 'Likely';
       } else {
         fitChip.className = 'chip chip-slate';
@@ -379,25 +387,20 @@ export function renderActiveBuyers() {
       topPickHead.appendChild(openStatus);
       nextCard.appendChild(topPickHead);
 
-      // Meta Row: distance, masked phone, maps link
+      // Meta Row: type · distance · masked phone, maps link
       const metaRow = document.createElement('div');
-      metaRow.className = 'buyer-meta-row flex gap-4 text-sm flex-wrap items-center';
+      metaRow.className = 'buyer-meta-row flex gap-2 text-sm flex-wrap items-center';
 
-      const distEl = document.createElement('span');
-      distEl.className = 'flex items-center gap-1';
-      distEl.appendChild(icon('pin'));
-      distEl.appendChild(document.createTextNode(` ${highlightedBuyer.distance_km} km`));
-      metaRow.appendChild(distEl);
-
-      const phoneEl = document.createElement('span');
-      phoneEl.className = 'buyer-phone-masked flex items-center gap-1';
-      phoneEl.appendChild(icon('phone'));
-      phoneEl.appendChild(document.createTextNode(` ${highlightedBuyer.phone_masked || 'No phone'}`));
-      metaRow.appendChild(phoneEl);
+      const typeRaw = (highlightedBuyer.buyer_type || '').replace(/_/g, ' ');
+      const typeStr = typeRaw ? typeRaw.charAt(0).toUpperCase() + typeRaw.slice(1) : '';
+      const metaSpan = document.createElement('span');
+      metaSpan.className = 'text-secondary';
+      metaSpan.textContent = `${typeStr ? typeStr + ' · ' : ''}${highlightedBuyer.distance_km} km · ${highlightedBuyer.phone_masked || 'No phone'}`;
+      metaRow.appendChild(metaSpan);
 
       if (highlightedBuyer.maps_uri && highlightedBuyer.maps_uri.startsWith('https://')) {
         const mapsLink = document.createElement('a');
-        mapsLink.className = 'buyer-maps-link flex items-center gap-1';
+        mapsLink.className = 'buyer-maps-link text-indigo hover:underline flex items-center gap-1';
         mapsLink.href = highlightedBuyer.maps_uri;
         mapsLink.target = '_blank';
         mapsLink.rel = 'noopener';
@@ -410,7 +413,7 @@ export function renderActiveBuyers() {
 
       // Facts line (reason) & fit_why
       const factsRow = document.createElement('div');
-      factsRow.className = 'buyer-facts-row flex flex-col gap-1 text-xs text-secondary';
+      factsRow.className = 'buyer-facts-row flex flex-col gap-1 text-sm text-secondary';
 
       if (highlightedBuyer.reason) {
         const rEl = document.createElement('div');
@@ -432,7 +435,7 @@ export function renderActiveBuyers() {
       // Call button
       const callBtn = document.createElement('button');
       callBtn.type = 'button';
-      callBtn.className = 'btn-ai self-start';
+      callBtn.className = 'btn-ai w-full';
       callBtn.textContent = 'Start call · you play the buyer';
       callBtn.disabled = state.isCallInProgress;
       callBtn.addEventListener('click', () => {
@@ -451,25 +454,31 @@ export function renderActiveBuyers() {
       const mainCol = document.createElement('div');
       mainCol.className = 'buyer-row-main flex flex-col gap-1 flex-1';
 
-      // Line 1: Header (rank, name, type chip, open/closed status, fit chip)
+      // Line 1: Header (rank, name, fit chip, open/closed status)
       const line1 = document.createElement('div');
       line1.className = 'flex items-center gap-2 flex-wrap';
 
       const rNum = document.createElement('span');
-      rNum.className = 'chip chip-slate font-mono';
+      rNum.className = 'chip chip-slate';
       rNum.textContent = `#${b.rank}`;
       line1.appendChild(rNum);
 
       const nameS = document.createElement('span');
-      nameS.className = 'font-bold';
+      const sClass = scriptClass(b.name);
+      nameS.className = 'font-semibold' + (sClass ? ' ' + sClass : '');
       nameS.dir = 'auto';
       nameS.textContent = b.name;
       line1.appendChild(nameS);
 
-      const typeChip = document.createElement('span');
-      typeChip.className = 'chip chip-slate';
-      typeChip.textContent = (b.buyer_type || '').replace(/_/g, ' ');
-      line1.appendChild(typeChip);
+      const fitChip = document.createElement('span');
+      if (b.fit === 'likely') {
+        fitChip.className = 'chip chip-indigo';
+        fitChip.textContent = 'Likely';
+      } else {
+        fitChip.className = 'chip chip-slate';
+        fitChip.textContent = 'Possible';
+      }
+      line1.appendChild(fitChip);
 
       const openStatus = document.createElement('span');
       if (b.open_now === true) {
@@ -484,37 +493,21 @@ export function renderActiveBuyers() {
       }
       line1.appendChild(openStatus);
 
-      const fitChip = document.createElement('span');
-      if (b.fit === 'likely') {
-        fitChip.className = 'chip chip-emerald';
-        fitChip.textContent = 'Likely';
-      } else {
-        fitChip.className = 'chip chip-slate';
-        fitChip.textContent = 'Possible';
-      }
-      line1.appendChild(fitChip);
-
       mainCol.appendChild(line1);
 
-      // Line 2: Details (distance, masked phone on one line, maps link)
+      // Line 2: Details (type · distance · phone, maps link)
       const line2 = document.createElement('div');
-      line2.className = 'flex items-center gap-3 flex-wrap text-sm';
+      line2.className = 'buyer-row-meta flex items-center gap-2 flex-wrap text-sm text-secondary';
 
-      const distEl = document.createElement('span');
-      distEl.className = 'flex items-center gap-1';
-      distEl.appendChild(icon('pin'));
-      distEl.appendChild(document.createTextNode(` ${b.distance_km} km`));
-      line2.appendChild(distEl);
-
-      const phoneEl = document.createElement('span');
-      phoneEl.className = 'buyer-phone-masked flex items-center gap-1';
-      phoneEl.appendChild(icon('phone'));
-      phoneEl.appendChild(document.createTextNode(` ${b.phone_masked || 'No phone'}`));
-      line2.appendChild(phoneEl);
+      const bTypeRaw = (b.buyer_type || '').replace(/_/g, ' ');
+      const bTypeStr = bTypeRaw ? bTypeRaw.charAt(0).toUpperCase() + bTypeRaw.slice(1) : '';
+      const metaSpan = document.createElement('span');
+      metaSpan.textContent = `${bTypeStr ? bTypeStr + ' · ' : ''}${b.distance_km} km · ${b.phone_masked || 'No phone'}`;
+      line2.appendChild(metaSpan);
 
       if (b.maps_uri && b.maps_uri.startsWith('https://')) {
         const mapsLink = document.createElement('a');
-        mapsLink.className = 'buyer-maps-link flex items-center gap-1';
+        mapsLink.className = 'buyer-maps-link text-indigo hover:underline flex items-center gap-1';
         mapsLink.href = b.maps_uri;
         mapsLink.target = '_blank';
         mapsLink.rel = 'noopener';
@@ -527,7 +520,7 @@ export function renderActiveBuyers() {
 
       // Line 3: Facts line (reason) & fit_why
       const line3 = document.createElement('div');
-      line3.className = 'flex flex-col gap-1 text-xs text-secondary';
+      line3.className = 'buyer-row-reason flex flex-col gap-1 text-sm text-secondary';
 
       if (b.reason) {
         const reasonEl = document.createElement('div');
@@ -550,7 +543,7 @@ export function renderActiveBuyers() {
 
       // Right Column: Row status chips in plain words or "Play this buyer"
       const rightCol = document.createElement('div');
-      rightCol.className = 'buyer-row-action flex items-center gap-2 flex-shrink-0';
+      rightCol.className = 'buyer-row-action flex items-center justify-end flex-shrink-0';
 
       const att = (batch && batch.attempts)
         ? batch.attempts.findLast(a => a.buyer_id === b.buyer_id && a.call_status !== 'pending')
@@ -637,13 +630,13 @@ export function renderActiveBuyers() {
 
     if (skippedParts.length > 0) {
       const skipLine = document.createElement('div');
-      skipLine.className = 'font-mono text-muted text-sm w-full mb-2';
+      skipLine.className = 'text-muted text-sm w-full mb-2';
       skipLine.textContent = `Skipped: ${skippedParts.join(' · ')}`;
       dom.buyersFooter.appendChild(skipLine);
     }
 
     const footerMeta = document.createElement('div');
-    footerMeta.className = 'flex justify-between items-center w-full flex-wrap gap-2';
+    footerMeta.className = 'flex justify-between items-center w-full flex-wrap gap-2 text-sm text-secondary';
 
     const metaLeft = document.createElement('div');
     metaLeft.className = 'flex items-center flex-wrap gap-1';
@@ -687,9 +680,9 @@ export function renderActiveBuyers() {
     const screenedOut = scoutResult.screened_out || [];
     if (screenedOut.length > 0) {
       const det = document.createElement('details');
-      det.className = 'font-mono text-xs text-muted';
+      det.className = 'text-sm text-muted';
       const sum = document.createElement('summary');
-      sum.className = 'cursor-pointer';
+      sum.className = 'cursor-pointer text-secondary';
       sum.textContent = `Screened out by Gemini (${screenedOut.length})`;
       det.appendChild(sum);
 

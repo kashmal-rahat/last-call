@@ -21,7 +21,7 @@ export function createPriceCard(label, valText, unitText, extraClass = '', iconN
   card.appendChild(lbl);
 
   const val = document.createElement('div');
-  val.className = 'price-card-value';
+  val.className = 'price-card-value font-mono';
   val.textContent = valText;
 
   if (unitText) {
@@ -115,6 +115,10 @@ export function renderActiveDecision() {
   // Header Chips
   const activeItemObj = state.currentInspection.items.find(i => i.item_key === state.activeItemKey);
   dom.decisionActiveProduceChip.textContent = activeItemObj ? activeItemObj.name : 'Active Item';
+  if (dom.decisionSectionSubtitle) {
+    const itmName = activeItemObj ? activeItemObj.name : 'produce';
+    dom.decisionSectionSubtitle.textContent = `What happens to ${itmName}, with prices set by the mart's rules.`;
+  }
 
   const hoursLeft = dom.closingTimeSelect.value ? parseFloat(dom.closingTimeSelect.value) : 2.0;
   dom.decisionRunwayChip.textContent = `${hoursLeft} h to closing`;
