@@ -448,3 +448,26 @@ User feedback on the deployed round-10 page: the live-call panel felt cluttered,
     - `callFloorPrice` shows "Rs 65 / dozen"; "Never told to the AI" is now a static note
     No request, payload, flow or timing changed.
 - **Not verifiable locally:** real microphone audio (blocked in the preview browser), and real Places and Gemini text lengths.
+
+---
+
+# Round 12: hero and "How it works", by Claude (2026-10-13)
+
+The hero is there so a judge who opens the link cold understands in seconds what Last Call is and where to start. It's markup and CSS only; no JS file changed (`git diff --stat`: `demo.css`, `index.html`).
+
+- **Hero, the first block in `<main>`:**
+  - a kicker ("AI Builder Cup 2026 · Retail & Commerce")
+  - the `h1`: "An AI that sells your near-expiry produce, by phone, in Urdu". The header brand `h1` became a `div`, so the page has one `h1`.
+  - one lead sentence
+  - two plain anchor links (`#inspectorSection`, `#howItWorks`), no JS
+  - an access-code note and an AI-agent quote with a static waveform
+- **Visual:** an example call drawn in HTML (`role="img"` with an `aria-label`): a Gemini flag card ("Bananas · overripe"), three Urdu bubbles, a "Deal agreed" banner. It uses no image file and no real business name ("Juice corner").
+- **"How it works":** a 4-step strip (Inspect, Decide, Find buyers, Call). It has 2 columns at ≤900 px, and a compact list on a phone.
+- **Fixes:**
+  - `.main-layout > section { scroll-margin-top: 80px }`, so anchors and the progress-step scroll clear the sticky header
+  - a bug already on live: `.setup-grid` columns `1fr` → `minmax(0, 1fr)`, since at 768 px a long branch name pushed the page to 983 px wide
+- **No animations** (the user's decision).
+- **Verification:**
+  - no sideways scroll at 1280, 768 or 375 px (`scrollWidth == clientWidth`)
+  - every `dom.js` element lookup is non-null
+  - `pytest`: 369 passed, 19 skipped; `node --test`: 21 passed
