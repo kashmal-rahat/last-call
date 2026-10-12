@@ -33,38 +33,6 @@
     </div>
   </header>
 
-  <!-- Sticky Progress Bar Under Header -->
-  <div class="progress-bar-wrapper">
-    <div class="progress-container">
-      <div class="progress-track" id="progressTrack" aria-live="polite">
-        <button type="button" class="progress-step completed" data-step="1" id="progStep1" title="Shelf setup">
-          <div class="progress-bar-segment"></div>
-          <span class="progress-label">1. Setup</span>
-        </button>
-        <button type="button" class="progress-step" data-step="2" id="progStep2" title="AI reading">
-          <div class="progress-bar-segment"></div>
-          <span class="progress-label">2. AI Reading</span>
-        </button>
-        <button type="button" class="progress-step" data-step="3" id="progStep3" title="Valuation and routing">
-          <div class="progress-bar-segment"></div>
-          <span class="progress-label">3. Decision</span>
-        </button>
-        <button type="button" class="progress-step" data-step="4" id="progStep4" title="Commercial buyers">
-          <div class="progress-bar-segment"></div>
-          <span class="progress-label">4. Buyers</span>
-        </button>
-        <button type="button" class="progress-step" data-step="5" id="progStep5" title="Live negotiation call">
-          <div class="progress-bar-segment"></div>
-          <span class="progress-label">5. Live Call</span>
-        </button>
-        <button type="button" class="progress-step" data-step="6" id="progStep6" title="Value recovery impact">
-          <div class="progress-bar-segment"></div>
-          <span class="progress-label">6. Impact</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
   <!-- Main Single-Column Layout -->
   <main class="main-layout">
 
@@ -73,22 +41,13 @@
       <div class="hero-copy">
         <span class="hero-kicker"><span class="hero-kicker-dot" aria-hidden="true"></span>AI Builder Cup 2026 · Retail &amp; Commerce</span>
         <h1 class="hero-title" id="heroTitle">An AI that sells your near-expiry produce, <span class="hero-accent">by phone, in Urdu</span></h1>
-        <p class="hero-lead">Last Call reads your shelf from <strong>one photo</strong>, decides discount, bulk sale or donation, finds nearby buyers on Google Maps, and <strong>calls them in Urdu to close the deal</strong> before closing time.</p>
+        <p class="hero-lead">Last Call reads your shelf from a photo, decides whether to discount, sell in bulk or donate, finds nearby buyers on Google Maps, then calls and negotiates with them in the local language (Urdu) to close the deal before closing time.</p>
         <div class="hero-actions">
           <a class="btn-primary hero-btn" href="#inspectorSection">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 4 20 12 6 20 6 4"/></svg>
             Try the live demo
           </a>
-          <a class="btn-ghost hero-btn" href="#howItWorks">
-            See how it works
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          </a>
         </div>
-        <p class="hero-note">You play the buyer in a real voice call. The access code is in our submission.</p>
-        <p class="hero-quote">
-          <span class="hero-wave" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></span>
-          <span>“Ripe bananas, Rs 110 a dozen, perfect for your shakes.” <span class="hero-quote-by">AI agent, in Urdu</span></span>
-        </p>
       </div>
 
       <div class="hero-visual" role="img" aria-label="Example: Gemini flags overripe bananas, then the AI agent agrees a sale with a nearby juice shop in Urdu">
@@ -116,27 +75,29 @@
     </section>
 
     <!-- How it works: the four agents -->
-    <section class="how-strip" id="howItWorks" aria-label="How it works">
-      <div class="how-step">
-        <span class="how-num">1</span>
+    <section class="how-section" id="howItWorks" aria-label="How it works">
+      <ol class="how-strip">
+      <li class="how-step">
+        <span class="how-num" aria-hidden="true">1</span>
         <h3>Inspect</h3>
-        <p>Gemini reads ripeness, damage and quantity from one shelf photo.</p>
-      </div>
-      <div class="how-step">
-        <span class="how-num">2</span>
+        <p>Gemini reads ripeness, damage and quantity from a shelf photo.</p>
+      </li>
+      <li class="how-step">
+        <span class="how-num" aria-hidden="true">2</span>
         <h3>Decide</h3>
-        <p>Clear rules pick keep, discount, bulk sale, donate, animal feed or compost, with prices.</p>
-      </div>
-      <div class="how-step">
-        <span class="how-num">3</span>
+        <p>Gemini knows the produce, then rules choose discount, bulk sale, donation, feed or compost, with a price floor.</p>
+      </li>
+      <li class="how-step">
+        <span class="how-num" aria-hidden="true">3</span>
         <h3>Find buyers</h3>
-        <p>Google Maps finds nearby juice shops, bakeries and charities; Gemini checks each fit.</p>
-      </div>
-      <div class="how-step">
-        <span class="how-num">4</span>
-        <h3>Call</h3>
-        <p>Gemini Live calls in Urdu, never goes below your floor price and books the pickup.</p>
-      </div>
+        <p>Google Maps finds nearby juice shops, bakeries and charities, and Gemini checks each fit.</p>
+      </li>
+      <li class="how-step">
+        <span class="how-num" aria-hidden="true">4</span>
+        <h3>Call and negotiate</h3>
+        <p>Gemini Live calls in Urdu, bargains above your floor price and books the pickup.</p>
+      </li>
+      </ol>
     </section>
 
     <!-- SECTION 1: Shelf Intake & Store Setup -->

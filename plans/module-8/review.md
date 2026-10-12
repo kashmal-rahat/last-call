@@ -471,3 +471,21 @@ The hero is there so a judge who opens the link cold understands in seconds what
   - no sideways scroll at 1280, 768 or 375 px (`scrollWidth == clientWidth`)
   - every `dom.js` element lookup is non-null
   - `pytest`: 369 passed, 19 skipped; `node --test`: 21 passed
+
+---
+
+# Round 13: calmer hero, step cards, progress bar removed, by Claude (2026-10-13)
+
+User feedback: the hero felt cluttered.
+- **Hero:**
+  - The lead sentence is now "reads your shelf from a photo … then calls and negotiates with them in the local language (Urdu)", with no bold text.
+  - Removed: the "See how it works" button, the access-code note, and the quoted AI line with its waveform (and their CSS).
+- **"How it works":** four separate cards, with the numbered circles joined by a line (desktop: horizontal, first to last circle; phone: a short vertical connector between steps). Step 4 is now "Call and negotiate". Markup is an `<ol>`.
+- **Progress bar removed** (the user judged it useless). That removed the markup, its CSS, the 7 `dom.js` lookups, `updateProgressBar` (`setup.js`) and its 4 calls (`main.js`, `reading.js`), the click-to-scroll handler (`main.js`), and the `progressTrack` assertion and export-list entry in `static.test.mjs`.
+  - **The JS diff is deletions only;** no other logic changed.
+- **Verification:**
+  - preview flow: sample → Inspect (3 items, decision shown) → Find buyers (5 buyers, next highlighted), with no JS errors (only the expected 404s for "no batch yet")
+  - no sideways scroll at 1280, 768 or 375 px
+  - `pytest`: 369 passed, 19 skipped; `node --test`: 21 passed; `node --check` on every module
+- **Follow-up (same round, after the user's local check):** the connector line looked busy, so it's gone. Each step is now one card with its number badge inside (`.how-step` is the card; `.how-card` was removed). 4 columns, 2 at ≤900 px, 1 at ≤560 px. No JS change; `node --test` passes 21.
+- **Second follow-up:** the number is now a 24 px outlined circle (1.5 px emerald border, 12 px digit) instead of a 32 px filled square. The cards are tighter: padding 18×20 (16×18 on a phone), radius 14, 12 px above the title.

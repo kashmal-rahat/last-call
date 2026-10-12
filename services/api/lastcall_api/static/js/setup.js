@@ -118,21 +118,3 @@ export function updateHeaderBranch() {
     dom.headerBranchChip.textContent = branchName;
   }
 }
-
-// Progress Bar Updater
-export function updateProgressBar() {
-  const hasInspection = !!(state.currentInspection && state.currentInspection.inspection_id);
-  const hasDecisions = !!(state.currentLadderResult && state.currentLadderResult.decisions && state.currentLadderResult.decisions.length > 0);
-  const hasBuyers = !!(state.activeItemKey && state.scoutResultsMap[state.activeItemKey] && state.scoutResultsMap[state.activeItemKey].buyers);
-  const hasCall = state.isCallInProgress || Object.values(state.currentBatchesMap).some(b => b.attempts && b.attempts.length > 0);
-  const hasDeal = Object.values(state.currentBatchesMap).some(b =>
-    b.attempts && b.attempts.some(a => a.outcome === 'deal' || a.outcome === 'partial_deal')
-  );
-
-  dom.progStep1.className = 'progress-step completed';
-  dom.progStep2.className = 'progress-step' + (hasInspection ? ' completed' : '');
-  dom.progStep3.className = 'progress-step' + (hasDecisions ? ' completed' : (hasInspection ? ' current' : ''));
-  dom.progStep4.className = 'progress-step' + (hasBuyers ? ' completed' : (hasDecisions ? ' current' : ''));
-  dom.progStep5.className = 'progress-step' + (hasCall ? ' completed' : (hasBuyers ? ' current' : ''));
-  dom.progStep6.className = 'progress-step' + (hasDeal ? ' completed' : (hasCall ? ' current' : ''));
-}

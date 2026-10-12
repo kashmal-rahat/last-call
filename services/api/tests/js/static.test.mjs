@@ -47,12 +47,6 @@ test('index.html: has ZERO style="..." attributes', () => {
 });
 
 test('index.html: has required accessibility attributes', () => {
-  // progress track has aria-live="polite"
-  assert.ok(
-    /id=["']progressTrack["'][^>]*aria-live=["']polite["']|aria-live=["']polite["'][^>]*id=["']progressTrack["']/i.test(indexHtmlContent),
-    'progressTrack must have aria-live="polite"'
-  );
-
   // closing-time-btn buttons have aria-pressed
   const closingBtns = [...indexHtmlContent.matchAll(/<button[^>]*class=["'][^"']*closing-time-btn[^"']*["'][^>]*>/gi)];
   assert.ok(closingBtns.length > 0, 'Found closing-time-btn buttons');
@@ -124,8 +118,7 @@ test('static/js/: every exported symbol in the Step 9 table exists', async () =>
       'syncClosingTimeButtons',
       'loadSamples',
       'loadBranches',
-      'updateHeaderBranch',
-      'updateProgressBar'
+      'updateHeaderBranch'
     ],
     'lock.js': ['batchIdFor', 'loadBatchesForBranch', 'isShelfLocked', 'updateShelfLock'],
     'reading.js': ['handleInspect', 'setActiveItem', 'highlightActiveBox', 'renderItemsList', 'renderResults'],

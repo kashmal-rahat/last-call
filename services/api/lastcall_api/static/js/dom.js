@@ -86,11 +86,3 @@ export const impactHint = document.getElementById('impactHint');
 export const headerBranchChip = document.getElementById('headerBranchChip');
 export const headerTime = document.getElementById('headerTime');
 
-// Progress bar elements
-export const progressTrack = document.getElementById('progressTrack');
-export const progStep1 = document.getElementById('progStep1');
-export const progStep2 = document.getElementById('progStep2');
-export const progStep3 = document.getElementById('progStep3');
-export const progStep4 = document.getElementById('progStep4');
-export const progStep5 = document.getElementById('progStep5');
-export const progStep6 = document.getElementById('progStep6');

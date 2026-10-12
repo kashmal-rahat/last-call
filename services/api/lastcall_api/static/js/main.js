@@ -9,8 +9,7 @@ import {
   syncClosingTimeButtons,
   loadSamples,
   loadBranches,
-  updateHeaderBranch,
-  updateProgressBar
+  updateHeaderBranch
 } from './setup.js';
 import { isShelfLocked, updateShelfLock, loadBatchesForBranch } from './lock.js';
 import { handleInspect, renderResults } from './reading.js';
@@ -73,7 +72,6 @@ if (dom.btnNewShelf) {
     }
 
     updateShelfLock();
-    updateProgressBar();
     renderImpact();
   });
 }
@@ -137,27 +135,6 @@ if (dom.btnHangup) {
   dom.btnHangup.addEventListener('click', hangup);
 }
 
-const progressTrack = document.getElementById('progressTrack');
-if (progressTrack) {
-  progressTrack.addEventListener('click', (e) => {
-    const stepBtn = e.target.closest('.progress-step');
-    if (!stepBtn) return;
-    const stepNum = stepBtn.dataset.step;
-    const targetMap = {
-      '1': 'inspectorSection',
-      '2': 'sectionAiReading',
-      '3': 'sectionDecision',
-      '4': 'sectionBuyers',
-      '5': 'voiceSection',
-      '6': 'sectionImpact'
-    };
-    const el = document.getElementById(targetMap[stepNum]);
-    if (el && el.style.display !== 'none') {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  });
-}
-
 if (dom.btnActiveItemRedecide) {
   dom.btnActiveItemRedecide.addEventListener('click', () => {
     if (isShelfLocked() || !state.activeItemKey) return;
@@ -206,7 +183,6 @@ async function init() {
   }
   updateHeaderBranch();
   syncClosingTimeButtons();
-  updateProgressBar();
   renderImpact();
 }
 

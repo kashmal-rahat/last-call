@@ -6,7 +6,6 @@ import { setStoredItem, getOrCreateShelfId } from './storage.js';
 import { rankItems, formatObserved, formatQuantity, STAFF_REASON_LABELS } from './format.js';
 import { icon, showToast } from './ui.js';
 import { updateShelfLock } from './lock.js';
-import { updateProgressBar } from './setup.js';
 import { triggerDecide, renderActiveDecision } from './decision.js';
 import { renderActiveBuyers } from './buyers.js';
 import { renderImpact } from './impact.js';
@@ -138,7 +137,6 @@ export function setActiveItem(itemKey) {
 
   renderActiveDecision();
   renderActiveBuyers();
-  updateProgressBar();
 }
 
 export function highlightActiveBox(itemKey) {
@@ -399,7 +397,6 @@ export function renderResults(data, imgSrc) {
     renderImpact();
   }
   updateShelfLock();
-  updateProgressBar();
 }
 
 // Produce names and words arrive in lower case; capitalise the first letter for display only.

@@ -159,73 +159,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Progress Tracker Bar */
-.progress-bar-wrapper {
-  background-color: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-
-.progress-container {
-  max-width: 1040px;
-  margin: 0 auto;
-  padding: 0.625rem 1.25rem;
-}
-
-.progress-track {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 0.5rem;
-}
-
-.progress-step {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  cursor: pointer;
-  background: none;
-  border: none;
-  text-align: left;
-  padding: 0;
-  transition: opacity 0.2s;
-}
-
-.progress-step:hover {
-  opacity: 0.85;
-}
-
-.progress-bar-segment {
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background-color: var(--border);
-  transition: background-color 0.3s ease;
-}
-
-.progress-step.completed .progress-bar-segment {
-  background-color: var(--emerald);
-}
-
-.progress-step.current .progress-bar-segment {
-  background-color: var(--indigo);
-}
-
-.progress-label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.progress-step.completed .progress-label {
-  color: var(--emerald-dark);
-}
-
-.progress-step.current .progress-label {
-  color: var(--indigo);
-  font-weight: 700;
-}
-
 /* Main Layout */
 .main-layout {
   max-width: 1040px;
@@ -1928,9 +1861,6 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   .setup-grid > *, .field { min-width: 0; }
   .field select, .field input { width: 100%; max-width: 100%; }
   .segmented-control button { white-space: normal; }
-  .progress-track { gap: 4px; }
-  .progress-step { min-width: 0; }
-  .progress-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
 }
 
 /* Dark-panel details */
@@ -2011,30 +1941,10 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   line-height: 1.65;
   color: var(--text-secondary);
 }
-.hero-lead strong { color: var(--text-primary); font-weight: 600; }
 
 .hero-actions { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 12px; }
 .hero-btn { height: 48px; padding: 0 20px; font-size: 15px; text-decoration: none; }
 .btn-primary.hero-btn { box-shadow: 0 8px 20px -8px rgba(4, 120, 87, 0.55); }
-
-.hero-note { margin-top: 14px; font-size: 13px; color: var(--text-muted); }
-
-.hero-quote {
-  margin-top: 28px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-.hero-quote-by { display: block; font-size: 12px; color: var(--text-muted); }
-.hero-wave { display: inline-flex; align-items: center; gap: 3px; height: 24px; flex: none; }
-.hero-wave span { width: 3px; border-radius: 3px; background: var(--indigo-vivid); opacity: 0.75; }
-.hero-wave span:nth-child(1) { height: 8px; }
-.hero-wave span:nth-child(2) { height: 18px; }
-.hero-wave span:nth-child(3) { height: 24px; }
-.hero-wave span:nth-child(4) { height: 14px; }
-.hero-wave span:nth-child(5) { height: 6px; }
 
 /* Visual: an example call, drawn in HTML */
 .hero-visual { position: relative; min-width: 0; padding: 38px 0 0 28px; }
@@ -2130,24 +2040,28 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
 .hero-flag-text { display: flex; flex-direction: column; font-size: 12px; color: var(--text-secondary); }
 .hero-flag-text strong { font-size: 13px; color: var(--text-primary); font-weight: 600; }
 
-/* How it works */
+/* How it works: four separate cards, number inside each */
 .how-strip {
+  list-style: none;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface);
-  overflow: hidden;
+  gap: 20px;
 }
-.how-step { padding: 22px 22px 24px; min-width: 0; }
-.how-step + .how-step { border-left: 1px solid var(--border-muted); }
+.how-step {
+  min-width: 0;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
 .how-num {
   display: inline-flex; align-items: center; justify-content: center;
   width: 24px; height: 24px;
   border-radius: 999px;
-  background: var(--emerald-light);
+  border: 1.5px solid var(--emerald);
   color: var(--emerald-dark);
-  font-size: 12px; font-weight: 700;
+  font-size: 12px; font-weight: 600;
 }
 .how-step h3 {
   margin-top: 12px;
@@ -2157,14 +2071,20 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   letter-spacing: -0.01em;
   color: var(--text-primary);
 }
-.how-step p { margin-top: 6px; font-size: 14px; line-height: 1.55; color: var(--text-secondary); }
+.how-step p { margin-top: 4px; font-size: 14px; line-height: 1.55; color: var(--text-secondary); }
 
 @media (max-width: 900px) {
   .hero { grid-template-columns: minmax(0, 1fr); gap: 40px; padding-top: 16px; }
   .hero-visual { max-width: 520px; }
+}
+
+@media (max-width: 900px) {
   .how-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .how-step:nth-child(3) { border-left: none; }
-  .how-step:nth-child(n + 3) { border-top: 1px solid var(--border-muted); }
+}
+
+@media (max-width: 560px) {
+  .how-strip { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .how-step { padding: 16px 18px; }
 }
 
 @media (max-width: 640px) {
@@ -2175,15 +2095,4 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   .hero-flag { position: static; margin-bottom: 12px; width: fit-content; max-width: 100%; }
   .hero-call { padding: 16px; }
   .hero-bubble { font-size: 14px; }
-  .how-strip { grid-template-columns: minmax(0, 1fr); }
-  .how-step + .how-step { border-left: none; border-top: 1px solid var(--border-muted); }
-  .how-step {
-    padding: 16px 20px;
-    display: grid;
-    grid-template-columns: 24px minmax(0, 1fr);
-    column-gap: 12px;
-  }
-  .how-num { grid-row: span 2; }
-  .how-step h3 { margin-top: 1px; }
-  .how-step p { margin-top: 2px; }
 }
