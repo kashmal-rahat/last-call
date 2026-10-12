@@ -343,6 +343,16 @@
       font-size: 0.88rem;
     }
 
+    .shelf-lock-note {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      margin-top: 0.5rem;
+      padding: 0.4rem 0.6rem;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
     .inspect-result-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -911,8 +921,9 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 0.4rem;
+      min-width: 0;
     }
 
     .buyer-title {
@@ -922,6 +933,9 @@
       font-size: 0.85rem;
       font-weight: 600;
       color: #f1f5f9;
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow: hidden;
     }
 
     .buyer-rank {
@@ -935,10 +949,15 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
     }
 
     .buyer-name {
       color: #f8fafc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
     }
 
     .buyer-type-chip {
@@ -950,6 +969,8 @@
       padding: 0.1rem 0.4rem;
       border-radius: 4px;
       text-transform: capitalize;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
 
     .buyer-meta {
@@ -958,15 +979,19 @@
       gap: 0.5rem;
       font-size: 0.75rem;
       color: #94a3b8;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
 
     .buyer-open-now {
       color: #34d399;
       font-weight: 500;
+      white-space: nowrap;
     }
 
     .buyer-closed {
       color: #94a3b8;
+      white-space: nowrap;
     }
 
     .buyer-phone-row {
@@ -1092,6 +1117,8 @@
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.15);
       color: #cbd5e1;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
     .buyer-status-chip.chip-deal {
       background: rgba(16, 185, 129, 0.18);
@@ -1129,6 +1156,9 @@
       border-radius: 4px;
       cursor: pointer;
       transition: all 0.2s;
+      flex: 0 0 auto;
+      width: auto;
+      white-space: nowrap;
     }
     .btn-play-buyer:hover:not(:disabled) {
       background: rgba(56, 189, 248, 0.25);
@@ -1583,6 +1613,8 @@
           </div>
         </div>
 
+        <div id="shelfLockNote" class="shelf-lock-note" style="display: none;"></div>
+
         <!-- Sample Photos Selector -->
         <div class="samples-container">
           <label>Or pick a sample shelf photo:</label>
@@ -1708,6 +1740,7 @@
     const inspectError = document.getElementById('inspectError');
     const inspectStatusBanner = document.getElementById('inspectStatusBanner');
     const inspectInstructionBanner = document.getElementById('inspectInstructionBanner');
+    const shelfLockNote = document.getElementById('shelfLockNote');
     const inspectResultContainer = document.getElementById('inspectResultContainer');
     const inspectedImage = document.getElementById('inspectedImage');
     const bboxOverlay = document.getElementById('bboxOverlay');
@@ -1735,6 +1768,7 @@
     let quantityInputs = {};
     let quantityEdited = {};
     let isCallInProgress = false;
+    let isInspecting = false;
     let currentActiveCall = null;
 
     function getStoredItem(key, defaultVal = '') {
@@ -1782,7 +1816,48 @@
     shelfIdDisplay.textContent = getOrCreateShelfId();
     btnNewShelf.addEventListener('click', (e) => {
       e.preventDefault();
+      if (isCallInProgress || isInspecting) return;
+
       resetShelfId();
+
+      currentInspection = null;
+      currentLadderResult = null;
+      currentDisplayUrl = null;
+      priceOverrides = {};
+      scoutResultsMap = {};
+      scoutErrorsMap = {};
+      scoutLoadingMap = {};
+      scoutRequestCounters = {};
+      currentBatchesMap = {};
+      quantityInputs = {};
+      quantityEdited = {};
+      staffCheckedMap = {};
+      currentActiveCall = null;
+
+      // Hide result area
+      inspectError.style.display = 'none';
+      decideError.style.display = 'none';
+      decideError.textContent = '';
+      inspectStatusBanner.style.display = 'none';
+      inspectInstructionBanner.style.display = 'none';
+      inspectResultContainer.style.display = 'none';
+      inspectFooter.style.display = 'none';
+      inspectLoading.style.display = 'none';
+      inspectedImage.src = '';
+      bboxOverlay.replaceChildren();
+      itemsContainer.replaceChildren();
+
+      if (resultCard) {
+        resultCard.classList.remove('visible');
+      }
+      if (resultContent) {
+        resultContent.replaceChildren();
+      }
+      if (resultNextAction) {
+        resultNextAction.replaceChildren();
+      }
+
+      updateShelfLock();
     });
 
     // Populate Samples
@@ -1898,8 +1973,55 @@
       scoutResultsMap = {};
       scoutErrorsMap = {};
       scoutLoadingMap = {};
-      loadBatchesForBranch();
+      currentBatchesMap = {};
+      if (resultCard) {
+        resultCard.classList.remove('visible');
+      }
+      if (resultContent) {
+        resultContent.replaceChildren();
+      }
+      if (resultNextAction) {
+        resultNextAction.replaceChildren();
+      }
+      renderResults(currentInspection, currentDisplayUrl);
     });
+
+    function isShelfLocked() {
+      if (isCallInProgress) return true;
+      return Object.values(currentBatchesMap || {}).some(
+        b => b && Array.isArray(b.attempts) && b.attempts.length > 0
+      );
+    }
+
+    function updateShelfLock() {
+      const locked = isShelfLocked();
+      branchSelect.disabled = locked;
+      closingTimeSelect.disabled = locked;
+
+      document.querySelectorAll('.price-override-input').forEach(input => {
+        input.disabled = locked;
+      });
+      document.querySelectorAll('.btn-redecide').forEach(btn => {
+        btn.disabled = locked;
+      });
+
+      if (btnInspect) {
+        btnInspect.disabled = isCallInProgress || isInspecting;
+      }
+      if (btnNewShelf) {
+        btnNewShelf.disabled = isCallInProgress || isInspecting;
+      }
+
+      if (shelfLockNote) {
+        if (locked) {
+          shelfLockNote.textContent = 'Branch, closing time and prices are fixed once calls start · New shelf to start over';
+          shelfLockNote.style.display = 'block';
+        } else {
+          shelfLockNote.textContent = '';
+          shelfLockNote.style.display = 'none';
+        }
+      }
+    }
 
     async function fetchScoutBuyers(itemKey, refresh = false) {
       if (!currentInspection || !currentInspection.inspection_id) return;
@@ -3080,6 +3202,7 @@
       }
 
       inspectResultContainer.style.display = 'grid';
+      updateShelfLock();
     }
 
     async function triggerDecide() {
@@ -3181,6 +3304,7 @@
       decideError.style.display = 'none';
       decideError.textContent = '';
       inspectLoading.style.display = 'flex';
+      isInspecting = true;
       btnInspect.disabled = true;
 
       currentInspection = null;
@@ -3190,6 +3314,13 @@
       scoutResultsMap = {};
       scoutErrorsMap = {};
       scoutLoadingMap = {};
+      scoutRequestCounters = {};
+      currentBatchesMap = {};
+      quantityInputs = {};
+      quantityEdited = {};
+      staffCheckedMap = {};
+      currentActiveCall = null;
+      updateShelfLock();
 
       const shelfId = getOrCreateShelfId();
       const formData = new FormData();
@@ -3236,8 +3367,10 @@
         inspectError.textContent = err.message;
         inspectError.style.display = 'block';
       } finally {
+        isInspecting = false;
         inspectLoading.style.display = 'none';
         btnInspect.disabled = false;
+        updateShelfLock();
       }
     }
 
@@ -3357,6 +3490,7 @@
       const staffChecked = !!staffCheckedMap[itemKey];
 
       isCallInProgress = true;
+      updateShelfLock();
       renderResults(currentInspection, currentDisplayUrl);
 
       const liveSection = document.getElementById('section-live-call');
@@ -3450,6 +3584,7 @@
         setStatus('Ready');
         btnHangup.disabled = true;
         isCallInProgress = false;
+        updateShelfLock();
         renderResults(currentInspection, currentDisplayUrl);
       }
     }
@@ -3520,6 +3655,7 @@
 
         if (event.code === 4401 || event.code === 4409 || event.code === 4423 || (event.code >= 4000 && event.code < 5000)) {
           isCallInProgress = false;
+          updateShelfLock();
           if (event.code === 4401) {
             setStatus('Auth Failed');
             alert('WebSocket Auth failed (Code 4401)');
@@ -3544,6 +3680,7 @@
           await pollBatchUntilCompleted(currentActiveCall.batchId, currentActiveCall.callId);
         } else {
           isCallInProgress = false;
+          updateShelfLock();
           if (currentInspection) renderResults(currentInspection, currentDisplayUrl);
         }
       };
@@ -3580,6 +3717,7 @@
       }
 
       isCallInProgress = false;
+      updateShelfLock();
       setStatus('Call Ended');
 
       if (currentActiveCall && currentActiveCall.itemKey) {
@@ -3661,6 +3799,7 @@
         isCallInProgress = false;
         btnHangup.disabled = true;
         setStatus('Server Busy');
+        updateShelfLock();
         if (currentInspection) {
           renderResults(currentInspection, currentDisplayUrl);
         }

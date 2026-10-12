@@ -169,3 +169,45 @@ Scope: uncommitted change to `static/index.html` (+10/−3). `uv run pytest`: **
 - Note, no change needed: the retry starts only when the server's `{"type":"busy"}` message arrives before the 1013 close. `live_session.py` always sends it first, so this holds.
 
 **Verdict: Module 6 code is complete. Commit and deploy (plan Step 8).**
+
+---
+
+# Round 5: shelf lock (D58), before deploy (2026-10-12)
+
+Scope: uncommitted change to `static/index.html` (it replaces the per-branch-progress version). `uv run pytest`: **367 passed, 19 skipped**. The page's inline script passes `node --check`.
+
+**Verdict: D58 is built as specified. One small fix (L1, 2 minutes), then commit and deploy the API.**
+
+## Verified OK
+- **B removed:** no branch note, no `branchesMap`, no automatic list reload after a switch. `loadBatchesForBranch()` stays, because two things still use it: the "Call in progress… · Refresh" button and the load after a decide.
+- **Branch change** (only possible when unlocked) keeps the photo and decisions and clears only the buyer lists, the batches and the call card.
+- **`isShelfLocked()`** is true during a live call or once any batch has attempts. **`updateShelfLock()`** disables the branch, closing time, every `.price-override-input` and every `.btn-redecide` (these class names match the card code), and shows the note. It runs at the end of `renderResults` and on every way a call ends.
+- **New shelf** does nothing during a call. Otherwise it starts a new shelf ID, clears all page state, hides the result area and unlocks.
+- **A new inspection** clears the call state and unlocks, and keeps the shelf ID.
+- The "Play this buyer" CSS fix is kept.
+
+## Fix before deploy
+- **L1. The Inspect button is re-enabled while an inspection is running.**
+  - `handleInspect` sets `btnInspect.disabled = true` (line ~3306), then calls `updateShelfLock()` (line ~3321), which sets `btnInspect.disabled = isCallInProgress`, i.e. **false**.
+  - So during the 4–10 s inspection the judge can click Inspect again. That fires a second inspection, which uses the daily inspect cap twice and makes the two results race.
+  - **New shelf** is also clickable mid-inspection: it clears the page, and then the late result renders anyway.
+  - **Fix:** add `let isInspecting = false;`. Set it to true where `btnInspect.disabled = true` is today, and back to false where it's re-enabled (line ~3369, every path). In `updateShelfLock()`, use `btnInspect.disabled = isCallInProgress || isInspecting;` and the same for `btnNewShelf`.
+
+## Next
+1. Fix L1, then run `uv run pytest` and `node --check`.
+2. The user commits everything (page, D58, docs) and deploys the API only (`./scripts/deploy.sh api`).
+3. Test 9 (lock) on the deployed `/demo`, then the remaining Step 8 checks (3, 4, 5, 10, 11 and Firestore).
+
+---
+
+# Round 6: L1 re-check (2026-10-12)
+
+`uv run pytest`: **367 passed, 19 skipped**. The page's inline script passes `node --check`.
+
+- ✅ **L1:**
+  - `isInspecting` is set to true right where the Inspect button is disabled, and reset to false in the `finally` block, so every path clears it (success, HTTP error, network error).
+  - `updateShelfLock()` keeps both **Inspect** and **New shelf** disabled while `isCallInProgress || isInspecting`.
+  - The New shelf handler also returns early in that state.
+  - `renderResults` during the inspection no longer re-enables the button.
+
+**Verdict: Module 6 code is complete.** The user commits everything (page, D58, docs, this review) and deploys the API only. Then test 9 (lock) and the remaining plan Step 8 checks on the deployed `/demo`.
