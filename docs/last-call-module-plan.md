@@ -161,14 +161,17 @@ Plan: [plans/module-6/plan.md](../plans/module-6/plan.md) (D53–D57).
 - Feeds back into the system: pricing stats in Firestore (which buyers said yes, at what price, and which discounts worked) inform the Ladder's prices; BigQuery is for reporting
 - Powers the daily summary and impact numbers (kg saved, money recovered)
 
-## Module 8: Judge demo experience (deployed link)
+## Module 8: Judge demo experience (UI redesign)
 
-- Sample shelf photos ready to click, plus upload your own
-- Estimated quantity shown as an editable field that doesn't block the flow
-- **"Play the buyer" mode with a browser call:** pick a scenario, see the floor price, and talk to the Negotiator in the browser
-- Live transcript and the agreed result shown on screen
-- Usage limits on the voice demo to protect the budget
-- Runs as a separate demo mart with test data; never places real calls
+Plan: [plans/module-8/plan.md](../plans/module-8/plan.md) (D59). Design: [design/stitch/](../design/stitch/) (desktop and mobile, one `DESIGN.md`).
+
+- One responsive, light, premium page in six sections: Shelf setup → AI reading → Decision → Buyers → Live call → Impact, with a progress bar
+- Sections 3–5 follow the **active item** chosen from the AI reading (click a row or a photo box)
+- Decision shown as a ladder stepper (Keep → Discount → Bulk sale → Donate → Animal feed → Compost) with price cards (shelf · AI opening · floor never told to the AI)
+- Buyers: the next buyer as a highlighted card, the rest as rows; Google Maps attribution and Gemini's screened-out list kept
+- Live call as a dark panel: info tiles, an agent-audio waveform, the Urdu transcript, the result and the next action
+- Impact: this shelf's real call outcomes only (money recovered, stock placed, donated, animal feed, calls, deals), labelled as demo role-play
+- Real data only; no server change; sample photos, upload, editable quantity and usage limits as before; never places real calls
 
 ## Module 9: Real phone calls (demo video)
 

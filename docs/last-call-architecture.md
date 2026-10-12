@@ -37,6 +37,7 @@
     - For each off-shelf batch, the judge clicks **Find buyers** to run the Scout (up to 5 ranked buyers, each with a reason and a "View on Google Maps" link), then **Start calling** (rank #1) or **Play this buyer** on any row to start the Negotiator at the Ladder's prices. After each call: **Next buyer**, then **Next step** (e.g. find charities) once the step's buyers are used up (D53, D54). Paid steps run only on these clicks (D33).
     - The estimated quantity is shown as an editable field (until calling starts) that doesn't block the flow.
     - The call happens in the browser, with the judge playing the buyer. A role-play never changes a real business's records: no buyer history, no do-not-call entry, masked phone only, call record kept 24 h (D55). Calling hours and "closed now" are shown as notes, not enforced; pickup times follow the mart's real hours (D56).
+    - Look (D59): one light, responsive page (design in `design/stitch/`) in six sections, Setup → AI reading → Decision → Buyers → Live call → Impact; sections 3–5 follow the active item; the impact panel counts only this shelf's real call outcomes, labelled as demo role-play.
     - No route to Twilio; never touches real marts or real stock.
     - 5-minute session limit, plus a global daily session limit stored in Firestore.
 

@@ -1,0 +1,441 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_stack" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "secondary-fixed": "#e2dfff", "error-container": "#ffdad6", "primary": "#006948", "on-primary-fixed-variant": "#005137", "on-tertiary-container": "#fffbff", "on-primary": "#ffffff", "on-error-container": "#93000a", "primary-fixed": "#85f8c4", "on-surface-variant": "#3d4a42", "inverse-on-surface": "#eef0ff", "primary-fixed-dim": "#68dba9", "surface-container-low": "#f2f3ff", "outline-variant": "#bccac0", "outline": "#6d7a72", "secondary-fixed-dim": "#c3c0ff", "surface-bright": "#faf8ff", "on-tertiary-fixed": "#2a1700", "secondary": "#4b41e1", "surface-container": "#eaedff", "error": "#ba1a1a", "on-secondary": "#ffffff", "surface": "#faf8ff", "on-secondary-container": "#fffbff", "surface-variant": "#dae2fd", "surface-tint": "#006c4a", "surface-container-highest": "#dae2fd", "on-primary-fixed": "#002114", "background": "#faf8ff", "secondary-container": "#645efb", "on-tertiary": "#ffffff", "tertiary-fixed-dim": "#ffb95f", "surface-container-lowest": "#ffffff", "primary-container": "#00855d", "inverse-primary": "#68dba9", "on-primary-container": "#f5fff7", "on-tertiary-fixed-variant": "#653e00", "on-surface": "#131b2e", "on-secondary-fixed": "#0f0069", "on-error": "#ffffff", "surface-container-high": "#e2e7ff", "on-secondary-fixed-variant": "#3323cc", "tertiary-container": "#a36700", "on-background": "#131b2e", "inverse-surface": "#283044", "surface-dim": "#d2d9f4", "tertiary": "#825100", "tertiary-fixed": "#ffddb8" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "margin": "1rem", "space-lg": "1.25rem", "space-md": "0.75rem", "space-xl": "2rem", "gutter": "1.25rem", "space-xs": "0.25rem", "space-sm": "0.5rem", "margin-desktop": "2rem", "gutter-desktop": "1.5rem" }, "fontFamily": { "display-hero-mobile": [ "Plus Jakarta Sans" ], "headline-md": [ "Plus Jakarta Sans" ], "body-sm": [ "Inter" ], "data-mono-md": [ "JetBrains Mono" ], "metric-headline": [ "Plus Jakarta Sans" ], "headline-lg-mobile": [ "Plus Jakarta Sans" ], "label-caps": [ "Inter" ], "body-md": [ "Inter" ], "body-lg": [ "Inter" ], "display-hero": [ "Plus Jakarta Sans" ], "headline-lg": [ "Plus Jakarta Sans" ], "data-mono-lg": [ "JetBrains Mono" ], "headline-sm": [ "Plus Jakarta Sans" ] }, "fontSize": { "display-hero-mobile": [ "32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800" } ], "headline-md": [ "22px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" } ], "body-sm": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.005em", "fontWeight": "400" } ], "data-mono-md": [ "13px", { "lineHeight": "18px", "letterSpacing": "-0.01em", "fontWeight": "500" } ], "metric-headline": [ "28px", { "lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700" } ], "headline-lg-mobile": [ "24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "700" } ], "label-caps": [ "11px", { "lineHeight": "14px", "letterSpacing": "0.06em", "fontWeight": "600" } ], "body-md": [ "14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" } ], "body-lg": [ "16px", { "lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "400" } ], "display-hero": [ "44px", { "lineHeight": "52px", "letterSpacing": "-0.03em", "fontWeight": "800" } ], "headline-lg": [ "30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700" } ], "data-mono-lg": [ "16px", { "lineHeight": "22px", "letterSpacing": "-0.02em", "fontWeight": "600" } ], "headline-sm": [ "18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" } ] } } } }</script></head><body class="bg-surface-container-lowest font-body-md text-on-surface flex flex-col min-h-screen selection:bg-primary-fixed selection:text-on-primary-fixed"><header class="fixed top-0 w-full z-50 pt-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-gutter flex items-center justify-between"><div class="flex items-center gap-space-xs"><button aria-label="Go back" class="w-11 h-11 flex items-center justify-center rounded-lg text-on-surface hover:bg-surface-container-low active:bg-surface-container transition-colors" onclick="history.back()"><span class="material-symbols-outlined text-[20px]">arrow_back</span></button><div class="flex flex-col ml-1"><h1 class="font-headline-sm text-headline-sm text-on-surface tracking-tight leading-none">Call Session Inspector</h1><span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider mt-0.5">Johar Town Hub • Demo Mart</span></div></div><div class="flex items-center gap-space-sm"><div class="hidden xs:flex items-center px-2 py-1 rounded bg-surface-container-low font-data-mono-md text-data-mono-md text-on-surface-variant"><span class="material-symbols-outlined text-[14px] mr-1 text-outline">schedule</span>18:42 <span class="text-[10px] ml-0.5 text-outline">PKT</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 bg-surface-container-lowest min-h-screen pb-safe"><div class="flex flex-col w-full pb-16 px-5 py-4 space-y-10">
+<!-- Pipeline Progress Track Indicator -->
+<div class="bg-surface-container-low/70 rounded-2xl p-5 shadow-sm space-y-3">
+<div class="flex items-center justify-between">
+<span class="font-label-caps text-label-caps text-primary uppercase tracking-wider font-semibold">Autonomous Rescue Lifecycle</span>
+<span class="font-data-mono-md text-data-mono-md text-on-surface-variant">Step 1 to 6 Active</span>
+</div>
+<div class="grid grid-cols-6 gap-2 h-2 rounded-full overflow-hidden bg-surface-container/60">
+<div class="bg-primary rounded-full"></div>
+<div class="bg-primary rounded-full"></div>
+<div class="bg-primary rounded-full"></div>
+<div class="bg-secondary rounded-full"></div>
+<div class="bg-secondary-container rounded-full animate-pulse"></div>
+<div class="bg-primary-container rounded-full"></div>
+</div>
+</div>
+
+<!-- STEP 1: Shelf Intake & Store Setup -->
+<section class="bg-surface-container-lowest rounded-2xl p-6 shadow-sm space-y-6">
+<!-- Header -->
+<div class="flex items-center justify-between pb-1">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-headline-sm text-headline-sm font-bold">1</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface tracking-tight">Shelf Intake &amp; Setup</h2>
+</div>
+<span class="bg-surface-container-high/60 text-on-surface-variant font-data-mono-md text-data-mono-md px-2.5 py-1 rounded-md">#LHR-JT-408</span>
+</div>
+<!-- Stacked Form Controls -->
+<div class="space-y-5">
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider mb-2.5">Mart Branch Location</label>
+<div class="flex items-center justify-between bg-surface-container-low/50 px-4 py-3.5 rounded-xl text-on-surface font-body-md text-body-md transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[20px] text-primary">store</span>
+<span class="font-medium">Johar Town (G1 Market)</span>
+</div>
+<span class="material-symbols-outlined text-[20px] text-outline">expand_more</span>
+</div>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider mb-2.5">Closing Window Runway</label>
+<div class="grid grid-cols-3 gap-2.5">
+<button class="py-3 rounded-xl font-body-md text-body-md bg-surface-container-low/50 text-on-surface-variant text-center active:scale-95 transition-transform" type="button">
+            Now
+          </button>
+<button class="py-3 rounded-xl font-body-md text-body-md bg-primary text-on-primary font-semibold text-center shadow-sm" type="button">
+            Evening (4h)
+          </button>
+<button class="py-3 rounded-xl font-body-md text-body-md bg-surface-container-low/50 text-on-surface-variant text-center active:scale-95 transition-transform" type="button">
+            1h Flash
+          </button>
+</div>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider mb-2.5">Perishable Clearance Cap</label>
+<div class="flex items-center justify-between bg-surface-container-low/50 px-4 py-3.5 rounded-xl">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[20px] text-outline">scale</span>
+<span class="font-data-mono-lg text-data-mono-lg font-semibold text-on-surface">35</span>
+</div>
+<span class="font-data-mono-md text-data-mono-md text-outline">kg (batch weight)</span>
+</div>
+</div>
+<button class="w-full mt-2 bg-primary text-on-primary py-3.5 rounded-xl flex items-center justify-center gap-2 font-headline-sm text-headline-sm shadow-sm active:bg-on-primary-fixed-variant transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">document_scanner</span>
+<span class="">Inspect Shelf Photo</span>
+</button>
+</div>
+</section>
+
+<!-- STEP 2: AI Shelf Reading & Multi-Item Freshness -->
+<section class="bg-surface-container-lowest rounded-2xl p-6 shadow-sm space-y-6">
+<!-- Header -->
+<div class="flex items-center justify-between pb-1">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-headline-sm text-headline-sm font-bold">2</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface tracking-tight">AI Shelf Reading</h2>
+</div>
+<span class="bg-secondary-fixed text-on-secondary-fixed font-data-mono-md text-data-mono-md px-2.5 py-1 rounded-md">Gemini 2.5 · 420ms</span>
+</div>
+<!-- Live Camera Viewport Card -->
+<div class="relative bg-inverse-surface rounded-2xl p-5 text-inverse-on-surface overflow-hidden shadow-inner space-y-5">
+<div class="flex items-center justify-between z-10 relative">
+<div class="flex items-center gap-2 bg-error text-on-error px-2.5 py-1 rounded-full font-label-caps text-label-caps tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+          LIVE CAM
+        </div>
+<span class="bg-surface-container-lowest/20 backdrop-blur-sm text-white px-2.5 py-1 rounded-md font-data-mono-md text-data-mono-md">96.8% Conf</span>
+</div>
+<!-- Center Perishable Target Graphics -->
+<div class="relative py-6 flex flex-col items-center justify-center">
+<!-- Target Bounding Box -->
+<div class="relative p-6 rounded-2xl bg-surface-container-lowest/10 backdrop-blur-sm flex flex-col items-center">
+<div class="absolute -top-1 -left-1 w-3.5 h-3.5 border-t-2 border-l-2 border-primary-fixed"></div>
+<div class="absolute -top-1 -right-1 w-3.5 h-3.5 border-t-2 border-r-2 border-primary-fixed"></div>
+<div class="absolute -bottom-1 -left-1 w-3.5 h-3.5 border-b-2 border-l-2 border-primary-fixed"></div>
+<div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 border-b-2 border-r-2 border-primary-fixed"></div>
+<span class="material-symbols-outlined text-[54px] text-tertiary-fixed-dim" style="font-variation-settings: 'FILL' 1;">nutrition</span>
+<span class="font-headline-sm text-headline-sm font-bold text-white mt-2">Bananas (Cavendish)</span>
+<span class="font-data-mono-md text-data-mono-md text-primary-fixed mt-0.5">Est. 1.3–2.1 dz</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1 text-inverse-on-surface/80 font-data-mono-md text-data-mono-md">
+<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-tertiary-fixed-dim"></span>Overripe Mid-stage</span>
+<span class="font-semibold text-tertiary-fixed-dim">Score 38/100</span>
+</div>
+</div>
+<!-- Freshness Intelligence Breakdown Card -->
+<div class="bg-surface-container-low/50 rounded-2xl p-5 space-y-4">
+<div class="flex items-center justify-between">
+<div class="space-y-0.5">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Bananas (Cavendish / کیلے)</h3>
+<p class="font-data-mono-md text-data-mono-md text-on-surface-variant">Estimated Stock: 1.3–2.1 dozen</p>
+</div>
+<span class="bg-primary-fixed text-on-primary-fixed font-label-caps text-label-caps px-2.5 py-1 rounded-full font-bold">Active Target</span>
+</div>
+<!-- Biological degradation chips -->
+<div class="flex flex-wrap gap-2 pt-1">
+<span class="bg-surface-container-lowest px-3 py-1.5 rounded-full font-body-sm text-body-sm text-on-surface flex items-center gap-1.5 shadow-sm">
+<span class="material-symbols-outlined text-[15px] text-tertiary">wb_sunny</span>
+          Brown sugar spots: 42%
+        </span>
+<span class="bg-surface-container-lowest px-3 py-1.5 rounded-full font-body-sm text-body-sm text-on-surface flex items-center gap-1.5 shadow-sm">
+<span class="material-symbols-outlined text-[15px] text-primary">verified</span>
+          Pulp intact · No mould
+        </span>
+<span class="bg-secondary-fixed/70 text-on-secondary-fixed px-3 py-1.5 rounded-full font-body-sm text-body-sm font-semibold flex items-center gap-1.5 shadow-sm">
+<span class="material-symbols-outlined text-[15px] text-secondary">blender</span>
+          Ideal for Milkshakes &amp; Bakeries
+        </span>
+</div>
+<!-- Staff Notice box -->
+<div class="flex items-center justify-between bg-surface-container-lowest p-3.5 rounded-xl shadow-sm">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[18px] text-tertiary">info</span>
+<span class="font-body-sm text-body-sm text-on-surface font-medium">Check bottom crate layer before dispatch</span>
+</div>
+<span class="bg-surface-container/70 font-label-caps text-label-caps px-2 py-1 rounded text-primary font-semibold">Verified</span>
+</div>
+<!-- Secondary Item Row -->
+<div class="flex items-center justify-between pt-2">
+<div class="flex flex-col space-y-0.5">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Hybrid Salad Tomatoes (8.4 kg)</span>
+<span class="font-data-mono-md text-data-mono-md text-primary font-medium">Score 76/100 · Fresh Late Stage</span>
+</div>
+<button class="px-3.5 py-1.5 bg-surface-container-lowest shadow-sm text-primary rounded-lg font-body-sm text-body-sm font-semibold" type="button">View</button>
+</div>
+</div>
+</section>
+
+<!-- STEP 3: AI Valuation & Routing Strategy -->
+<section class="bg-surface-container-lowest rounded-2xl p-6 shadow-sm space-y-6">
+<!-- Header -->
+<div class="flex items-center justify-between pb-1">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-headline-sm text-headline-sm font-bold">3</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface tracking-tight">AI Valuation Strategy</h2>
+</div>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed font-data-mono-md text-data-mono-md px-2.5 py-1 rounded-md font-medium">Runway: 4h left</span>
+</div>
+<!-- Routing Pipeline Horizontal Stack -->
+<div class="bg-surface-container-low/50 p-4 rounded-2xl space-y-3">
+<div class="flex items-center justify-between">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider font-semibold">Autonomous Recovery Funnel</span>
+<span class="font-data-mono-md text-data-mono-md text-secondary font-bold">Stage 3 Active</span>
+</div>
+<div class="flex items-center gap-2 overflow-x-auto pb-1 text-on-surface-variant font-body-sm text-body-sm whitespace-nowrap">
+<span class="opacity-60">1. Shelf</span>
+<span class="opacity-40">→</span>
+<span class="opacity-60">2. Discount</span>
+<span class="opacity-40">→</span>
+<span class="bg-secondary text-on-secondary px-2.5 py-1 rounded-full font-bold shadow-sm">3. Bulk B2B Sale [ACTIVE]</span>
+<span class="opacity-40">→</span>
+<span class="opacity-60">4. Charity</span>
+<span class="opacity-40">→</span>
+<span class="opacity-60">5. Feed</span>
+</div>
+<div class="flex items-center gap-2 text-secondary font-body-sm text-body-sm font-medium pt-1">
+<span class="material-symbols-outlined text-[16px]">phone_in_talk</span>
+<span class="">Outbound calling to verified neighborhood juice bars</span>
+</div>
+</div>
+<!-- Core Price Anchor Cards -->
+<div class="grid grid-cols-1 gap-3.5 pt-1">
+<div class="bg-surface-container-low/50 p-4 rounded-xl flex items-center justify-between min-h-[64px]">
+<div class="flex flex-col space-y-0.5">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wide">Standard Shelf Price</span>
+<span class="font-body-sm text-body-sm text-outline">Johar Town retail average</span>
+</div>
+<span class="font-data-mono-lg text-data-mono-lg text-on-surface font-bold">Rs 220 <span class="text-body-sm text-outline font-normal">/ dz</span></span>
+</div>
+<div class="bg-secondary-fixed/40 p-4 rounded-xl flex items-center justify-between min-h-[64px]">
+<div class="flex flex-col space-y-0.5">
+<span class="font-label-caps text-label-caps text-secondary font-bold uppercase tracking-wide">AI Opening Offer</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Recommended prompt launch</span>
+</div>
+<span class="font-data-mono-lg text-data-mono-lg text-secondary font-bold">Rs 140 <span class="text-body-sm text-secondary font-normal">/ dz</span></span>
+</div>
+<div class="bg-primary-fixed/30 p-4 rounded-xl flex items-center justify-between min-h-[64px]">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary">lock</span>
+<div class="flex flex-col space-y-0.5">
+<span class="font-label-caps text-label-caps text-primary font-bold uppercase tracking-wide">Judge Floor Guardrail</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Hard stop safety margin</span>
+</div>
+</div>
+<span class="font-data-mono-lg text-data-mono-lg text-primary font-bold">Rs 100 <span class="text-body-sm text-primary font-normal">/ dz</span></span>
+</div>
+</div>
+</section>
+
+<!-- STEP 4: Nearby Commercial Buyers -->
+<section class="bg-surface-container-lowest rounded-2xl p-6 shadow-sm space-y-6">
+<!-- Header -->
+<div class="flex items-center justify-between pb-1">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-headline-sm text-headline-sm font-bold">4</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface tracking-tight">Nearby Commercial Buyers</h2>
+</div>
+<span class="bg-primary-fixed text-on-primary-fixed font-data-mono-md text-data-mono-md px-2.5 py-1 rounded-md font-medium">5 Leads Verified</span>
+</div>
+<!-- Highlighted #1 Lead Card -->
+<div class="bg-surface-container-low/50 rounded-2xl p-5 space-y-4">
+<div class="flex items-start justify-between">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-label-caps bg-primary text-on-primary px-2 py-0.5 rounded font-bold">#1 MATCH</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold">Madina Fresh Juice Corner</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant font-medium block">مدینہ فریش جوس کارنر</span>
+</div>
+<span class="bg-primary-fixed text-on-primary-fixed font-label-caps text-label-caps px-2.5 py-1 rounded-full font-bold">Open Now</span>
+</div>
+<div class="grid grid-cols-2 gap-3 text-on-surface-variant font-body-sm text-body-sm py-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-outline">near_me</span>
+<span class="">0.8 km · G1 Market</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-outline">call</span>
+<span class="font-data-mono-md text-data-mono-md">+92 ••••••• 507</span>
+</div>
+</div>
+<div class="flex items-center gap-2 text-primary font-body-sm text-body-sm font-semibold bg-surface-container-lowest px-3 py-2 rounded-xl shadow-sm">
+<span class="material-symbols-outlined text-[16px]">local_fire_department</span>
+<span class="">High demand match: Daily banana shake consumption &gt;4 dozen</span>
+</div>
+<button class="w-full mt-2 bg-secondary text-on-secondary py-3.5 rounded-xl flex items-center justify-center gap-2 font-headline-sm text-headline-sm shadow-sm active:bg-on-secondary-fixed-variant transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">phone_in_talk</span>
+<span class="">Simulate Call (Play Buyer)</span>
+</button>
+</div>
+<!-- Queue Items Below -->
+<div class="space-y-3 pt-1">
+<div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-container-low/40">
+<div class="flex flex-col space-y-0.5">
+<div class="flex items-center gap-2">
+<span class="font-data-mono-md text-data-mono-md text-outline font-bold">#2</span>
+<span class="font-body-md text-body-md font-semibold text-on-surface">Rahat Bakers &amp; Sweets</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">1.4 km · Cake &amp; Banana Pudding production</span>
+</div>
+<span class="bg-surface-container-lowest shadow-sm text-on-surface-variant font-label-caps text-label-caps px-2.5 py-1 rounded-md">Next in queue</span>
+</div>
+<div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-container-low/40">
+<div class="flex flex-col space-y-0.5">
+<div class="flex items-center gap-2">
+<span class="font-data-mono-md text-data-mono-md text-outline font-bold">#3</span>
+<span class="font-body-md text-body-md font-semibold text-on-surface">Gourmet Bakers Production</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">2.9 km · Bulk requirement &gt;5 dz</span>
+</div>
+<span class="bg-surface-container-lowest shadow-sm text-on-surface-variant font-label-caps text-label-caps px-2.5 py-1 rounded-md">Queue #3</span>
+</div>
+</div>
+</section>
+
+<!-- STEP 5: Live Voice Call Simulation (Play the Buyer) -->
+<section class="bg-inverse-surface rounded-2xl p-6 text-inverse-on-surface shadow-md space-y-6">
+<!-- Header -->
+<div class="flex items-center justify-between pb-1">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-headline-sm text-headline-sm font-bold">5</div>
+<div class="space-y-0.5">
+<h2 class="font-headline-sm text-headline-sm text-white tracking-tight">Live Voice Call Simulation</h2>
+<span class="font-data-mono-md text-data-mono-md text-primary-fixed">Active Call · 01:24</span>
+</div>
+</div>
+<button class="bg-error text-on-error px-3 py-1.5 rounded-xl font-label-caps text-label-caps uppercase tracking-wider font-bold shadow-sm active:scale-95 transition-transform" type="button">
+        End Call
+      </button>
+</div>
+<!-- Metadata 2x2 Grid -->
+<div class="grid grid-cols-2 gap-3 bg-surface-container-lowest/10 p-4 rounded-xl font-body-sm text-body-sm">
+<div class="flex flex-col space-y-1">
+<span class="font-label-caps text-label-caps text-inverse-on-surface/60 uppercase">Counterparty</span>
+<span class="font-semibold text-white truncate">Madina Juice Corner</span>
+</div>
+<div class="flex flex-col space-y-1">
+<span class="font-label-caps text-label-caps text-inverse-on-surface/60 uppercase">Target Batch</span>
+<span class="font-data-mono-md text-data-mono-md text-white">0.65 Dz Ripe Bananas</span>
+</div>
+<div class="flex flex-col space-y-1">
+<span class="font-label-caps text-label-caps text-inverse-on-surface/60 uppercase">Price Quoted</span>
+<span class="font-data-mono-md text-data-mono-md text-secondary-fixed">Rs 140 → Floor Rs 100</span>
+</div>
+<div class="flex flex-col space-y-1">
+<span class="font-label-caps text-label-caps text-inverse-on-surface/60 uppercase">Pickup Slot</span>
+<span class="font-semibold text-primary-fixed truncate">Today &lt; 17:30</span>
+</div>
+</div>
+<!-- Audio Waveform Canvas Box -->
+<div class="bg-surface-container-lowest/10 p-4 rounded-xl flex flex-col items-center justify-center space-y-3">
+<div class="flex items-center gap-2 h-8">
+<span class="w-1 h-3 bg-secondary-fixed rounded-full animate-pulse"></span>
+<span class="w-1 h-5 bg-secondary-fixed rounded-full animate-bounce"></span>
+<span class="w-1 h-8 bg-primary-fixed rounded-full animate-pulse"></span>
+<span class="w-1 h-4 bg-primary-fixed rounded-full animate-bounce"></span>
+<span class="w-1 h-6 bg-secondary-fixed rounded-full animate-pulse"></span>
+<span class="w-1 h-2 bg-secondary-fixed rounded-full"></span>
+<span class="w-1 h-5 bg-primary-fixed rounded-full animate-bounce"></span>
+<span class="w-1 h-3 bg-primary-fixed rounded-full animate-pulse"></span>
+</div>
+<div class="flex items-center justify-between w-full font-data-mono-md text-data-mono-md text-inverse-on-surface/70 px-1 pt-1">
+<span class="">Agent Audio · 180ms Latency</span>
+<span class="text-primary-fixed font-semibold">Bilingual Negotiation Active</span>
+</div>
+</div>
+<!-- Transcript Chat Bubbles -->
+<div class="space-y-4 pt-1">
+<!-- AI Agent Bubble -->
+<div class="flex items-start gap-3">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">smart_toy</span>
+</div>
+<div class="bg-surface-container-lowest/15 rounded-2xl rounded-tl-none p-4 text-white max-w-[85%] space-y-1.5 shadow-sm">
+<span class="font-label-caps text-label-caps text-primary-fixed font-bold block">LastCall AI Agent (Urdu / اردو)</span>
+<p class="font-body-md text-body-md leading-relaxed text-right font-medium">
+            "باؤ جی، 90 روپے بہت کم ہیں۔ آخری 110 روپے درجن کر لیتے ہیں۔ آدھا لاٹ (0.65 درجن) آپ کا، رائیڈر لے جائے گا؟"
+          </p>
+<p class="font-body-sm text-body-sm text-inverse-on-surface/70 italic pt-1">
+            "Final 110 Rs dozen kar dete hain. 0.65 dozen lot apka, rider pick kar le ga?"
+          </p>
+</div>
+</div>
+<!-- Buyer Bubble -->
+<div class="flex items-start justify-end gap-3">
+<div class="bg-secondary text-on-secondary rounded-2xl rounded-tr-none p-4 max-w-[85%] space-y-1.5 shadow-sm">
+<span class="font-label-caps text-label-caps text-secondary-fixed font-bold block">Buyer (Madina Juice)</span>
+<p class="font-body-md text-body-md leading-relaxed text-right font-medium">
+            "چلو ٹھیک ہے، 110 پہ ڈیل پکی کرو۔"
+          </p>
+<p class="font-body-sm text-body-sm text-on-secondary-container opacity-90 italic pt-1">
+            "Deal pakki karo at 110 Rs. Rider 30 min mein pick kar leta hai."
+          </p>
+</div>
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">storefront</span>
+</div>
+</div>
+</div>
+<!-- Deal Closed Success Banner -->
+<div class="bg-primary-container text-on-primary-container p-4 rounded-2xl flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[24px] text-primary-fixed">check_circle</span>
+<div class="flex flex-col space-y-0.5">
+<span class="font-headline-sm text-headline-sm font-bold">Deal Closed</span>
+<span class="font-data-mono-md text-data-mono-md text-primary-fixed">0.65 dz @ Rs 110/dz (Rs 71.50)</span>
+</div>
+</div>
+<button class="bg-primary-fixed text-on-primary-fixed font-label-caps text-label-caps px-3.5 py-2 rounded-xl font-bold shadow-sm active:scale-95 transition-transform" type="button">
+        Next Call
+      </button>
+</div>
+</section>
+
+<!-- STEP 6: Live Recovery Impact & Waste Diversion -->
+<section class="bg-surface-container-lowest rounded-2xl p-6 shadow-sm space-y-6">
+<!-- Header -->
+<div class="flex items-center justify-between pb-1">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-headline-sm text-headline-sm font-bold">6</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface tracking-tight">Recovery Impact</h2>
+</div>
+<span class="bg-primary-fixed text-on-primary-fixed font-data-mono-md text-data-mono-md px-2.5 py-1 rounded-md font-bold">91.4% Diverted</span>
+</div>
+<!-- 4 Clean Metric Cards (2x2 Grid) -->
+<div class="grid grid-cols-2 gap-3.5">
+<!-- Metric 1 -->
+<div class="bg-surface-container-low/50 p-4 rounded-2xl space-y-1.5">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Revenue Recovered</span>
+<div class="font-headline-sm text-headline-sm font-bold text-primary">Rs 14,850</div>
+<span class="font-data-mono-md text-data-mono-md text-primary font-medium block pt-0.5">+18% vs manual discount</span>
+</div>
+<!-- Metric 2 -->
+<div class="bg-surface-container-low/50 p-4 rounded-2xl space-y-1.5">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Produce Rescued</span>
+<div class="font-headline-sm text-headline-sm font-bold text-on-surface">68.5 kg</div>
+<span class="font-data-mono-md text-data-mono-md text-on-surface-variant font-medium block pt-0.5">42 dozen units diverted</span>
+</div>
+<!-- Metric 3 -->
+<div class="bg-surface-container-low/50 p-4 rounded-2xl space-y-1.5">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Donated Meals</span>
+<div class="font-headline-sm text-headline-sm font-bold text-secondary">18.2 kg</div>
+<span class="font-data-mono-md text-data-mono-md text-on-surface-variant font-medium block pt-0.5">Edhi &amp; Al-Khidmat Hub</span>
+</div>
+<!-- Metric 4 -->
+<div class="bg-surface-container-low/50 p-4 rounded-2xl space-y-1.5">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider block">Deals Closed</span>
+<div class="font-headline-sm text-headline-sm font-bold text-on-surface">14 Deals</div>
+<span class="font-data-mono-md text-data-mono-md text-primary font-medium block pt-0.5">73.6% conversion rate</span>
+</div>
+</div>
+<!-- Live Salvage Verification Footnote -->
+<div class="flex items-center justify-between p-3.5 bg-surface-container/60 rounded-xl text-on-surface font-body-sm text-body-sm mt-1">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[18px] text-primary">verified_user</span>
+<span class="">Johar Town Store Hub Audit Log synced</span>
+</div>
+<span class="font-data-mono-md text-data-mono-md text-outline">18:42 PKT</span>
+</div>
+</section>
+</div>
+<script>
+  // Interactive Micro-interactions for Mobile Pipeline
+  document.addEventListener('DOMContentLoaded', () => {
+    // Step 1: Closing Window toggle
+    const runwayButtons = document.querySelectorAll('section:nth-of-type(1) .grid-cols-3 button');
+    runwayButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        runwayButtons.forEach(b => {
+          b.className = 'py-2 rounded-lg font-body-md text-body-md bg-surface-container-low text-on-surface-variant text-center active:scale-95 transition-transform';
+        });
+        btn.className = 'py-2 rounded-lg font-body-md text-body-md bg-primary text-on-primary font-semibold text-center shadow-sm';
+      });
+    });
+  });
+</script></main>
+
+</body></html>
