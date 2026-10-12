@@ -62,6 +62,7 @@ export const statusText = document.getElementById('callStatusText') || document.
 export const callDuration = document.getElementById('callDuration');
 export const btnHangup = document.getElementById('btnHangup');
 export const callBuyerName = document.getElementById('callBuyerName');
+export const callerAvatar = document.getElementById('callerAvatar');
 export const callItemQty = document.getElementById('callItemQty');
 export const callOpeningQuote = document.getElementById('callOpeningQuote');
 export const callFloorPrice = document.getElementById('callFloorPrice');

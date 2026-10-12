@@ -68,6 +68,14 @@ export function icon(name) {
       appendCircle('12', '12', '10');
       appendPath('M12 6v6l4 2');
       break;
+    case 'x':
+      appendPath('M18 6 6 18');
+      appendPath('m6 6 12 12');
+      break;
+    case 'sparkle':
+      appendPath('M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z');
+      appendPath('M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z');
+      break;
     case 'external':
       appendPath('M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6');
       appendPath('m15 3 6 0 0 6');
@@ -103,4 +111,11 @@ export function showToast(message, kind = 'info') {
       toast.remove();
     }, 300);
   }, 5000);
+}
+
+// Two-letter initials for an avatar, from the Latin-script words of a business name.
+export function initials(name) {
+  const words = (name || '').split(/\s+/).filter(w => /[A-Za-z]/.test(w));
+  const letters = words.slice(0, 2).map(w => w.replace(/[^A-Za-z]/g, '').charAt(0).toUpperCase()).join('');
+  return letters || (name || '?').trim().charAt(0).toUpperCase() || '?';
 }

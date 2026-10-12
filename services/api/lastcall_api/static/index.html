@@ -308,73 +308,58 @@
     </section>
 
     <!-- SECTION 5: Live Voice Negotiation Call (Dark Panel) -->
-    <section class="call-dark-panel" id="voiceSection">
-      <div class="call-header-bar">
-        <div class="call-title-group">
-          <div class="section-circle section-circle-call">5</div>
-          <div class="section-title-group">
-            <h2 class="call-header-title">Live call</h2>
-            <p class="section-subtitle section-subtitle-dark">The AI negotiates in Urdu; you play the buyer.</p>
+    <section class="call-dark-panel" id="voiceSection" aria-label="Live call">
+      <div class="call-top">
+        <div class="caller">
+          <div class="caller-avatar" id="callerAvatar" aria-hidden="true"></div>
+          <div class="caller-text">
+            <div class="caller-kicker">Live call · you play the buyer</div>
+            <h2 class="caller-name" id="callBuyerName">—</h2>
+            <div class="caller-sub">Business from Google Maps · the AI speaks Urdu</div>
           </div>
-          <span id="callStatusBadge" class="chip chip-emerald">
+        </div>
+
+        <div class="call-controls">
+          <div class="waveform-mini" id="waveformBox" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <span id="callStatusBadge" class="status-badge" aria-live="polite">
             <span class="status-dot"></span>
-            <span id="callStatusText">Connecting…</span> · <span id="callDuration">00:00</span>
+            <span id="callStatusText">Connecting…</span>
+            <span class="status-sep">·</span>
+            <span id="callDuration">00:00</span>
           </span>
-        </div>
-
-        <button id="btnHangup" class="btn-danger" type="button" disabled>Hang up</button>
-      </div>
-
-      <p class="call-hint">Use headphones, so the AI doesn't hear its own voice through your speakers.</p>
-
-      <!-- Call Metadata Ribbon -->
-      <div class="call-meta-tiles">
-        <div class="call-tile">
-          <div class="call-tile-label">Buyer</div>
-          <div class="call-tile-value" id="callBuyerName">—</div>
-        </div>
-        <div class="call-tile">
-          <div class="call-tile-label">Stock</div>
-          <div class="call-tile-value" id="callItemQty">—</div>
-        </div>
-        <div class="call-tile">
-          <div class="call-tile-label">Opening price</div>
-          <div class="call-tile-value" id="callOpeningQuote">—</div>
-        </div>
-        <div class="call-tile">
-          <div class="call-tile-label">Floor</div>
-          <div class="call-tile-value" id="callFloorPrice">—</div>
-        </div>
-        <div class="call-tile">
-          <div class="call-tile-label">Pickup</div>
-          <div class="call-tile-value" id="callPickupWindow">—</div>
+          <button id="btnHangup" class="btn-danger" type="button" disabled>Hang up</button>
         </div>
       </div>
 
-      <!-- Waveform and Live Transcript Stream -->
-      <div class="call-live-grid">
-        <div class="waveform-box" id="waveformBox">
-          <div class="waveform-label">AI agent</div>
-          <div class="waveform-bars">
-            <div class="waveform-bar"></div>
-            <div class="waveform-bar"></div>
-            <div class="waveform-bar"></div>
-            <div class="waveform-bar"></div>
-            <div class="waveform-bar"></div>
-            <div class="waveform-bar"></div>
-            <div class="waveform-bar"></div>
+      <div class="call-body">
+        <dl class="deal-sheet">
+          <div class="deal-row">
+            <dt>Stock</dt>
+            <dd id="callItemQty">—</dd>
           </div>
-          <div class="waveform-sub">Speaks Urdu</div>
-        </div>
+          <div class="deal-row">
+            <dt>Opening price</dt>
+            <dd id="callOpeningQuote">—</dd>
+          </div>
+          <div class="deal-row">
+            <dt>Floor</dt>
+            <dd><span id="callFloorPrice">—</span><span class="deal-note">Never told to the AI</span></dd>
+          </div>
+          <div class="deal-row">
+            <dt>Pickup</dt>
+            <dd id="callPickupWindow">—</dd>
+          </div>
+          <p class="call-hint">Use headphones, so the AI doesn't hear its own voice through your speakers.</p>
+        </dl>
 
-        <div class="transcript-box" id="transcript">
+        <div class="transcript-box" id="transcript" aria-live="polite">
           <div class="transcript-notice">The conversation appears here as it happens.</div>
         </div>
       </div>
 
-      <!-- Result Strip -->
-      <div class="card" id="resultCard">
-        <div class="result-title">Call result</div>
+      <div id="resultCard" class="call-result">
         <div id="resultContent"></div>
         <div id="resultNextAction"></div>
       </div>

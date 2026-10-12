@@ -3,7 +3,7 @@
 import { state } from './state.js';
 import * as dom from './dom.js';
 import { getFindBuyersLabel, getNextStepTargetLabel } from './format.js';
-import { icon, showToast, scriptClass } from './ui.js';
+import { icon, showToast, initials } from './ui.js';
 import { batchIdFor, loadBatchesForBranch } from './lock.js';
 import { renderResults } from './reading.js';
 import { startCallForItem } from './call.js';
@@ -229,10 +229,22 @@ export function renderActiveBuyers() {
   // Quantity control row
   dom.buyerQuantityControl.replaceChildren();
   if (batch) {
-    const badge = document.createElement('span');
-    badge.className = 'buyer-remaining';
-    badge.textContent = `Remaining ${batch.remaining_quantity} of ${batch.total_quantity} ${batch.unit || 'kg'}`;
-    dom.buyerQuantityControl.appendChild(badge);
+    const total = batch.total_quantity || 0;
+    const placed = Math.max(0, Math.round((total - (batch.remaining_quantity || 0)) * 100) / 100);
+    const wrap = document.createElement('div');
+    wrap.className = 'stock-progress';
+    const lbl = document.createElement('div');
+    lbl.className = 'stock-progress-label';
+    lbl.textContent = `${placed} of ${total} ${batch.unit || 'kg'} placed`;
+    wrap.appendChild(lbl);
+    const track = document.createElement('div');
+    track.className = 'stock-progress-track';
+    const fill = document.createElement('div');
+    fill.className = 'stock-progress-fill';
+    fill.style.width = (total > 0 ? Math.min(100, (placed / total) * 100) : 0) + '%';
+    track.appendChild(fill);
+    wrap.appendChild(track);
+    dom.buyerQuantityControl.appendChild(wrap);
   } else {
     const lbl = document.createElement('span');
     lbl.className = 'buyer-qty-label';
@@ -319,7 +331,6 @@ export function renderActiveBuyers() {
     highlightedBuyer = buyers.length > 0 ? buyers[0] : null;
   }
 
-  const otherBuyers = buyers.filter(b => !highlightedBuyer || b.buyer_id !== highlightedBuyer.buyer_id);
 
   // Buyers list: the next buyer as a highlighted card, the rest as rows
   dom.buyersListContainer.replaceChildren();
@@ -329,57 +340,16 @@ export function renderActiveBuyers() {
     emptyMsg.textContent = 'No suitable buyers found nearby';
     dom.buyersListContainer.appendChild(emptyMsg);
   } else if (buyers.length > 0) {
-    if (highlightedBuyer) {
-      const card = document.createElement('div');
-      card.className = 'buyer-card-top-pick';
-      card.appendChild(buyerHeading(highlightedBuyer, `#${highlightedBuyer.rank || 1} · Next to call`, true));
-      card.appendChild(buyerMeta(highlightedBuyer));
-      if (highlightedBuyer.fit_why) card.appendChild(buyerFitWhy(highlightedBuyer.fit_why));
-
-      const callBtn = document.createElement('button');
-      callBtn.type = 'button';
-      callBtn.className = 'btn-ai btn-block';
-      callBtn.textContent = 'Start call · you play the buyer';
-      callBtn.disabled = state.isCallInProgress;
-      callBtn.addEventListener('click', () => {
-        startCallForItem(state.activeItemKey, highlightedBuyer.buyer_id);
-      });
-      card.appendChild(callBtn);
-      dom.buyersListContainer.appendChild(card);
-    }
-
-    otherBuyers.forEach(b => {
-      const row = document.createElement('div');
-      row.className = 'buyer-card-row';
-
-      const main = document.createElement('div');
-      main.className = 'buyer-row-main';
-      main.appendChild(buyerHeading(b, `#${b.rank}`, false));
-      main.appendChild(buyerMeta(b));
-      if (b.fit_why) main.appendChild(buyerFitWhy(b.fit_why));
-      row.appendChild(main);
-
-      const action = document.createElement('div');
-      action.className = 'buyer-row-action';
+    const list = document.createElement('div');
+    list.className = 'buyer-list';
+    buyers.forEach(b => {
+      const isNext = !!highlightedBuyer && b.buyer_id === highlightedBuyer.buyer_id;
       const att = (batch && batch.attempts)
         ? batch.attempts.findLast(a => a.buyer_id === b.buyer_id && a.call_status !== 'pending')
         : null;
-      if (att && att.call_status !== 'pending') {
-        action.appendChild(buyerStatusChip(att, batch.unit || 'kg'));
-      } else {
-        const playBtn = document.createElement('button');
-        playBtn.type = 'button';
-        playBtn.className = 'btn-ghost btn-sm';
-        playBtn.textContent = 'Play this buyer';
-        playBtn.disabled = state.isCallInProgress;
-        playBtn.addEventListener('click', () => {
-          startCallForItem(state.activeItemKey, b.buyer_id);
-        });
-        action.appendChild(playBtn);
-      }
-      row.appendChild(action);
-      dom.buyersListContainer.appendChild(row);
+      list.appendChild(buyerItem(b, isNext, att, batch ? (batch.unit || 'kg') : 'kg'));
     });
+    dom.buyersListContainer.appendChild(list);
   }
 
   // Footer: attribution + Refresh, skipped counts, screened-out list
@@ -469,72 +439,113 @@ function capitalise(text) {
   return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
 }
 
-// Name line: rank badge, name, fit chip, opening-hours chip
-function buyerHeading(b, rankText, highlight) {
-  const head = document.createElement('div');
-  head.className = highlight ? 'buyer-head' : 'buyer-row-title';
+// One buyer in the list: avatar with rank, name and hours, icon meta line, Gemini's reasoning, action or outcome
+function buyerItem(b, isNext, att, unit) {
+  const item = document.createElement('div');
+  item.className = 'buyer-item' + (isNext ? ' is-next' : '') + (att ? ' is-called' : '');
 
+  const avatar = document.createElement('div');
+  avatar.className = 'buyer-avatar';
+  avatar.textContent = initials(b.name);
   const rank = document.createElement('span');
-  rank.className = highlight ? 'chip chip-indigo' : 'chip';
-  rank.textContent = rankText;
-  head.appendChild(rank);
+  rank.className = 'buyer-rank';
+  rank.textContent = String(b.rank);
+  avatar.appendChild(rank);
+  item.appendChild(avatar);
 
+  const body = document.createElement('div');
+  body.className = 'buyer-body';
+
+  if (isNext) {
+    const eyebrow = document.createElement('div');
+    eyebrow.className = 'buyer-eyebrow';
+    eyebrow.textContent = 'Next to call';
+    body.appendChild(eyebrow);
+  }
+
+  const line1 = document.createElement('div');
+  line1.className = 'buyer-line1';
   const name = document.createElement('span');
-  const sClass = scriptClass(b.name);
-  name.className = 'buyer-heading-name' + (sClass ? ' ' + sClass : '');
+  name.className = 'buyer-name';
   name.dir = 'auto';
   name.textContent = b.name;
-  head.appendChild(name);
-
-  const fit = document.createElement('span');
-  fit.className = b.fit === 'likely' ? 'chip chip-indigo' : 'chip';
-  fit.textContent = b.fit === 'likely' ? 'Likely' : 'Possible';
-  head.appendChild(fit);
-
+  line1.appendChild(name);
   const hours = document.createElement('span');
-  hours.className = 'buyer-hours';
-  if (b.open_now === true) {
-    hours.classList.add('is-open');
-    hours.textContent = 'Open now';
-  } else if (b.open_now === false) {
-    hours.classList.add('is-closed');
-    hours.textContent = 'Closed now';
-  } else {
-    hours.textContent = 'Hours unknown';
-  }
-  head.appendChild(hours);
-  return head;
-}
+  hours.className = 'buyer-hours' + (b.open_now === true ? ' is-open' : (b.open_now === false ? ' is-closed' : ''));
+  hours.textContent = b.open_now === true ? 'Open now' : (b.open_now === false ? 'Closed now' : 'Hours unknown');
+  line1.appendChild(hours);
+  body.appendChild(line1);
 
-// Meta line: type · distance · masked phone, then the Google Maps link
-function buyerMeta(b) {
-  const row = document.createElement('div');
-  row.className = 'buyer-meta-row';
-  const parts = [capitalise((b.buyer_type || '').replace(/_/g, ' ')), `${b.distance_km} km`, b.phone_masked || 'No phone']
-    .filter(Boolean);
-  const text = document.createElement('span');
-  text.className = 'buyer-meta-text';
-  text.textContent = parts.join(' · ');
-  row.appendChild(text);
-
+  const meta = document.createElement('div');
+  meta.className = 'buyer-line2';
+  const addMeta = (iconName, text) => {
+    const span = document.createElement('span');
+    span.className = 'buyer-meta-item';
+    if (iconName) span.appendChild(icon(iconName));
+    span.appendChild(document.createTextNode(text));
+    meta.appendChild(span);
+  };
+  addMeta(null, capitalise((b.buyer_type || '').replace(/_/g, ' ')));
+  addMeta('pin', `${b.distance_km} km`);
+  addMeta('phone', b.phone_masked || 'No phone');
   if (b.maps_uri && b.maps_uri.startsWith('https://')) {
     const link = document.createElement('a');
     link.className = 'buyer-maps-link';
     link.href = b.maps_uri;
     link.target = '_blank';
     link.rel = 'noopener';
-    link.appendChild(document.createTextNode('View on Google Maps'));
+    link.appendChild(document.createTextNode('Google Maps'));
     link.appendChild(icon('external'));
-    row.appendChild(link);
+    meta.appendChild(link);
   }
-  return row;
-}
+  body.appendChild(meta);
 
-function buyerFitWhy(text) {
-  const el = document.createElement('p');
-  el.className = 'buyer-fit-why';
-  el.textContent = text;
-  return el;
+  if (b.fit_why || b.fit) {
+    const ai = document.createElement('div');
+    ai.className = 'buyer-ai';
+    const tag = document.createElement('span');
+    tag.className = 'ai-tag';
+    tag.appendChild(icon('sparkle'));
+    tag.appendChild(document.createTextNode(b.fit === 'likely' ? 'Likely fit' : 'Possible fit'));
+    ai.appendChild(tag);
+    if (b.fit_why) {
+      const why = document.createElement('span');
+      why.className = 'ai-why';
+      why.textContent = b.fit_why;
+      ai.appendChild(why);
+    }
+    body.appendChild(ai);
+  }
+  item.appendChild(body);
+
+  const side = document.createElement('div');
+  side.className = 'buyer-side';
+  if (isNext) {
+    const callBtn = document.createElement('button');
+    callBtn.type = 'button';
+    callBtn.className = 'btn-ai';
+    callBtn.appendChild(icon('phone'));
+    callBtn.appendChild(document.createTextNode('Start call'));
+    callBtn.disabled = state.isCallInProgress;
+    callBtn.addEventListener('click', () => {
+      startCallForItem(state.activeItemKey, b.buyer_id);
+    });
+    side.appendChild(callBtn);
+  } else if (att) {
+    side.appendChild(buyerStatusChip(att, unit));
+  } else {
+    const playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.className = 'btn-ghost btn-sm';
+    playBtn.textContent = 'Play this buyer';
+    playBtn.disabled = state.isCallInProgress;
+    playBtn.addEventListener('click', () => {
+      startCallForItem(state.activeItemKey, b.buyer_id);
+    });
+    side.appendChild(playBtn);
+  }
+  item.appendChild(side);
+  return item;
 }
 
 // Outcome of a finished call, in plain words

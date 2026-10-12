@@ -3,7 +3,7 @@
 import { state } from './state.js';
 import * as dom from './dom.js';
 import { setStoredItem } from './storage.js';
-import { showToast, scriptClass } from './ui.js';
+import { showToast, scriptClass, icon, initials } from './ui.js';
 import { updateShelfLock } from './lock.js';
 import { renderResults } from './reading.js';
 import { renderNextActionRow } from './buyers.js';
@@ -18,30 +18,53 @@ export function setStatus(text, type = '') {
 }
 
 export function appendMessage(speaker, text) {
+  const isAgent = speaker === 'agent';
   const msg = document.createElement('div');
-  msg.className = 'transcript-bubble ' + (speaker === 'agent' ? 'agent' : 'buyer');
+  msg.className = 'msg ' + (isAgent ? 'msg-agent' : 'msg-buyer');
 
-  const speakerSpan = document.createElement('div');
-  speakerSpan.className = 'msg-speaker';
-  speakerSpan.textContent = speaker === 'agent' ? 'AI Assistant (Mart)' : 'You (Buyer)';
+  const label = document.createElement('div');
+  label.className = 'msg-speaker';
+  label.textContent = isAgent ? 'AI agent' : 'You';
+  msg.appendChild(label);
 
-  const textSpan = document.createElement('div');
+  const bubble = document.createElement('div');
   const sClass = scriptClass(text);
-  if (sClass) textSpan.className = sClass;
-  textSpan.textContent = text;
+  bubble.className = 'msg-bubble' + (sClass ? ' ' + sClass : '');
+  bubble.dir = 'auto';
+  bubble.textContent = text;
+  msg.appendChild(bubble);
 
-  msg.appendChild(speakerSpan);
-  msg.appendChild(textSpan);
   dom.transcript.appendChild(msg);
   dom.transcript.scrollTop = dom.transcript.scrollHeight;
 }
 
+// Tool and connection notices in plain words (e.g. "Tool: verify_offer (counter)" → "Price check · counter")
+const TOOL_LABELS = {
+  verify_offer: 'Price check',
+  confirm_deal: 'Deal confirmed',
+  record_outcome: 'Outcome recorded',
+  schedule_callback: 'Call-back scheduled',
+  send_photo: 'Photo sent on WhatsApp'
+};
+
 export function appendNotice(text) {
+  let display = text;
+  const tool = /^Tool: (\w+)(?: \(([^)]*)\))?$/.exec(text || '');
+  if (tool) {
+    const label = TOOL_LABELS[tool[1]] || tool[1].replace(/_/g, ' ');
+    display = tool[2] && tool[2] !== 'executing' ? `${label} · ${tool[2]}` : label;
+  } else if (/^Call closed/.test(text || '')) {
+    display = 'Call ended';
+  }
   const notice = document.createElement('div');
-  notice.className = 'transcript-notice';
-  notice.textContent = text;
+  notice.className = 'transcript-notice' + (tool ? ' is-tool' : '');
+  notice.textContent = display;
   dom.transcript.appendChild(notice);
   dom.transcript.scrollTop = dom.transcript.scrollHeight;
+}
+
+export function renderCallerAvatar(name) {
+  if (dom.callerAvatar) dom.callerAvatar.textContent = initials(name);
 }
 
 export function startCallTimer() {
@@ -150,7 +173,8 @@ export async function startCallForItem(itemKey, buyerId) {
 
     // Populate Call info panel
     const bName = data.buyer ? data.buyer.name : 'Buyer';
-    dom.callBuyerName.textContent = `${bName} (from Google Maps)`;
+    dom.callBuyerName.textContent = bName;
+    renderCallerAvatar(bName);
 
     const itmName = data.deal ? data.deal.item : 'Produce';
     const dealQ = data.deal ? data.deal.quantity : (qty || '—');
@@ -164,7 +188,7 @@ export async function startCallForItem(itemKey, buyerId) {
     }
 
     if (data.deal && data.deal.floor != null) {
-      dom.callFloorPrice.textContent = `floor Rs ${data.deal.floor} / ${dealU} (never told to the AI)`;
+      dom.callFloorPrice.textContent = `Rs ${data.deal.floor} / ${dealU}`;
     } else {
       dom.callFloorPrice.textContent = 'None (donation)';
     }
@@ -359,31 +383,47 @@ export function renderCallResult(batchData, callId) {
     (batchData.attempts && batchData.attempts[batchData.attempts.length - 1]);
 
   if (attempt) {
-    const summary = document.createElement('div');
-    if (attempt.outcome === 'deal' || attempt.outcome === 'partial_deal') {
-      if (attempt.step === 'donate' || attempt.agreed_price === 0) {
-        summary.textContent = `Donated ${attempt.agreed_quantity || 0} ${batchData.unit || 'kg'}`;
-      } else {
-        const priceStr = attempt.agreed_price == null ? '—' : attempt.agreed_price;
-        summary.textContent = `Deal agreed: ${attempt.agreed_quantity || 0} ${batchData.unit || 'kg'} @ Rs ${priceStr} / ${batchData.unit || 'kg'}`;
-      }
-    } else if (attempt.outcome === 'declined') {
-      summary.textContent = 'Outcome: Declined by buyer';
-    } else if (attempt.outcome === 'call_back') {
-      summary.textContent = `Outcome: Call back ${attempt.callback_at ? 'at ' + attempt.callback_at : ''}`;
-    } else if (attempt.outcome === 'no_answer') {
-      summary.textContent = 'Outcome: No answer';
-    } else if (attempt.outcome === 'do_not_call') {
-      summary.textContent = 'Outcome: Buyer asked not to be called';
+    const unit = batchData.unit || 'kg';
+    const isDeal = attempt.outcome === 'deal' || attempt.outcome === 'partial_deal';
+    let title;
+    if (isDeal) {
+      title = (attempt.step === 'donate' || attempt.agreed_price === 0)
+        ? `Donated ${attempt.agreed_quantity || 0} ${unit}`
+        : `Deal agreed · ${attempt.agreed_quantity || 0} ${unit} at Rs ${attempt.agreed_price == null ? '—' : attempt.agreed_price} / ${unit}`;
     } else {
-      summary.textContent = `Outcome: ${(attempt.outcome || 'Completed').replace(/_/g, ' ')}`;
+      const labels = {
+        declined: 'Buyer declined',
+        call_back: 'Buyer asked for a call back',
+        no_answer: 'No answer',
+        do_not_call: 'Buyer asked not to be called again',
+        wants_photo: 'Buyer wants a photo first',
+        wants_manager: 'Buyer wants to speak to the manager'
+      };
+      title = labels[attempt.outcome] || (attempt.outcome || 'Call finished').replace(/_/g, ' ');
     }
-    dom.resultContent.appendChild(summary);
 
-    const stockInfo = document.createElement('div');
-    stockInfo.className = 'call-stock-info';
-    stockInfo.textContent = `Remaining batch stock: ${batchData.remaining_quantity} of ${batchData.total_quantity} ${batchData.unit || 'kg'}`;
-    dom.resultContent.appendChild(stockInfo);
+    const row = document.createElement('div');
+    row.className = 'result-row';
+    const badge = document.createElement('div');
+    badge.className = 'result-icon ' + (isDeal ? 'is-deal' : 'is-other');
+    badge.appendChild(icon(isDeal ? 'check' : 'x'));
+    row.appendChild(badge);
+
+    const text = document.createElement('div');
+    const t = document.createElement('div');
+    t.className = 'result-title';
+    t.textContent = title;
+    text.appendChild(t);
+    const sub = document.createElement('div');
+    sub.className = 'result-sub';
+    const parts = [`${batchData.remaining_quantity} of ${batchData.total_quantity} ${unit} left`];
+    if (isDeal && attempt.pickup_time) {
+      parts.unshift(`Pickup ${new Date(attempt.pickup_time).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Karachi' })}`);
+    }
+    sub.textContent = parts.join(' · ');
+    text.appendChild(sub);
+    row.appendChild(text);
+    dom.resultContent.appendChild(row);
   }
 
   const scout = state.currentActiveCall ? state.scoutResultsMap[state.currentActiveCall.itemKey] : null;
@@ -399,7 +439,7 @@ export function renderCallPendingResult(batchId, callId) {
 
   const btnRef = document.createElement('button');
   btnRef.type = 'button';
-  btnRef.className = 'btn-secondary';
+  btnRef.className = 'btn-ghost btn-sm';
   btnRef.textContent = 'Refresh';
   btnRef.addEventListener('click', () => {
     pollBatchUntilCompleted(batchId, callId);

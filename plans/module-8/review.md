@@ -406,3 +406,45 @@ The user asked Claude to make the visual changes directly ("go ahead with the UI
   - real voice audio (the microphone is blocked in the preview browser)
   - real Places and Gemini data
   The user's live check covers both.
+
+---
+
+# Round 11: premium call screen and buyer list, by Claude (2026-10-13)
+
+User feedback on the deployed round-10 page: the live-call panel felt cluttered, and the buyer list "looks just like text". This round redesigns both. It was checked in the local preview (scratchpad harness) at 1280 px and 375 px, with sample transcript lines and a finished deal.
+
+## Live call: now a call screen
+- **Header:**
+  - a caller avatar with initials, the buyer's name, "Business from Google Maps · the AI speaks Urdu", and a "Live call · you play the buyer" kicker
+  - a status pill (dot, state, timer) with a small waveform that moves only while agent audio arrives
+  - "Hang up" becomes a quiet outline button once the call ends
+- **Body, two columns:**
+  - **left, a deal sheet** as a quiet list (Stock, Opening price, Floor + "Never told to the AI", Pickup, headphones hint)
+  - **right, the conversation:** speaker labels above the bubbles (AI agent left, You right, indigo), dark scrollbar
+  - tool notices in plain words ("Price check · quote", "Deal confirmed", "Outcome recorded"); "Call closed (Code: 1000)" shows as "Call ended"
+- **Result banner:** an icon (check or ×), "Deal agreed · 1.3 dozen at Rs 110 / dozen", a sub-line with pickup time and stock left, and the next action under it. Chips are re-tinted for the dark background.
+- **Removed:** the five boxed tiles and the large empty "AI agent" box.
+- **Phone:** the deal sheet becomes a 2 × 2 grid; "Hang up" doesn't wrap.
+
+## Buyers: a designed list
+- **One rounded list container with dividers.** Each row has:
+  - a 44 px initials avatar with a rank badge
+  - name and an opening-hours dot
+  - an icon meta line (type · pin km · phone masked · Google Maps ↗)
+  - Gemini's reasoning marked as AI (an indigo "✦ Likely fit" tag + the reason)
+  - a right-aligned action or status chip
+- **The next buyer is highlighted in place:** tinted background, indigo left rule, "Next to call" eyebrow, and the only "Start call" button.
+- **"Remaining 0 of 1.3 dozen" is now a stock-progress bar:** "1.3 of 1.3 dozen placed".
+- **Urdu font:** Noto Nastaliq Urdu sits in the body font stack after Inter, so mixed names ("Bholli Juice Corner بھولی جوس کارنر") keep Inter for Latin letters and Nastaliq only for the Urdu ones.
+
+## Verification
+- `uv run pytest`: **369 passed, 19 skipped**; `node --test`: **21 passed**; `node --check` on every module.
+- **Function diff against live `d9b7750`:**
+  - changed: renderers only (`renderNextActionRow`, `renderActiveBuyers`, `appendMessage`, `appendNotice`, `renderCallResult`, `renderCallPendingResult`, `createPriceCard`, `renderActiveDecision`, `renderImpact`, `renderItemsList`, `renderResults`, `icon`)
+  - new helpers: `buyerItem`, `buyerStatusChip`, `capitalise`, `displayName`, `initials`, `renderCallerAvatar`
+  - **One logic function touched, display only:** in `startCallForItem`,
+    - `callBuyerName` shows the name without "(from Google Maps)"; that is now a static label
+    - one `renderCallerAvatar(bName)` line was added
+    - `callFloorPrice` shows "Rs 65 / dozen"; "Never told to the AI" is now a static note
+    No request, payload, flow or timing changed.
+- **Not verifiable locally:** real microphone audio (blocked in the preview browser), and real Places and Gemini text lengths.
