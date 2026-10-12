@@ -239,3 +239,21 @@ All plan Step 8 checks were run by the user on the deployed `/demo` (screenshots
 **Note:** `test_daily_sessions` in the production database is a leftover from a live contract-test run. It is harmless and can be deleted.
 
 **Module 6: implemented and deployed.**
+
+---
+
+# Round 8: page text fixes (2026-10-12)
+
+Scope: commit `08a2a8b`. `uv run pytest`: **367 passed, 19 skipped**. The page's inline script passes `node --check`.
+
+- ✅ **Donation text:**
+  - The buyer-row chip and the call result summary show "Donated <qty> <unit>" when `step === 'donate'` or the price is 0.
+  - Sales show "Deal … @ Rs <price>", and the price is checked with `== null`, so 0 is never treated as missing.
+  - `agreed_price ||` is gone from the page.
+- ✅ **"All stock placed ✓"** replaces "Sold out ✓".
+- ✅ **No more 404 lookups:**
+  - The batch lookup after a decide is removed.
+  - After a search, the batch is fetched only when `currentBatchesMap` already has the item.
+  - `loadBatchesForBranch()` remains only for the "Call in progress… · Refresh" button.
+
+**Not deployed yet:** the live `/health` reports `e04e6c5`, while HEAD is `08a2a8b`. Run `./scripts/deploy.sh api`.
