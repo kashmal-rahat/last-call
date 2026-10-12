@@ -1357,3 +1357,288 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Stage Colors */
+.stage-fresh {
+  background-color: #10b981;
+  color: #065f46;
+  border-color: #10b981;
+}
+.stage-ripening {
+  background-color: #84cc16;
+  color: #3f6212;
+  border-color: #84cc16;
+}
+.stage-overripe {
+  background-color: #f59e0b;
+  color: #78350f;
+  border-color: #f59e0b;
+}
+.stage-spoiled {
+  background-color: #f97316;
+  color: #7c2d12;
+  border-color: #f97316;
+}
+.stage-unsafe {
+  background-color: #ef4444;
+  color: #7f1d1d;
+  border-color: #ef4444;
+}
+
+/* Bounding box borders per stage */
+.bbox-rect.stage-fresh { border-color: #10b981; }
+.bbox-rect.stage-ripening { border-color: #84cc16; }
+.bbox-rect.stage-overripe { border-color: #f59e0b; }
+.bbox-rect.stage-spoiled { border-color: #f97316; }
+.bbox-rect.stage-unsafe { border-color: #ef4444; }
+
+.bbox-worst {
+  outline: 2px solid #ef4444;
+  outline-offset: 1px;
+}
+
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 380px;
+  pointer-events: none;
+}
+.toast {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+  animation: toastFadeIn 0.2s ease-out;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.toast-error {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+.toast-info {
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+.toast-success {
+  background-color: #10b981;
+  color: #ffffff;
+}
+@keyframes toastFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Price card unit and stock info */
+.price-card-unit {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+.call-stock-info {
+  font-size: 0.75rem;
+  color: var(--call-muted);
+  margin-top: 0.25rem;
+}
+.qty-input {
+  width: 70px;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  background-color: var(--surface);
+  color: var(--text-primary);
+}
+
+/* Default hidden states for panels */
+#closingTimeSelect {
+  display: none;
+}
+#shelfLockNote {
+  display: none;
+}
+#inspectLoading {
+  display: none;
+}
+#inspectError {
+  display: none;
+  margin-top: 1rem;
+}
+#decideError {
+  display: none;
+  margin-top: 1rem;
+}
+#sectionAiReading {
+  display: none;
+}
+#inspectStatusBanner {
+  display: none;
+  margin-bottom: 1rem;
+}
+#inspectInstructionBanner {
+  display: none;
+  margin-bottom: 1rem;
+}
+#inspectFooter {
+  display: none;
+}
+#sectionDecision {
+  display: none;
+}
+#decideLoading {
+  display: none;
+}
+#sectionBuyers {
+  display: none;
+}
+#buyerStaffCheckRow {
+  display: none;
+  margin-bottom: 0.75rem;
+}
+#buyerHoursBanner {
+  display: none;
+  margin-bottom: 1rem;
+}
+#buyerErrorBanner {
+  display: none;
+  margin-bottom: 1rem;
+}
+#buyersFooter {
+  display: none;
+}
+#voiceSection {
+  display: none;
+}
+#resultCard {
+  display: none;
+  background-color: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  padding: 1.25rem;
+}
+
+/* Replacements for removed inline styles in HTML */
+.shelf-id-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.mt-4 {
+  margin-top: 1rem;
+}
+.mb-4 {
+  margin-bottom: 1rem;
+}
+.file-input-compact {
+  font-size: 0.8125rem;
+}
+.badges-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.price-override-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.buyer-qty-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+.buyer-staff-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.buyer-next-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.buyers-screened-out {
+  margin-top: 1rem;
+}
+.call-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.section-circle-call {
+  background-color: var(--emerald);
+  color: #020617;
+  border-color: var(--emerald);
+}
+.call-header-title {
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--emerald-vivid);
+  display: inline-block;
+}
+.banner-call-info {
+  background-color: rgba(30, 41, 59, 0.9);
+  border-color: #334155;
+  color: #E2E8F0;
+}
+.call-live-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1rem;
+}
+.waveform-label {
+  font-size: 0.75rem;
+  color: var(--call-muted);
+  font-weight: 600;
+}
+.waveform-sub {
+  font-size: 0.6875rem;
+  color: var(--call-muted);
+}
+.result-title {
+  font-weight: 700;
+  color: var(--emerald-vivid);
+  margin-bottom: 0.5rem;
+}
+#resultContent {
+  font-size: 0.875rem;
+  color: #FFFFFF;
+}
+#resultNextAction {
+  margin-top: 0.75rem;
+}
+.text-emerald {
+  color: var(--emerald) !important;
+}
+.text-indigo {
+  color: var(--indigo) !important;
+}
+.text-amber {
+  color: var(--amber) !important;
+}
+#impactHint {
+  margin-top: 0.75rem;
+  font-size: 0.8125rem;
+  text-align: center;
+}
+

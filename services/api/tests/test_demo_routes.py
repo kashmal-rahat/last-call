@@ -459,3 +459,19 @@ async def test_next_step_then_demo_scout_charity(setup_api_test):
         assert captured_target.buyer_types == ("charity",)
     finally:
         delattr(app.state, "scout_fn")
+
+
+def test_static_and_demo_cache_control():
+    client = TestClient(app)
+    r_demo = client.get("/demo")
+    assert r_demo.status_code == 200
+    assert r_demo.headers.get("Cache-Control") == "no-cache"
+
+    r_css = client.get("/static/demo.css")
+    assert r_css.status_code == 200
+    assert r_css.headers.get("Cache-Control") == "no-cache"
+
+    r_js = client.get("/static/js/main.js")
+    assert r_js.status_code == 200
+    assert r_js.headers.get("Cache-Control") == "no-cache"
+

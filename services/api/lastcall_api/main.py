@@ -112,9 +112,20 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Last Call API", version=VERSION, lifespan=lifespan)
 
+
+@app.middleware("http")
+async def add_cache_control_headers(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path == "/demo" or path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 # Mount static files directory
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
 
 
 @lru_cache
