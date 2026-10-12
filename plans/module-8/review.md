@@ -154,3 +154,12 @@ Scope: uncommitted changes to `index.html` and `demo.css`. `uv run pytest`: **36
   - **Fix:** use the **last** attempt for that buyer whose `call_status` isn't `pending` (fall back to "Play this buyer" if there is none).
 
 **Verdict: ready to deploy after W8** (a one-line change). Then the user's deployed check: Sections 1–3 (the 8A 🛑), and the full Module 6 checklist on the new page.
+
+---
+
+# Round 4: W8 and the baseline deploy (2026-10-12)
+
+- ✅ **W8:** buyer rows use `batch.attempts.findLast(a => a.buyer_id === b.buyer_id && a.call_status !== 'pending')`, the last non-pending attempt. (`Array.prototype.findLast` works in every current browser: Chrome 97+, Safari 15.4+, Firefox 104+.)
+- `uv run pytest`: **367 passed, 19 skipped**; `node --check`: OK.
+- **Committed and deployed:** live `/health` reports `a7cfc28`, and the working tree is clean. **`a7cfc28` is the 8C baseline** and the Cloud Run rollback point. It also ships the Module 6 text fixes.
+- **Next:** the user's quick live check (one voice call; Sections 1–3), then the 8C prompt.
