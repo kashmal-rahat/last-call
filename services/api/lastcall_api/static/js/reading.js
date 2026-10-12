@@ -183,115 +183,90 @@ export function renderItemsList(data) {
     row.className = 'item-row' + (isActive ? ' active' : '');
     row.dataset.itemKey = item.item_key;
 
-    // Header Row
+    // Header: name, stage chip, level; score on the right
     const header = document.createElement('div');
     header.className = 'item-row-header';
 
-    const titleGroup = document.createElement('div');
-    titleGroup.className = 'item-title-group';
+    const head = document.createElement('div');
+    head.className = 'item-head';
 
     const nameSpan = document.createElement('span');
     nameSpan.className = 'item-name';
-    nameSpan.textContent = item.name;
-    titleGroup.appendChild(nameSpan);
+    nameSpan.textContent = displayName(item.name);
+    head.appendChild(nameSpan);
 
     const stageChip = document.createElement('span');
-    stageChip.className = 'chip chip-neutral chip-stage';
+    stageChip.className = 'chip chip-stage';
     const dot = document.createElement('span');
     dot.className = `dot dot-${item.stage}`;
     stageChip.appendChild(dot);
-    const stageCap = item.stage ? item.stage.charAt(0).toUpperCase() + item.stage.slice(1) : '';
-    stageChip.appendChild(document.createTextNode(stageCap));
-    titleGroup.appendChild(stageChip);
+    stageChip.appendChild(document.createTextNode(displayName(item.stage || '')));
+    head.appendChild(stageChip);
 
     if (item.stage_level) {
-      const cleanLevel = String(item.stage_level).replace(/^L/i, '').toLowerCase();
       const lvlSpan = document.createElement('span');
       lvlSpan.className = 'item-stage-level';
-      lvlSpan.textContent = `${cleanLevel} stage`;
-      titleGroup.appendChild(lvlSpan);
+      lvlSpan.textContent = `${String(item.stage_level).toLowerCase()} stage`;
+      head.appendChild(lvlSpan);
     }
 
     if (item.needs_staff_check) {
       const alertChip = document.createElement('span');
-      alertChip.className = 'chip chip-warning';
-      alertChip.textContent = 'Staff Check';
-      titleGroup.appendChild(alertChip);
+      alertChip.className = 'chip chip-amber';
+      alertChip.textContent = 'Staff check';
+      head.appendChild(alertChip);
     }
+    header.appendChild(head);
 
-    if (item.zoom_source_group) {
-      const zChip = document.createElement('span');
-      zChip.className = 'chip chip-indigo';
-      zChip.textContent = 'Zoomed';
-      titleGroup.appendChild(zChip);
-    }
-
-    header.appendChild(titleGroup);
-
-    // Degradation Score Indicator
     const scoreWrap = document.createElement('div');
     scoreWrap.className = 'item-score-block';
-
     const scoreNum = document.createElement('div');
     scoreNum.className = 'item-score-num';
     scoreNum.textContent = item.score != null ? String(Math.round(item.score)) : '—';
     scoreWrap.appendChild(scoreNum);
-
     const scoreBarTrack = document.createElement('div');
     scoreBarTrack.className = 'item-score-bar-track';
-
     const scoreFill = document.createElement('div');
     scoreFill.className = `item-score-bar-fill fill-${item.stage}`;
     scoreFill.style.width = Math.min(100, Math.max(0, item.score || 0)) + '%';
     scoreBarTrack.appendChild(scoreFill);
     scoreWrap.appendChild(scoreBarTrack);
-
     header.appendChild(scoreWrap);
     row.appendChild(header);
 
-    // Active Details Drawer
+    // Active item: evidence, issue tags, facts grid, staff check
     if (isActive) {
       const details = document.createElement('div');
       details.className = 'item-row-details';
 
-      // Degradation Evidence
-      if (item.degradation_evidence && item.degradation_evidence.length > 0) {
-        const evBox = document.createElement('div');
-        evBox.className = 'evidence-box';
-
-        const evTitle = document.createElement('div');
-        evTitle.className = 'evidence-title';
-        evTitle.textContent = 'Observed Degradation Evidence:';
-        evBox.appendChild(evTitle);
-
-        const ul = document.createElement('ul');
-        ul.className = 'evidence-list';
-        item.degradation_evidence.forEach(ev => {
-          const li = document.createElement('li');
-          li.textContent = ev;
-          ul.appendChild(li);
-        });
-        evBox.appendChild(ul);
-        details.appendChild(evBox);
+      if (item.evidence) {
+        const ev = document.createElement('p');
+        ev.className = 'item-evidence';
+        ev.textContent = item.evidence;
+        details.appendChild(ev);
       }
 
-      // Issues Chips
-      if (item.issues && item.issues.length > 0) {
+      const tags = (item.issues || []).filter(iss => iss !== 'instruction_text');
+      if (tags.length > 0 || item.zoomed) {
         const issuesWrap = document.createElement('div');
         issuesWrap.className = 'issues-chips';
-        item.issues.forEach(iss => {
+        tags.forEach(iss => {
           const chip = document.createElement('span');
-          chip.className = 'chip chip-neutral';
+          chip.className = 'chip';
           chip.textContent = iss.replace(/_/g, ' ');
           issuesWrap.appendChild(chip);
         });
+        if (item.zoomed) {
+          const zChip = document.createElement('span');
+          zChip.className = 'chip chip-indigo';
+          zChip.textContent = 'Zoomed in for a closer look';
+          issuesWrap.appendChild(zChip);
+        }
         details.appendChild(issuesWrap);
       }
 
-      // Definition Grid: 2-column grid of Observed, Estimated stock, Confidence, Change
       const defGrid = document.createElement('div');
       defGrid.className = 'item-def-grid';
-
       const addGridItem = (lblText, valText) => {
         const cell = document.createElement('div');
         cell.className = 'item-def-cell';
@@ -305,29 +280,24 @@ export function renderItemsList(data) {
         cell.appendChild(val);
         defGrid.appendChild(cell);
       };
-
       addGridItem('Observed', formatObserved(item.observed) || '—');
       addGridItem('Estimated stock', formatQuantity(item.quantity) || '—');
-
-      let confWord = '—';
-      if (item.confidence_level) {
-        confWord = item.confidence_level.charAt(0).toUpperCase() + item.confidence_level.slice(1).toLowerCase() + ' confidence';
-      } else if (item.confidence != null) {
-        confWord = item.confidence >= 0.8 ? 'High confidence' : (item.confidence >= 0.6 ? 'Medium confidence' : 'Low confidence');
-      }
+      const confWord = item.confidence_level
+        ? `${displayName(item.confidence_level.toLowerCase())} confidence`
+        : '—';
       addGridItem('Confidence', confWord);
-      addGridItem('Change', item.change_notes || '—');
-
+      addGridItem('Since last photo', item.change_note ? displayName(item.change_note) : 'First photo of this shelf');
       details.appendChild(defGrid);
 
-      // Staff Check Reasons
-      if (item.needs_staff_check && item.staff_reasons && item.staff_reasons.length > 0) {
+      if (item.needs_staff_check) {
         const alertDiv = document.createElement('div');
-        alertDiv.className = 'staff-alert-banner flex items-center gap-2';
+        alertDiv.className = 'item-staff-alert';
         alertDiv.appendChild(icon('warning'));
-        const reasons = item.staff_reasons.map(r => STAFF_REASON_LABELS[r] || r.replace(/_/g, ' ')).join(', ');
-        const txt = document.createTextNode(` Staff check required: ${reasons}`);
-        alertDiv.appendChild(txt);
+        const reasons = (item.staff_check_reasons || [])
+          .map(r => STAFF_REASON_LABELS[r] || r.replace(/_/g, ' '));
+        const text = document.createElement('span');
+        text.textContent = item.check_reason || (reasons.length ? `Staff check: ${reasons.join(', ')}` : 'Staff check needed');
+        alertDiv.appendChild(text);
         details.appendChild(alertDiv);
       }
 
@@ -370,7 +340,7 @@ export function renderResults(data, imgSrc) {
       const dot = document.createElement('span');
       dot.className = `dot dot-${item.stage}`;
       label.appendChild(dot);
-      const nameTxt = document.createTextNode(item.name);
+      const nameTxt = document.createTextNode(displayName(item.name));
       label.appendChild(nameTxt);
       box.appendChild(label);
 
@@ -430,4 +400,9 @@ export function renderResults(data, imgSrc) {
   }
   updateShelfLock();
   updateProgressBar();
+}
+
+// Produce names and words arrive in lower case; capitalise the first letter for display only.
+function displayName(text) {
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
 }

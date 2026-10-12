@@ -30,7 +30,6 @@ export const inspectFooter = document.getElementById('inspectFooter');
 // Section 3: Decision elements
 export const sectionDecision = document.getElementById('sectionDecision');
 export const decisionSectionSubtitle = document.getElementById('decisionSectionSubtitle');
-export const decisionActiveProduceChip = document.getElementById('decisionActiveProduceChip');
 export const decisionRunwayChip = document.getElementById('decisionRunwayChip');
 export const decideLoading = document.getElementById('decideLoading');
 export const decisionContent = document.getElementById('decisionContent');

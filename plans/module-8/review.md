@@ -287,3 +287,122 @@ Scope: uncommitted changes against `fb78667` (live). `uv run pytest`: **369 pass
 - ✅ **Optional subtitle:** Section 3 reads "What happens to <item>, with prices set by the mart's rules."
 
 **Verdict: the 8D code is complete.** The user commits and deploys the API (rollback `fb78667`), then sends the screenshots listed in round 7 "Next" for the visual check against the 8D spec.
+
+---
+
+# Round 9: visual check of 8D on the deployed page (2026-10-12)
+
+Source: the user's screenshots (AI shelf reading; Buyers). D1 (no-fill boxes), D2 (fonts), D5 ("mid stage"), D7 ("High confidence") and the details grid are visibly fixed. **The page still doesn't look premium**, for these reasons. Each one is specific. **Use the CSS below exactly**; don't redesign.
+
+## Problems
+- **V1. Missing CSS rules.**
+  - The renderers use `chip-neutral`, `chip-warning` and `dot`, but `demo.css` defines none of them, and the base `.chip` has no background.
+  - **Effect:** the stage chip ("Overripe"), the issue tags ("browning", "dark spots"), "2 items detected" and every stage dot render as bare, misaligned text.
+- **V2. No spacing between names and chips.** "JuicePandaLikely", "Niazi Juice CornerLikely". "Open now" wraps onto its own line in the highlighted card.
+- **V3. Information shown twice.** Each buyer shows the meta line ("Juice shop · 0.6 km · +92 ••••••• 996") and then the code `reason` line ("Juice shop · 0.6 km · open now"). Remove the `reason` line from the card and the rows; keep the meta line and Gemini's `fit_why`.
+- **V4. "Next to call: #1 JuicePanda" above the card** repeats the card's own "#1 · Next to call" label. In the Buyers section, a `call` action renders **nothing** (`showCallButton = false` → no text either).
+- **V5. The buyer footer is still monospace,** with Refresh on its own line. Use the footer CSS below.
+- **V6. Lower-case produce names** ("banana", "apple"). Capitalise the first letter **for display only** (item rows, box labels, the decision subtitle): `name.charAt(0).toUpperCase() + name.slice(1)`.
+- **V7. Are the buttons disabled?** In the screenshot, "Find juice shops & bakeries", "Start call" and "Play this buyer" all show the disabled style (opacity 0.5) with no call running. **Agent: check.** These buttons are disabled only by `state.isCallInProgress` (or a search in flight). If the flag stays `true` after a call ends or after a failed `/demo/calls`, report the path; don't change logic without asking. (If the screenshot was taken during a call, this is fine. The user will confirm.)
+
+## Exact CSS (add to `demo.css`, replacing any rule with the same selector)
+```css
+/* Chips: neutral by default */
+.chip { background:#F1F5F9; color:#334155; border:0; }
+.chip-neutral { background:#F1F5F9; color:#334155; }
+.chip-warning { background:#FFFBEB; color:#B45309; }
+.chip-stage { gap:6px; }
+.dot { display:inline-block; width:6px; height:6px; border-radius:999px; flex:none; }
+
+/* Headings with chips (item rows, buyer card, buyer rows) */
+.item-head, .buyer-head, .buyer-row-title { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.item-name, .buyer-heading-name { font:600 16px/24px 'Inter',sans-serif; color:#0F172A; }
+.item-stage-level { font:400 13px/20px 'Inter',sans-serif; color:#94A3B8; }
+.issues-chips { display:flex; flex-wrap:wrap; gap:8px; }
+
+/* Highlighted buyer */
+.buyer-card-top-pick { display:flex; flex-direction:column; gap:12px; padding:24px;
+  border:1px solid #C7D2FE; border-radius:16px; background:#FFFFFF; box-shadow:0 0 0 4px #EEF2FF; }
+.buyer-card-top-pick .btn-ai { width:100%; height:44px; }
+
+/* Other buyers: content | fixed action column */
+.buyer-card-row { display:grid; grid-template-columns:1fr 168px; gap:16px; align-items:center;
+  padding:16px 0; border-top:1px solid #F1F5F9; }
+.buyer-row-action { justify-self:end; }
+.buyer-meta-row, .buyer-row-meta { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px;
+  font:400 13px/20px 'Inter',sans-serif; color:#475569; }
+.buyer-row-reason, .buyer-fit-why { font:400 14px/22px 'Inter',sans-serif; color:#475569; }
+.buyer-maps-link { color:#4F46E5; text-decoration:none; font-weight:500; }
+.buyer-maps-link:hover { text-decoration:underline; }
+
+/* Footer: one quiet line + Refresh on the right */
+.buyers-footer { display:flex; justify-content:space-between; align-items:center; gap:16px;
+  padding-top:16px; border-top:1px solid #F1F5F9; font:400 12px/18px 'Inter',sans-serif; color:#64748B; }
+.buyers-footer .btn-ghost, .buyers-footer .btn-secondary { height:32px; padding:0 12px; font-size:13px; }
+.buyers-skipped { font:400 12px/18px 'Inter',sans-serif; color:#94A3B8; margin-top:8px; }
+
+@media (max-width: 640px) {
+  .buyer-card-row { grid-template-columns:1fr; }
+  .buyer-row-action { justify-self:stretch; }
+  .buyer-row-action button { width:100%; height:44px; }
+  .buyers-footer { flex-direction:column; align-items:flex-start; }
+}
+```
+**Markup to match (renderers only):**
+- the item row header is wrapped in `.item-head`, with name `.item-name`, the stage chip, and `.item-stage-level`
+- each buyer header is in `.buyer-head` (card) or `.buyer-row-title` (rows)
+- the footer is `.buyers-footer` (text left, Refresh right), with `.buyers-skipped` under it
+- **no monospace** in the buyer footer
+
+## Verify
+- `uv run pytest` and `node --test` green; the reviewer re-diffs the logic functions (no change allowed).
+- Screenshots at 1280 px **and 375 px** of Section 2 (Shelf C) and Section 4 (after one declined call), plus the answer on V7.
+
+---
+
+# Round 10: UI polish done directly by Claude (2026-10-12)
+
+The user asked Claude to make the visual changes directly ("go ahead with the UI"). Scope: `demo.css`, `index.html` markup and **renderer functions only**. The work was checked in a local preview: the real page and API with an in-memory store and fake inspect/scout data from the scratchpad, never committed. It was checked at 1280 px and 375 px.
+
+## Root causes found (beyond round 9)
+- **About 40 Tailwind-style utility classes** (`flex`, `items-center`, `gap-2`, `text-sm`, `justify-between`…) were used by the renderers, but the page has no Tailwind, so those layouts did nothing. Several semantic classes didn't match the CSS either: `item-title-group` vs `.item-row-title-group`, `item-def-value` vs `.item-def-val`, and `chip-neutral`, `chip-warning` and `dot` didn't exist.
+- **Data bugs in `renderItemsList`:** it read fields that don't exist (`degradation_evidence`, `zoom_source_group`, `change_notes`, `staff_reasons`). So the AI's evidence sentence, the zoom marker, the change since the last photo and the staff-check reasons were never shown. The renderer now uses `evidence`, `zoomed`, `change_note`, `staff_check_reasons` and `check_reason`.
+- **"h to closing" was wrong:** it fell back to a hard-coded 2.0 h for "Now"; it now uses `LadderResult.hours_until_closing`.
+- **The decision's own reason sentence** (with clock times) wasn't shown; it is now the main line.
+- **Skip-reason labels** didn't match the server's `SkipReason` values; they now map to the real values.
+
+## Changes
+- **Chips:** neutral by default (no borders), tinted variants, stage dots.
+- **AI reading:**
+  - item rows: name, stage chip with a dot, "mid stage", a staff-check chip, the score with a thin bar
+  - the active item expands into evidence, issue tags, a zoom chip, the facts grid (including "Since last photo") and the staff-check line
+  - photo box labels sit inside the box, so they aren't clipped
+- **Decision:**
+  - plain ladder labels (Keep › Discount › Bulk sale › Donate › Animal feed › Compost)
+  - price cards in Plus Jakarta Sans (no monospace)
+  - the reason sentence, the real hours to closing
+  - no duplicate item chip
+- **Buyers:**
+  - a highlighted "#n · Next to call" card holds the only call button; rows sit in a content/action grid
+  - opening hours as a dot plus text; one meta line ("Type · km · phone · View on Google Maps"); Gemini's reason; plain-word status chips
+  - quiet notes instead of stacked banners; footer with Refresh on the same line; skipped counts; the screened-out list
+- **Live call:**
+  - plain tile labels (Buyer, Stock, Opening price, Floor, Pickup), "Hang up", a calm headphones hint
+  - the result card on a dark surface with the "Next buyer" button
+- **Impact:** neutral numbers on soft tiles, "Money recovered", the hint and the role-play note on one line.
+- **Phone:**
+  - no sideways scroll at 375 px
+  - the header hides the clock; section heads stack
+  - the closing-time buttons wrap 2 × 2; progress labels shorten
+- **Fonts:** removed the render-blocking `@import` (the `<link>` in `index.html` loads them).
+
+## Verification
+- `uv run pytest`: **369 passed, 19 skipped**; `node --test`: **21 passed**; `node --check` on every module.
+- **Function diff against live `d9b7750`:**
+  - changed: only `renderNextActionRow` (removed the duplicate "Next to call" text), `renderActiveBuyers`, `createPriceCard`, `renderActiveDecision`, `renderImpact`, `renderItemsList`, `renderResults`
+  - new helpers: `buyerHeading`, `buyerMeta`, `buyerFitWhy`, `buyerStatusChip`, `capitalise`, `displayName`
+  - **no logic function changed or removed**
+- **Not verifiable locally:**
+  - real voice audio (the microphone is blocked in the preview browser)
+  - real Places and Gemini data
+  The user's live check covers both.

@@ -201,9 +201,8 @@
             <h2>Decision</h2>
             <p class="section-subtitle" id="decisionSectionSubtitle">What happens to produce, with prices set by the mart's rules.</p>
           </div>
-          <span id="decisionActiveProduceChip" class="chip">—</span>
         </div>
-        <span id="decisionRunwayChip" class="chip">—</span>
+        <span id="decisionRunwayChip" class="chip"></span>
       </div>
 
       <!-- Loading Skeleton for Decision -->
@@ -214,18 +213,19 @@
 
       <div id="decisionContent">
         <!-- Ladder Stepper Trail -->
-        <div class="stepper-trail" id="ladderStepper">
-          <div class="stepper-item ladder-step" data-step="keep">1. Keep</div>
-          <span class="stepper-arrow">→</span>
-          <div class="stepper-item ladder-step" data-step="discount">2. Store Discount</div>
-          <span class="stepper-arrow">→</span>
-          <div class="stepper-item ladder-step" data-step="bulk_sale">3. Bulk B2B Sale</div>
-          <span class="stepper-arrow">→</span>
-          <div class="stepper-item ladder-step" data-step="donate">4. Charity Donation</div>
-          <span class="stepper-arrow">→</span>
-          <div class="stepper-item ladder-step" data-step="animal_feed">5. Animal Feed</div>
-          <span class="stepper-arrow">→</span>
-          <div class="stepper-item ladder-step" data-step="compost">6. Compost</div>
+        <div class="stepper-trail" id="ladderStepper" aria-label="Recovery ladder">
+          <div class="stepper-item ladder-step" data-step="keep">Keep</div>
+          <span class="stepper-arrow" aria-hidden="true">›</span>
+          <div class="stepper-item ladder-step" data-step="discount">Discount</div>
+          <span class="stepper-arrow" aria-hidden="true">›</span>
+          <div class="stepper-item ladder-step" data-step="bulk_sale">Bulk sale</div>
+          <span class="stepper-arrow" aria-hidden="true">›</span>
+          <div class="stepper-item ladder-step" data-step="donate">Donate</div>
+          <span class="stepper-arrow" aria-hidden="true">›</span>
+          <div class="stepper-item ladder-step" data-step="animal_feed">Animal feed</div>
+          <span class="stepper-arrow" aria-hidden="true">›</span>
+          <div class="stepper-item ladder-step" data-step="compost">Compost</div>
+        </div>
         </div>
 
         <!-- Price Cards Grid -->
@@ -242,9 +242,9 @@
 
           <div class="price-override-row" id="decisionPriceOverrideRow">
             <label for="activeItemShelfPriceInput" class="price-override-label">
-              Shelf price:
+              Shelf price (Rs)
             </label>
-            <input type="number" id="activeItemShelfPriceInput" class="price-override-input font-mono" min="1" max="100000" placeholder="Price">
+            <input type="number" id="activeItemShelfPriceInput" class="input-number" min="1" max="100000" placeholder="Price">
             <button type="button" id="btnActiveItemRedecide" class="btn-ghost">Re-decide</button>
           </div>
         </div>
@@ -281,13 +281,13 @@
           </label>
         </div>
 
-        <div class="banner banner-info mb-4">
-          In a real mart, the AI calls these in order on its own; here you play the buyer.
-        </div>
+        <p class="buyer-note">
+          In a real mart, the AI calls these in order on its own. Here, you play the buyer.
+        </p>
 
-        <div id="buyerHoursBanner" class="banner banner-warn mb-4">
-          Outside calling hours or business closed. Demo calls can proceed regardless for judging.
-        </div>
+        <p id="buyerHoursBanner" class="buyer-note buyer-note-warn">
+          Some buyers are closed or it's outside calling hours. A real mart would wait to call them; in this demo you can call now.
+        </p>
 
         <div id="buyerErrorBanner" class="banner banner-error mb-4"></div>
 
@@ -300,7 +300,7 @@
         </div>
 
         <!-- Buyers Footer -->
-        <div id="buyersFooter" class="section-meta-footer"></div>
+        <div id="buyersFooter"></div>
 
         <!-- Screened out details -->
         <div id="buyersScreenedOutContainer" class="buyers-screened-out"></div>
@@ -322,34 +322,31 @@
           </span>
         </div>
 
-        <button id="btnHangup" class="btn-danger" type="button" disabled>End Call</button>
+        <button id="btnHangup" class="btn-danger" type="button" disabled>Hang up</button>
       </div>
 
-      <div class="banner banner-info banner-call-info">
-        <span>🎧</span>
-        <span><strong>Please use headphones</strong> to prevent microphone echo during real-time Urdu conversation.</span>
-      </div>
+      <p class="call-hint">Use headphones, so the AI doesn't hear its own voice through your speakers.</p>
 
       <!-- Call Metadata Ribbon -->
       <div class="call-meta-tiles">
         <div class="call-tile">
-          <div class="call-tile-label">Counterparty</div>
+          <div class="call-tile-label">Buyer</div>
           <div class="call-tile-value" id="callBuyerName">—</div>
         </div>
         <div class="call-tile">
-          <div class="call-tile-label">Target Batch</div>
+          <div class="call-tile-label">Stock</div>
           <div class="call-tile-value" id="callItemQty">—</div>
         </div>
         <div class="call-tile">
-          <div class="call-tile-label">Price Quoted</div>
+          <div class="call-tile-label">Opening price</div>
           <div class="call-tile-value" id="callOpeningQuote">—</div>
         </div>
         <div class="call-tile">
-          <div class="call-tile-label">Floor Guardrail</div>
+          <div class="call-tile-label">Floor</div>
           <div class="call-tile-value" id="callFloorPrice">—</div>
         </div>
         <div class="call-tile">
-          <div class="call-tile-label">Pickup Window</div>
+          <div class="call-tile-label">Pickup</div>
           <div class="call-tile-value" id="callPickupWindow">—</div>
         </div>
       </div>
@@ -357,7 +354,7 @@
       <!-- Waveform and Live Transcript Stream -->
       <div class="call-live-grid">
         <div class="waveform-box" id="waveformBox">
-          <div class="waveform-label">Agent Audio</div>
+          <div class="waveform-label">AI agent</div>
           <div class="waveform-bars">
             <div class="waveform-bar"></div>
             <div class="waveform-bar"></div>
@@ -367,17 +364,17 @@
             <div class="waveform-bar"></div>
             <div class="waveform-bar"></div>
           </div>
-          <div class="waveform-sub">Urdu negotiation active</div>
+          <div class="waveform-sub">Speaks Urdu</div>
         </div>
 
         <div class="transcript-box" id="transcript">
-          <div class="transcript-notice">Waiting to start call...</div>
+          <div class="transcript-notice">The conversation appears here as it happens.</div>
         </div>
       </div>
 
       <!-- Result Strip -->
       <div class="card" id="resultCard">
-        <div class="result-title">Call Outcome</div>
+        <div class="result-title">Call result</div>
         <div id="resultContent"></div>
         <div id="resultNextAction"></div>
       </div>
@@ -393,13 +390,12 @@
             <p class="section-subtitle">What your calls on this shelf recovered.</p>
           </div>
         </div>
-        <span class="chip">Demo Role-Play</span>
       </div>
 
       <div class="impact-grid" id="impactGrid">
         <div class="impact-metric-card">
-          <div class="impact-metric-label">Revenue Recovered</div>
-          <div class="impact-metric-value text-emerald" id="impactRevenue">Rs 0</div>
+          <div class="impact-metric-label">Money recovered</div>
+          <div class="impact-metric-value" id="impactRevenue">Rs 0</div>
         </div>
         <div class="impact-metric-card">
           <div class="impact-metric-label">Stock placed</div>
@@ -407,11 +403,11 @@
         </div>
         <div class="impact-metric-card">
           <div class="impact-metric-label">Donated</div>
-          <div class="impact-metric-value text-indigo" id="impactDonated">0</div>
+          <div class="impact-metric-value" id="impactDonated">0</div>
         </div>
         <div class="impact-metric-card">
           <div class="impact-metric-label">Animal feed</div>
-          <div class="impact-metric-value text-amber" id="impactFeed">0</div>
+          <div class="impact-metric-value" id="impactFeed">0</div>
         </div>
         <div class="impact-metric-card">
           <div class="impact-metric-label">Calls made</div>
@@ -419,16 +415,12 @@
         </div>
         <div class="impact-metric-card">
           <div class="impact-metric-label">Deals Closed</div>
-          <div class="impact-metric-value" id="impactDeals">0 Deals</div>
+          <div class="impact-metric-value" id="impactDeals">0</div>
         </div>
       </div>
-      <div id="impactHint" class="text-muted">
-        Start a call to see the impact here
-      </div>
-
-      <div class="impact-disclaimer">
-        From your calls on this shelf · demo role-play, not real sales
-      </div>
+      <p class="impact-disclaimer">
+        <span id="impactHint">Start a call to see the impact here. </span>Counts only your calls on this shelf: demo role-play, not real sales.
+      </p>
     </section>
 
   </main>

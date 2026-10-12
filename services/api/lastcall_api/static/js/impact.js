@@ -34,12 +34,12 @@ export function renderImpact() {
   }
 
   if (dom.impactDeals) {
-    dom.impactDeals.textContent = `${dealsClosed} Deals`;
+    dom.impactDeals.textContent = String(dealsClosed);
   }
 
   if (dom.impactHint) {
     if (dealsClosed === 0) {
-      dom.impactHint.style.display = 'block';
+      dom.impactHint.style.display = 'inline';
       dom.impactHint.textContent = 'Start a call to see the impact here';
     } else {
       dom.impactHint.style.display = 'none';

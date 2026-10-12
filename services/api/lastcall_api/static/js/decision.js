@@ -21,7 +21,7 @@ export function createPriceCard(label, valText, unitText, extraClass = '', iconN
   card.appendChild(lbl);
 
   const val = document.createElement('div');
-  val.className = 'price-card-value font-mono';
+  val.className = 'price-card-value';
   val.textContent = valText;
 
   if (unitText) {
@@ -114,14 +114,17 @@ export function renderActiveDecision() {
 
   // Header Chips
   const activeItemObj = state.currentInspection.items.find(i => i.item_key === state.activeItemKey);
-  dom.decisionActiveProduceChip.textContent = activeItemObj ? activeItemObj.name : 'Active Item';
   if (dom.decisionSectionSubtitle) {
-    const itmName = activeItemObj ? activeItemObj.name : 'produce';
+    const raw = activeItemObj ? activeItemObj.name : 'this produce';
+    const itmName = raw.charAt(0).toUpperCase() + raw.slice(1);
     dom.decisionSectionSubtitle.textContent = `What happens to ${itmName}, with prices set by the mart's rules.`;
   }
 
-  const hoursLeft = dom.closingTimeSelect.value ? parseFloat(dom.closingTimeSelect.value) : 2.0;
-  dom.decisionRunwayChip.textContent = `${hoursLeft} h to closing`;
+  // Hours to closing as used by the decision (real clock, or the closing-time choice)
+  const hoursLeft = state.currentLadderResult.hours_until_closing;
+  dom.decisionRunwayChip.textContent = hoursLeft != null
+    ? `${hoursLeft < 1 ? hoursLeft.toFixed(1) : Math.round(hoursLeft)} h to closing`
+    : '';
 
   // Stepper
   const steps = dom.ladderStepper.querySelectorAll('.ladder-step');
@@ -142,37 +145,37 @@ export function renderActiveDecision() {
   const unitStr = decision.unit || 'kg';
 
   if (decision.step === 'discount') {
-    const c1 = createPriceCard('Standard Shelf Price', 'Rs ' + (decision.shelf_price != null ? decision.shelf_price : '—'), unitStr);
+    const c1 = createPriceCard('Shelf price', 'Rs ' + (decision.shelf_price != null ? decision.shelf_price : '—'), unitStr);
     const discPct = decision.discount_pct != null ? decision.discount_pct : 0;
     const discPrice = decision.discounted_price != null ? decision.discounted_price : '—';
-    const c2 = createPriceCard(`Store Discount (−${discPct}%)`, 'Rs ' + discPrice, unitStr, 'card-emerald');
+    const c2 = createPriceCard(`Discounted (−${discPct}%)`, 'Rs ' + discPrice, unitStr, 'card-emerald');
     dom.decisionPriceCards.appendChild(c1);
     dom.decisionPriceCards.appendChild(c2);
   } else if (['bulk_sale', 'animal_feed'].includes(decision.step)) {
-    const c1 = createPriceCard('Standard Shelf Price', 'Rs ' + (decision.shelf_price != null ? decision.shelf_price : '—'), unitStr);
-    const c2 = createPriceCard('AI Opening Offer', 'Rs ' + (decision.opening_price != null ? decision.opening_price : '—'), unitStr, 'card-indigo');
+    const c1 = createPriceCard('Shelf price', 'Rs ' + (decision.shelf_price != null ? decision.shelf_price : '—'), unitStr);
+    const c2 = createPriceCard('AI opening offer', 'Rs ' + (decision.opening_price != null ? decision.opening_price : '—'), unitStr, 'card-indigo');
     const c3 = createPriceCard('Floor · never told to the AI', 'Rs ' + (decision.floor_price != null ? decision.floor_price : '—'), unitStr, 'card-emerald', 'lock');
     dom.decisionPriceCards.appendChild(c1);
     dom.decisionPriceCards.appendChild(c2);
     dom.decisionPriceCards.appendChild(c3);
   } else if (decision.step === 'donate') {
-    const c1 = createPriceCard('Charity Routing', 'Free to charities', '', 'card-indigo');
+    const c1 = createPriceCard('Donation', 'Free to charities', '', 'card-indigo');
     dom.decisionPriceCards.appendChild(c1);
   } else if (decision.step === 'keep') {
-    const c1 = createPriceCard('Shelf Valuation', 'Rs ' + (decision.shelf_price != null ? decision.shelf_price : '—'), unitStr + ' · Stays at full price', 'card-emerald');
+    const c1 = createPriceCard('Stays at full price', 'Rs ' + (decision.shelf_price != null ? decision.shelf_price : '—'), unitStr, 'card-emerald');
     dom.decisionPriceCards.appendChild(c1);
   } else {
     const c1 = createPriceCard(decision.step || 'Status', decision.reason || '—', '');
     dom.decisionPriceCards.appendChild(c1);
   }
 
-  dom.decisionReasonLine.textContent = formatDecisionLine(decision);
+  dom.decisionReasonLine.textContent = decision.reason || formatDecisionLine(decision);
   dom.decisionProfileLine.textContent = formatProfileLine(decision);
 
   dom.decisionBadgesRow.replaceChildren();
   if (decision.on_hold) {
     const b = document.createElement('span');
-    b.className = 'chip chip-amber flex items-center gap-1';
+    b.className = 'chip chip-amber';
     b.appendChild(icon('warning'));
     b.appendChild(document.createTextNode(' On hold until staff check'));
     dom.decisionBadgesRow.appendChild(b);
@@ -188,7 +191,7 @@ export function renderActiveDecision() {
   if (decision.staff_actions && decision.staff_actions.length > 0) {
     decision.staff_actions.forEach(act => {
       const b = document.createElement('span');
-      b.className = 'chip chip-slate';
+      b.className = 'chip';
       b.textContent = STAFF_ACTION_LABELS[act] || act.replace(/_/g, ' ');
       dom.decisionBadgesRow.appendChild(b);
     });
