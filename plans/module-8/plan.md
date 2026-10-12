@@ -33,6 +33,7 @@ These are invented and must not appear: "96.8% Conf", "Brown sugar spots 42%", "
 ## Milestones
 - **8A (Steps 1–4):** design system, header and progress, setup, AI reading with the active item, decision. 🛑 The user deploys the API and checks.
 - **8B (Steps 5–8):** buyers, live call, impact, mobile polish, final check. 🛑 The user deploys and reruns the Module 6 checklist.
+- **8C (Steps 9–12, added 2026-10-12, D60):** the page's script is split into ES modules with tests and polish, after W8 is deployed as the baseline. Its single server change, `Cache-Control: no-cache` on `/static/*` and `/demo`, is the one exception to "page only". Step 8 of 8B (mobile polish and final check) runs after 8C.
 
 **Stop rules:** if the same test fails twice for the same reason, stop and report. Don't change logic to fix a layout problem; ask.
 
@@ -226,4 +227,120 @@ Rules:
 - If the same test fails twice for the same reason, stop and report. Don't change logic to fix layout; ask.
 
 Start now with Step 1 (demo.css design system).
+````
+
+---
+
+# Milestone 8C: page refactor to ES modules, tests and polish (added 2026-10-12, D60)
+
+> **Why:** after 8A the page works, but it is one 3,070-line file:
+> - the buyer renderer alone is 579 lines; 29 global variables
+> - 166 inline style assignments in the JavaScript and 43 in the HTML
+> - 13 `alert()` pop-ups, 5 silent `catch {}`, no ARIA attributes, emoji used as icons
+> - no frontend tests
+>
+> 8C makes the page as well built as the backend **without changing behaviour**. It is a **mechanical** refactor that the reviewer can verify with a script. It is not a rewrite.
+>
+> **Order:**
+> 1. W8 (review round 3) is fixed, committed and **deployed**. That commit is the baseline and the Cloud Run rollback point; write its hash in the 8C report.
+> 2. 8C.
+> 3. 8B's remaining polish (Step 8) runs on the new structure.
+
+## Rules for 8C (in addition to the module rules at the top)
+- **No framework, no bundler, no build step, no new dependencies.** Native ES modules (`<script type="module">`), which every current browser supports.
+- **Function bodies move unchanged.** Only these edits are allowed inside a moved function:
+  1. a reference to a former top-level `let` becomes `state.<name>` (e.g. `currentBatchesMap` → `state.currentBatchesMap`)
+  2. `alert(msg)` becomes `showToast(msg, 'error')`
+  3. in any function, an inline `.style.<prop> = …` line for **looks** (colour, font, spacing, flex, border, outline, opacity…) is replaced by a CSS class. **Only `display` (show/hide, used 66 times, including in logic functions) and geometry (`top`, `left`, `width`, `height`: bounding boxes, score bar) stay inline.** Stage colours on boxes and bars become classes (`.stage-fresh`, `.stage-ripening`, `.stage-overripe`, `.stage-spoiled`, `.stage-unsafe`, plus `.bbox-worst` for the worst-piece outline) instead of `getStageColor()` values
+  4. in renderers only: an emoji icon is replaced by `icon('<name>')`
+  5. an empty `catch {}` becomes `catch (e) { console.warn('<function name>', e); }`
+
+  Anything else (requests, payloads, conditions, order of calls, close codes, retries, polling, lock logic) must stay identical. The reviewer checks this with a normalising diff against the baseline.
+- **Checked by the planner (2026-10-12):**
+  - the inline script has no `onclick=` handlers in the HTML
+  - it parses in strict mode (modules are always strict) and assigns no undeclared variables
+  - the nine helpers planned for `format.js` touch neither the DOM nor shared state
+  If you find otherwise, stop and report.
+- **No top-level code in any module except `main.js`.** Other modules only declare and export functions and constants. This keeps the circular imports between `call.js`, `buyers.js` and `impact.js` safe: function declarations are hoisted.
+- Keep every element ID and every name (functions, state fields) exactly as they are today.
+
+### Step 9: Module layout (`services/api/lastcall_api/static/js/`)
+| File | Contents |
+|---|---|
+| `dom.js` | The 64 element references, `export const <same name> = document.getElementById('<same id>')`. No imports |
+| `state.js` | `export const state = { … }`: the 29 former top-level `let`s with their exact initial values. No imports |
+| `storage.js` | `getStoredItem`, `setStoredItem`, `generateShelfId`, `getOrCreateShelfId`, `resetShelfId` |
+| `format.js` (**pure**: no DOM, no `state`) | `rankItems`, `getStageColor`, `formatObserved`, `formatQuantity`, `formatUncertainFields`, `formatDecisionLine`, `formatProfileLine`, `getFindBuyersLabel`, `getNextStepTargetLabel`, `STAFF_REASON_LABELS`, `STAFF_ACTION_LABELS`, plus the new `computeImpact(batchesMap)` (below) |
+| `ui.js` | `icon(name)` (inline SVG built with `document.createElementNS`; names `pin`, `phone`, `lock`, `warning`, `check`, `leaf`, `clock`, `external`); `showToast(message, kind)`, a `role="status"` `aria-live="polite"` toast that hides after 5 s and replaces `alert()` |
+| `setup.js` | `updateClock`, `syncClosingTimeButtons`, `loadSamples`, `loadBranches`, `updateHeaderBranch`, `updateProgressBar` |
+| `lock.js` | `batchIdFor`, `loadBatchesForBranch`, `isShelfLocked`, `updateShelfLock` |
+| `reading.js` | `handleInspect`, `setActiveItem`, `highlightActiveBox`, `renderItemsList`, `renderResults` |
+| `decision.js` | `triggerDecide`, `renderActiveDecision` |
+| `buyers.js` | `fetchScoutBuyers`, `renderNextActionRow`, `advanceBatchStep`, `renderActiveBuyers` |
+| `call.js` | `setStatus`, `appendMessage`, `appendNotice`, `startCallTimer`, `stopCallTimer`, `triggerWaveformAnimation`, `startCallForItem`, `connectWebSocket`, `pollBatchUntilCompleted`, `renderCallResult`, `renderCallPendingResult`, `handleBusyRetry`, `hangup`, `cleanupAudio` |
+| `impact.js` | `renderImpact`, now a thin renderer over `computeImpact(state.currentBatchesMap)` |
+| `main.js` | Everything that runs at load today: every top-level `addEventListener` (New shelf, closing buttons, closing select, branch, photo input, Inspect, Hang up, Re-decide, Find buyers, access-code input), the saved-code restore, `updateClock()` plus its `setInterval`, `loadSamples()`, `loadBranches()`, `updateProgressBar()`, `renderImpact()`, in today's order |
+
+- **`computeImpact(batchesMap)`** returns `{ revenue, placedByUnit, donatedByUnit, feedByUnit, callsMade, dealsClosed }`. It is the logic inside today's `renderImpact`, moved unchanged, with the same rounding.
+- **`index.html`** becomes HTML only: the skeleton, `<link rel="stylesheet" href="/static/demo.css">`, and **one** `<script type="module" src="/static/js/main.js"></script>`. No inline `<script>` and no `style="…"` attributes (move them to classes).
+- **Accessibility:**
+  - `aria-live="polite"` on the call status and the transcript container
+  - `aria-pressed` on the closing-time buttons, updated by `syncClosingTimeButtons`
+  - `aria-label` on any button whose text is only an icon
+  - every input has a `<label>`
+
+### Step 10: Cache headers (the one server change, `main.py`)
+**Why:** browsers can cache the module files and mix an old `call.js` with a new `main.js` after a deploy.
+- Add a small HTTP middleware that sets `Cache-Control: no-cache` on responses for paths starting with `/static/` and for `/demo`. `no-cache` still lets the browser revalidate with the ETag, so an unchanged file costs a 304, not a download.
+- **Test** (`services/api/tests/test_demo_routes.py`): `GET /static/js/main.js` and `GET /demo` carry `Cache-Control: no-cache`; `GET /health` doesn't need it.
+
+### Step 11: Frontend tests (Node's built-in runner, no packages)
+`services/api/tests/js/` (not under `static/`, so the tests aren't served publicly):
+- **`format.test.mjs`**, importing `../../lastcall_api/static/js/format.js`:
+  - `rankItems` orders a compost item, an off-shelf item, a discount and a keep item as today
+  - `formatDecisionLine`: a discount ("Rs 180 → Rs 110 / dozen (−40%)" from `discounted_price` and `discount_pct`), a bulk sale, needs-price
+  - `getFindBuyersLabel` and `getNextStepTargetLabel` for each step
+  - `computeImpact`:
+    - two sales of 0.65 dozen at Rs 110 give revenue 143 and placed 1.3 dozen (not 1.3000000000000003)
+    - a donation adds to donated and not to revenue; animal feed adds to feed
+    - `pending` attempts are ignored; calls made counts only `completed`
+- **`static.test.mjs`**, reading every file in `static/js/` and `static/index.html`:
+  - no `innerHTML`, `outerHTML`, `insertAdjacentHTML` or `document.write`
+  - no `alert(`
+  - no `+92` followed by 9 or more digits (a full phone number)
+  - no inline `<script>` without `src` in `index.html`, and no `style="` in `index.html`
+  - in `static/js/`, `.style.` is used only for `display`, `top`, `left`, `width`, `height`
+- **`services/api/lastcall_api/static/js/package.json`** containing only `{"type": "module"}`, so Node always loads these `.js` files as ES modules in the tests (browsers ignore it).
+- **`services/api/tests/test_frontend_js.py`** runs `node --test "services/api/tests/js/*.test.mjs"` (Node expands the glob itself) with `subprocess` and asserts exit code 0. It skips (with a reason) if `node` isn't installed, so `uv run pytest` covers the page too. The Docker image doesn't need Node.
+
+### Step 12: 🛑 Verify and report
+1. `uv run pytest` green, including the new JS tests and the cache-header test.
+2. **Run the API locally** (`.env` exists) and check in the browser:
+   - no console errors on load
+   - inspect, decide, Find buyers and the lock work
+   - **one real voice call**: you hear the agent, it hears you, Hang up works, the result appears
+   - decline, then the highlighted card moves to #2
+   - a toast appears where an `alert()` used to be (e.g. clicking Inspect with no photo)
+   If you can't run locally, say so; don't claim it works.
+3. **Report:**
+   - the baseline commit hash
+   - the file list with line counts (no file over about 600 lines, except `buyers.js` if it can't be split without changing logic; say so)
+   - the pytest summary
+   - screenshots at 1280 px and 375 px of every section
+   - a list of every function moved, with its new file
+4. **Reviewer (Claude):** runs the normalising function diff against the baseline. Then the user commits, deploys the API (`./scripts/deploy.sh api`) and reruns the Module 6 checklist on the live page.
+
+### 8C prompt for the coding agent (paste into the same or a fresh chat)
+````text
+Implement Milestone 8C in plans/module-8/plan.md (Steps 9–12) for "Last Call" in /Users/kashmalrahat/AI-Builder-Cup/last-call. Read plans/README.md (D60), plans/module-8/plan.md (the 8C section and the module rules at the top) and plans/module-8/review.md first.
+
+This is a MECHANICAL refactor, not a rewrite:
+- Split the inline script of services/api/lastcall_api/static/index.html into native ES modules under static/js/ exactly as the Step 9 table says. No framework, bundler, build step or new dependency.
+- Move function bodies UNCHANGED. The only allowed edits inside a moved function are the five listed in "Rules for 8C" (state.<name> for former top-level lets; alert → showToast; inline looks-styles → CSS classes, keeping only display and top/left/width/height inline, with stage colours as .stage-* classes; emoji → icon(); empty catch → console.warn). Requests, payloads, conditions, call order, close codes, retries, polling and lock logic must stay identical; the reviewer will diff every function.
+- No top-level code outside main.js. Keep every element ID and every function and state name.
+- index.html: HTML only, one <script type="module" src="/static/js/main.js">, no style="" attributes.
+- Step 10: the Cache-Control: no-cache middleware for /static/* and /demo, with its test.
+- Step 11: the node:test tests in services/api/tests/js/, static/js/package.json with {"type": "module"}, and the pytest wrapper (node --test "services/api/tests/js/*.test.mjs").
+- Step 12: uv run pytest; run the API locally and make one real voice call; report the baseline commit, files and line counts, screenshots at 1280 and 375 px, and the function-to-file list. If you can't run it locally, say so.
+No commits, no deploy. If the same test fails twice for the same reason, stop and report. Don't change logic to fix anything; ask.
 ````

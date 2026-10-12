@@ -94,10 +94,10 @@
         <div class="field">
           <label>Closing Window</label>
           <div class="segmented-control" id="closingTimeButtons">
-            <button type="button" data-val="" class="active">Now (closes 23:00)</button>
-            <button type="button" data-val="12">Morning (12 h)</button>
-            <button type="button" data-val="4">Evening (4 h)</button>
-            <button type="button" data-val="1">Last hour (1 h)</button>
+            <button type="button" data-val="" class="closing-time-btn active">Now (closes 23:00)</button>
+            <button type="button" data-val="12" class="closing-time-btn">Morning (12 h)</button>
+            <button type="button" data-val="4" class="closing-time-btn">Evening (4 h)</button>
+            <button type="button" data-val="1" class="closing-time-btn">Last hour (1 h)</button>
           </div>
           <!-- Hidden select as the tested single source of truth -->
           <select id="closingTimeSelect" style="display: none;">
@@ -329,6 +329,10 @@
           <div class="call-tile-value" id="callOpeningQuote">—</div>
         </div>
         <div class="call-tile">
+          <div class="call-tile-label">Floor Guardrail</div>
+          <div class="call-tile-value" id="callFloorPrice">—</div>
+        </div>
+        <div class="call-tile">
           <div class="call-tile-label">Pickup Window</div>
           <div class="call-tile-value" id="callPickupWindow">—</div>
         </div>
@@ -379,17 +383,28 @@
           <div class="impact-metric-value" id="impactRevenue" style="color: var(--emerald);">Rs 0</div>
         </div>
         <div class="impact-metric-card">
-          <div class="impact-metric-label">Produce Rescued</div>
-          <div class="impact-metric-value" id="impactRescued">0 kg</div>
+          <div class="impact-metric-label">Stock placed</div>
+          <div class="impact-metric-value" id="impactRescued">0</div>
         </div>
         <div class="impact-metric-card">
-          <div class="impact-metric-label">Donated Meals</div>
-          <div class="impact-metric-value" id="impactDonated" style="color: var(--indigo);">0 kg</div>
+          <div class="impact-metric-label">Donated</div>
+          <div class="impact-metric-value" id="impactDonated" style="color: var(--indigo);">0</div>
+        </div>
+        <div class="impact-metric-card">
+          <div class="impact-metric-label">Animal feed</div>
+          <div class="impact-metric-value" id="impactFeed" style="color: var(--amber);">0</div>
+        </div>
+        <div class="impact-metric-card">
+          <div class="impact-metric-label">Calls made</div>
+          <div class="impact-metric-value" id="impactCalls">0</div>
         </div>
         <div class="impact-metric-card">
           <div class="impact-metric-label">Deals Closed</div>
           <div class="impact-metric-value" id="impactDeals">0 Deals</div>
         </div>
+      </div>
+      <div id="impactHint" class="font-mono text-muted" style="margin-top: 0.75rem; font-size: 0.8125rem; text-align: center;">
+        Start a call to see the impact here
       </div>
 
       <div class="impact-disclaimer">
@@ -401,9 +416,10 @@
 
   <script>
     /* =========================================================================
-       LAST CALL: JUDGE DEMO CLIENT SCRIPT
+       LAST CALL: JUDGE DEMO CLIENT SCRIPT (Restored from 63109cf + UI Redesign)
        ========================================================================= */
 
+    // Element references
     const inspectAccessCodeEl = document.getElementById('inspectAccessCode');
     const binCapacityEl = document.getElementById('binCapacity');
     const shelfPhotoInput = document.getElementById('shelfPhotoInput');
@@ -458,13 +474,14 @@
 
     // Section 5 Voice Panel Elements
     const voiceSection = document.getElementById('voiceSection');
-    const callStatusBadge = document.getElementById('callStatusBadge');
-    const callStatusText = document.getElementById('callStatusText');
+    const statusBadge = document.getElementById('callStatusBadge') || document.getElementById('statusBadge');
+    const statusText = document.getElementById('callStatusText') || document.getElementById('statusText');
     const callDuration = document.getElementById('callDuration');
     const btnHangup = document.getElementById('btnHangup');
     const callBuyerName = document.getElementById('callBuyerName');
     const callItemQty = document.getElementById('callItemQty');
     const callOpeningQuote = document.getElementById('callOpeningQuote');
+    const callFloorPrice = document.getElementById('callFloorPrice');
     const callPickupWindow = document.getElementById('callPickupWindow');
     const waveformBox = document.getElementById('waveformBox');
     const transcript = document.getElementById('transcript');
@@ -476,13 +493,13 @@
     const headerBranchChip = document.getElementById('headerBranchChip');
     const headerTime = document.getElementById('headerTime');
 
-    // State Variables
+    // State Variables (from 63109cf + timers)
     let activeSampleBlob = null;
     let activeSampleUrl = null;
     let currentInspection = null;
     let currentLadderResult = null;
     let currentDisplayUrl = null;
-    let activeItemKey = null; // Step 3 active item
+    let activeItemKey = null;
     let priceOverrides = {};
     let isDeciding = false;
     let decideRequestCounter = 0;
@@ -497,29 +514,40 @@
     let isCallInProgress = false;
     let isInspecting = false;
     let currentActiveCall = null;
-    let callTimerInterval = null;
-    let callStartTime = null;
-    let audioAnimTimeout = null;
 
-    // Mapping Constants
+    let ws = null;
+    let audioCtx = null;
+    let micStream = null;
+    let captureNode = null;
+    let playbackNode = null;
+    let retryCount = 0;
+
+    let callTimerInterval = null;
+    let callStartTime = 0;
+    let waveformTimer = null;
+
+    // Constants from 63109cf
     const STAFF_REASON_LABELS = {
-      'score_spread': 'Scores varied between passes',
-      'low_confidence': 'AI confidence is low',
-      'borderline_stage': 'Produce is between freshness stages',
-      'unusual_profile': 'Stage does not match typical decay pattern',
-      'high_decay_risk': 'Rapid decay expected soon',
-      'mixed_box': 'Mixed produce observed in display'
+      'spoiled_or_unsafe': 'spoiled or unsafe',
+      'bad_pieces_in_group': 'some pieces bad',
+      'low_confidence': 'low confidence',
+      'unknown_produce': 'unknown produce',
+      'mixed_crate': 'mixed crate',
+      'model_flagged': 'flagged by AI',
+      'safety_override': 'safety rule applied',
+      'zoom_disagreement': 'close-up disagreed',
     };
 
     const STAFF_ACTION_LABELS = {
-      'check_display': 'Check shelf display',
-      'cull_spoiled': 'Cull and discard spoiled pieces',
-      'trim_wilting': 'Trim wilted leaves',
-      'rebox_sound': 'Repack sound pieces into clean crates',
-      'isolate_batch': 'Separate from sound inventory'
+      'remove_bad_pieces': 'remove bad pieces',
+      'check_before_off_shelf': 'check before off-shelf',
+      'identify_item': 'identify item',
+      'approve_compost': 'approve compost',
+      'enter_shelf_price': 'enter shelf price',
+      'recheck_next_photo': 'recheck next photo',
     };
 
-    // Helper: Local Storage Storage
+    // Helper: Local Storage Storage (from 63109cf)
     function getStoredItem(key, defaultVal = '') {
       try {
         const val = localStorage.getItem(key);
@@ -535,7 +563,7 @@
       } catch (e) {}
     }
 
-    // Shelf ID management
+    // Shelf ID management (from 63109cf)
     function generateShelfId() {
       const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
       const bytes = new Uint8Array(8);
@@ -592,6 +620,7 @@
       decideError.textContent = '';
       inspectStatusBanner.style.display = 'none';
       inspectInstructionBanner.style.display = 'none';
+      if (inspectResultContainer) inspectResultContainer.style.display = 'none';
       sectionAiReading.style.display = 'none';
       sectionDecision.style.display = 'none';
       sectionBuyers.style.display = 'none';
@@ -604,6 +633,7 @@
 
       if (resultCard) {
         resultCard.style.display = 'none';
+        resultCard.classList.remove('visible');
       }
       if (resultContent) {
         resultContent.replaceChildren();
@@ -659,7 +689,7 @@
 
     closingTimeSelect.addEventListener('change', () => {
       syncClosingTimeButtons();
-      if (currentInspection && !isCallInProgress) {
+      if (currentInspection && currentInspection.items && currentInspection.items.length > 0) {
         triggerDecide();
       }
     });
@@ -688,18 +718,23 @@
           info.textContent = sample.label || `Sample ${idx + 1}`;
           card.appendChild(info);
 
-          card.addEventListener('click', () => {
-            if (isShelfLocked()) return;
+          card.addEventListener('click', async () => {
+            if (isCallInProgress || isInspecting) return;
             document.querySelectorAll('.sample-thumbnail-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
             shelfPhotoInput.value = '';
             activeSampleUrl = sample.url;
-            activeSampleBlob = null;
+            try {
+              const imgRes = await fetch(sample.url);
+              activeSampleBlob = await imgRes.blob();
+            } catch (err) {
+              console.error('Failed to load sample image blob', err);
+            }
           });
 
           samplesList.appendChild(card);
           if (idx === 0) {
-            activeSampleUrl = sample.url;
+            card.click();
           }
         });
       } catch (err) {
@@ -707,34 +742,37 @@
       }
     }
 
-    // Branch Helpers
+    // Branch Helpers (from 63109cf verbatim)
     function getFindBuyersLabel(step) {
-      if (step === 'donate') return 'Find charities';
+      if (step === 'bulk_sale') return 'Find juice shops & bakeries';
       if (step === 'animal_feed') return 'Find cattle farms';
+      if (step === 'donate') return 'Find charities';
       return 'Find buyers';
     }
 
     async function loadBranches() {
       try {
-        const resp = await fetch('/demo/branches');
-        if (!resp.ok) return;
-        const branches = await resp.json();
+        const res = await fetch('/demo/branches');
+        if (!res.ok) return;
+        const data = await res.json();
         branchSelect.replaceChildren();
-
-        branches.forEach(b => {
+        (data.branches || []).forEach(b => {
           const opt = document.createElement('option');
           opt.value = b.branch_id;
           opt.textContent = `${b.name} (${b.location})`;
+          if (b.branch_id === data.default_branch_id) {
+            opt.selected = true;
+          }
           branchSelect.appendChild(opt);
         });
 
         const storedBranch = getStoredItem('lc_branch_id', 'johar_town');
-        if (storedBranch && branches.some(b => b.branch_id === storedBranch)) {
+        if (storedBranch && (data.branches || []).some(b => b.branch_id === storedBranch)) {
           branchSelect.value = storedBranch;
         }
         updateHeaderBranch();
-      } catch (err) {
-        console.warn('Failed to load branches:', err);
+      } catch (e) {
+        console.warn('Failed to fetch /demo/branches', e);
       }
     }
 
@@ -749,83 +787,1110 @@
     branchSelect.addEventListener('change', () => {
       setStoredItem('lc_branch_id', branchSelect.value);
       updateHeaderBranch();
-      if (!isShelfLocked()) {
-        scoutResultsMap = {};
-        scoutErrorsMap = {};
-        scoutLoadingMap = {};
-        loadBatchesForBranch();
-        renderActiveBuyers();
+      scoutResultsMap = {};
+      scoutErrorsMap = {};
+      scoutLoadingMap = {};
+      currentBatchesMap = {};
+      if (resultCard) {
+        resultCard.style.display = 'none';
+        resultCard.classList.remove('visible');
       }
+      if (resultContent) {
+        resultContent.replaceChildren();
+      }
+      if (resultNextAction) {
+        resultNextAction.replaceChildren();
+      }
+      renderResults(currentInspection, currentDisplayUrl);
     });
 
-    // Batch ID helper
+    // Batch ID helper (from 63109cf verbatim)
     function batchIdFor(itemKey) {
-      if (!currentInspection || !currentInspection.inspection_id) return null;
+      if (!currentInspection || !currentInspection.inspection_id || !branchSelect.value) {
+        return null;
+      }
       return `${currentInspection.inspection_id}__${itemKey}__${branchSelect.value}`;
     }
 
-    // Load Batches for Branch
+    // Load Batches for Branch (from 63109cf verbatim)
     async function loadBatchesForBranch() {
-      if (!currentInspection || !currentLadderResult || !currentLadderResult.decisions) return;
+      currentBatchesMap = {};
+      if (!currentInspection || !currentInspection.inspection_id) return;
       const code = inspectAccessCodeEl.value.trim();
-      if (!code) return;
-
-      const relevantDecisions = currentLadderResult.decisions.filter(d =>
-        ['bulk_sale', 'donate', 'animal_feed'].includes(d.step)
-      );
-
-      await Promise.all(relevantDecisions.map(async d => {
-        const bId = batchIdFor(d.item_key);
-        if (!bId) return;
+      const items = currentInspection.items || [];
+      await Promise.all(items.map(async (item) => {
+        const batchId = batchIdFor(item.item_key);
+        if (!batchId) return;
         try {
-          const resp = await fetch(`/demo/batches/${encodeURIComponent(bId)}`, {
-            headers: { 'X-Demo-Access-Code': code }
+          const res = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
+            headers: code ? { 'X-Demo-Access-Code': code } : {}
           });
-          if (resp.ok) {
-            currentBatchesMap[d.item_key] = await resp.json();
+          if (res.ok) {
+            currentBatchesMap[item.item_key] = await res.json();
           }
         } catch (e) {}
       }));
-
-      updateShelfLock();
-      renderActiveBuyers();
-      renderImpact();
-      updateProgressBar();
+      renderResults(currentInspection, currentDisplayUrl);
     }
 
-    // Lock condition (D58)
+    // Lock condition (from 63109cf verbatim)
     function isShelfLocked() {
       if (isCallInProgress) return true;
-      for (const k in currentBatchesMap) {
-        const b = currentBatchesMap[k];
-        if (b && b.attempts && b.attempts.length > 0) return true;
-      }
-      return false;
+      return Object.values(currentBatchesMap || {}).some(
+        b => b && Array.isArray(b.attempts) && b.attempts.length > 0
+      );
     }
 
+    // updateShelfLock (from 63109cf + V4 fixes)
     function updateShelfLock() {
       const locked = isShelfLocked();
       branchSelect.disabled = locked;
-      shelfPhotoInput.disabled = locked;
-      btnInspect.disabled = locked || isInspecting;
+      closingTimeSelect.disabled = locked;
 
-      const closingBtns = closingTimeButtons.querySelectorAll('button');
-      closingBtns.forEach(b => b.disabled = locked);
+      // Segmented closing-time buttons
+      document.querySelectorAll('.closing-time-btn').forEach(btn => {
+        btn.disabled = locked;
+      });
 
-      if (activeItemShelfPriceInput && btnActiveItemRedecide) {
+      // All price overrides and redecide buttons
+      document.querySelectorAll('.price-override-input').forEach(input => {
+        input.disabled = locked;
+      });
+      document.querySelectorAll('.btn-redecide').forEach(btn => {
+        btn.disabled = locked;
+      });
+      if (activeItemShelfPriceInput) {
         activeItemShelfPriceInput.disabled = locked;
+      }
+      if (btnActiveItemRedecide) {
         btnActiveItemRedecide.disabled = locked;
       }
 
-      if (locked) {
-        shelfLockNote.textContent = 'Branch, closing time and prices are fixed once calls start · New shelf to start over';
-        shelfLockNote.style.display = 'block';
-      } else {
-        shelfLockNote.style.display = 'none';
+      // Per D58: Inspect stays enabled while locked, disabled only during call or inspection
+      if (btnInspect) {
+        btnInspect.disabled = isCallInProgress || isInspecting;
+      }
+      if (shelfPhotoInput) {
+        shelfPhotoInput.disabled = isCallInProgress || isInspecting;
+      }
+      // New shelf disabled only during call or inspection
+      if (btnNewShelf) {
+        btnNewShelf.disabled = isCallInProgress || isInspecting;
+      }
+
+      if (shelfLockNote) {
+        if (locked) {
+          shelfLockNote.textContent = 'Branch, closing time and prices are fixed once calls start · New shelf to start over';
+          shelfLockNote.style.display = 'block';
+        } else {
+          shelfLockNote.textContent = '';
+          shelfLockNote.style.display = 'none';
+        }
       }
     }
 
-    // Progress Bar Updater
+    // fetchScoutBuyers (from 63109cf verbatim)
+    async function fetchScoutBuyers(itemKey, refresh = false) {
+      if (!currentInspection || !currentInspection.inspection_id) return;
+      const code = inspectAccessCodeEl.value.trim();
+      if (!code) {
+        alert('Please enter your Demo Access Code first.');
+        inspectAccessCodeEl.focus();
+        return;
+      }
+      const branchId = branchSelect.value;
+      if (!branchId) return;
+
+      const currentCounter = (scoutRequestCounters[itemKey] || 0) + 1;
+      scoutRequestCounters[itemKey] = currentCounter;
+      scoutLoadingMap[itemKey] = true;
+      scoutErrorsMap[itemKey] = null;
+      renderResults(currentInspection, currentDisplayUrl);
+
+      const payload = {
+        inspection_id: currentInspection.inspection_id,
+        item_key: itemKey,
+        branch_id: branchId,
+        refresh: refresh
+      };
+
+      try {
+        const res = await fetch('/demo/scout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Demo-Access-Code': code
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (scoutRequestCounters[itemKey] !== currentCounter) return;
+
+        if (res.ok) {
+          const data = await res.json();
+          scoutResultsMap[itemKey] = data;
+          scoutErrorsMap[itemKey] = null;
+          const batchId = batchIdFor(itemKey);
+          if (batchId && currentBatchesMap[itemKey]) {
+            try {
+              const bRes = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
+                headers: { 'X-Demo-Access-Code': code }
+              });
+              if (bRes.ok) {
+                currentBatchesMap[itemKey] = await bRes.json();
+              }
+            } catch (e) {}
+          }
+        } else {
+          scoutResultsMap[itemKey] = null;
+          const errData = await res.json().catch(() => ({}));
+          const rawDetail = errData.detail;
+          const detail = (typeof rawDetail === 'string' && rawDetail.trim())
+            ? rawDetail.trim()
+            : 'Buyer search failed, please try again.';
+          scoutErrorsMap[itemKey] = detail;
+        }
+      } catch (err) {
+        if (scoutRequestCounters[itemKey] !== currentCounter) return;
+        scoutResultsMap[itemKey] = null;
+        scoutErrorsMap[itemKey] = err.message || 'Buyer search failed, please try again.';
+      } finally {
+        if (scoutRequestCounters[itemKey] === currentCounter) {
+          scoutLoadingMap[itemKey] = false;
+          renderResults(currentInspection, currentDisplayUrl);
+        }
+      }
+    }
+
+    shelfPhotoInput.addEventListener('change', () => {
+      if (shelfPhotoInput.files.length > 0) {
+        activeSampleBlob = null;
+        activeSampleUrl = null;
+        document.querySelectorAll('.sample-thumbnail-card').forEach(c => c.classList.remove('active'));
+      }
+    });
+
+    // rankItems (from 63109cf verbatim)
+    function rankItems(items, decisionsMap = null) {
+      const stageSeverity = {
+        'unsafe': 5,
+        'spoiled': 4,
+        'overripe': 3,
+        'ripening': 2,
+        'fresh': 1
+      };
+
+      function getTier(item) {
+        if (decisionsMap && decisionsMap[item.item_key]) {
+          const d = decisionsMap[item.item_key];
+          if (d.step === 'compost') return 1;
+          if (['bulk_sale', 'donate', 'animal_feed'].includes(d.step)) return 2;
+          if (d.step === 'discount') return 3;
+          if (d.on_hold || (d.staff_actions && d.staff_actions.length > 0) || item.needs_staff_check) return 4;
+          if (d.step === 'keep') return 5;
+          return 6;
+        }
+        if (['overripe', 'spoiled', 'unsafe'].includes(item.stage)) {
+          return 1;
+        }
+        if (item.needs_staff_check) {
+          return 2;
+        }
+        return 3;
+      }
+
+      function boxArea(pos) {
+        if (!pos) return 0;
+        return Math.max(0, (pos.ymax - pos.ymin) * (pos.xmax - pos.xmin));
+      }
+
+      return [...items].sort((a, b) => {
+        const tierA = getTier(a);
+        const tierB = getTier(b);
+        if (tierA !== tierB) {
+          return tierA - tierB;
+        }
+        const sevA = stageSeverity[a.stage] || 0;
+        const sevB = stageSeverity[b.stage] || 0;
+        if (sevA !== sevB) {
+          return sevB - sevA;
+        }
+        return boxArea(b.position) - boxArea(a.position);
+      });
+    }
+
+    // getStageColor (from 63109cf verbatim)
+    function getStageColor(stage) {
+      switch (stage) {
+        case 'fresh': return '#10b981';
+        case 'ripening': return '#f59e0b';
+        case 'overripe': return '#f97316';
+        case 'spoiled': return '#ef4444';
+        case 'unsafe': return '#dc2626';
+        default: return '#9ca3af';
+      }
+    }
+
+    // formatObserved (from 63109cf verbatim)
+    function formatObserved(obs) {
+      if (!obs) return '';
+      if (obs.method === 'count') {
+        return obs.min === obs.max ? `about ${obs.min} pieces` : `about ${obs.min}–${obs.max} pieces`;
+      }
+      return obs.min === obs.max ? `about ${obs.min}% full` : `about ${obs.min}–${obs.max}% full`;
+    }
+
+    // formatQuantity (from 63109cf verbatim)
+    function formatQuantity(qty) {
+      if (!qty) return '';
+      const unit = qty.unit || '';
+      return qty.low === qty.high ? `${qty.low} ${unit}` : `${qty.low}–${qty.high} ${unit}`;
+    }
+
+    // formatUncertainFields (from 63109cf verbatim)
+    function formatUncertainFields(fields) {
+      if (!fields || fields.length === 0) return 'all fields agreed';
+      const labelMap = {
+        'fresh.sellable_for': 'fresh shelf life',
+        'ripening.sellable_for': 'ripening shelf life',
+        'overripe.sellable_for': 'overripe shelf life',
+        'fresh.juice_shop': 'fresh juice shop',
+        'ripening.juice_shop': 'ripening juice shop',
+        'overripe.juice_shop': 'overripe juice shop',
+        'fresh.restaurant': 'fresh restaurant',
+        'ripening.restaurant': 'ripening restaurant',
+        'overripe.restaurant': 'overripe restaurant',
+        'fresh.bakery': 'fresh bakery',
+        'ripening.bakery': 'ripening bakery',
+        'overripe.bakery': 'overripe bakery',
+        'fresh.charity': 'fresh charity',
+        'ripening.charity': 'ripening charity',
+        'overripe.charity': 'overripe charity',
+        'overripe_ok_for_cattle': 'cattle overripe',
+        'spoiled_ok_for_cattle': 'cattle spoiled',
+      };
+      const words = fields.map(f => labelMap[f] || f.replace('.', ' ').replace(/_/g, ' '));
+      return 'uncertain: ' + words.join(', ');
+    }
+
+    // formatDecisionLine (from 63109cf verbatim, uses discounted_price and discount_pct)
+    function formatDecisionLine(decision) {
+      if (decision.step === 'keep') {
+        return 'Stays at full price · re-checked at next photo';
+      }
+      if (decision.step === 'discount') {
+        if (decision.shelf_price != null && decision.discounted_price != null) {
+          return `Rs ${decision.shelf_price} → Rs ${decision.discounted_price} / ${decision.unit} (−${decision.discount_pct}%)`;
+        }
+        return `Needs shelf price (−${decision.discount_pct || 0}%)`;
+      }
+      if (decision.step === 'bulk_sale' || decision.step === 'animal_feed') {
+        const buyerTypeLabels = {
+          'juice_shop': 'juice shops',
+          'restaurant': 'restaurants',
+          'bakery': 'bakeries',
+          'charity': 'charities',
+          'dairy_farm': 'dairy farms'
+        };
+        let buyers = (decision.buyer_types || []).map(b => buyerTypeLabels[b] || b.replace('_', ' ')).join(', ');
+        if (!buyers && decision.step === 'animal_feed') buyers = 'dairy farms';
+        if (buyers) buyers = buyers.charAt(0).toUpperCase() + buyers.slice(1);
+
+        let pricePart = '';
+        if (decision.opening_price != null && decision.floor_price != null) {
+          pricePart = `Opening Rs ${decision.opening_price}/${decision.unit} · floor Rs ${decision.floor_price}/${decision.unit} (never told to buyers)`;
+        } else {
+          pricePart = 'Needs shelf price';
+        }
+
+        let nextPart = '';
+        if (decision.next_steps && decision.next_steps.length > 0) {
+          nextPart = ` · Next: ${decision.next_steps.map(s => s.replace('_', ' ')).join(' → ')}`;
+        }
+        return `${buyers ? buyers + ' · ' : ''}${pricePart}${nextPart}`;
+      }
+      if (decision.step === 'donate') {
+        let line = 'Free to charities';
+        if (decision.next_steps && decision.next_steps.length > 0) {
+          line += ' · Next: ' + decision.next_steps.map(s => s.replace('_', ' ')).join(' → ');
+        }
+        return line;
+      }
+      if (decision.step === 'compost') {
+        return 'Needs manager approval';
+      }
+      return decision.step;
+    }
+
+    // formatProfileLine (from 63109cf verbatim)
+    function formatProfileLine(decision) {
+      const pName = decision.name || 'produce';
+      if (decision.profile_source === 'manager') {
+        return `Produce profile: ${pName} · Manager profile`;
+      }
+      if (decision.profile_source === 'fallback') {
+        return `Produce profile: ${pName} · Generic fallback`;
+      }
+      const votes = decision.profile_votes || 5;
+      const uncText = formatUncertainFields(decision.profile_uncertain_fields);
+      return `Produce profile: ${pName} · Gemini, ${votes} votes · ${uncText}`;
+    }
+
+    // getNextStepTargetLabel (from 63109cf verbatim)
+    function getNextStepTargetLabel(batch) {
+      if (batch && batch.plans && batch.step_index + 1 < batch.plans.length) {
+        const nextPlan = batch.plans[batch.step_index + 1];
+        if (nextPlan.step === 'donate') return 'charities';
+        if (nextPlan.step === 'animal_feed') return 'cattle farms';
+        return nextPlan.step.replace(/_/g, ' ');
+      }
+      return 'next step';
+    }
+
+    // renderNextActionRow (from 63109cf, using new design system classes)
+    function renderNextActionRow(container, batch, itemKey, buyers = []) {
+      container.replaceChildren();
+
+      if (batch && batch.next_action) {
+        const act = batch.next_action;
+        if (act.kind === 'call') {
+          const rank = act.buyer_rank || ((batch.attempts ? batch.attempts.length : 0) + 1);
+          const targetB = buyers.find(x => x.rank === rank) || buyers[rank - 1];
+          const bId = targetB ? targetB.buyer_id : null;
+          const bName = targetB ? targetB.name : '';
+          const btnCall = document.createElement('button');
+          btnCall.type = 'button';
+          btnCall.className = 'btn-primary';
+          btnCall.textContent = (batch.attempts && batch.attempts.length > 0)
+            ? `Next buyer (#${rank}${bName ? ' ' + bName : ''})`
+            : `Start calling #${rank}${bName ? ' ' + bName : ''}`;
+          btnCall.disabled = isCallInProgress;
+          btnCall.addEventListener('click', () => {
+            startCallForItem(itemKey, bId);
+          });
+          container.appendChild(btnCall);
+        } else if (act.kind === 'next_step') {
+          const btnStep = document.createElement('button');
+          btnStep.type = 'button';
+          btnStep.className = 'btn-secondary';
+          const label = getNextStepTargetLabel(batch);
+          btnStep.textContent = `Next step: find ${label}`;
+          btnStep.disabled = isCallInProgress;
+          btnStep.addEventListener('click', () => {
+            advanceBatchStep(batch.batch_id, itemKey);
+          });
+          container.appendChild(btnStep);
+        } else if (act.kind === 'sold') {
+          const chip = document.createElement('span');
+          chip.className = 'chip chip-emerald';
+          chip.textContent = 'All stock placed ✓';
+          container.appendChild(chip);
+        } else if (act.kind === 'compost_approval') {
+          const chip = document.createElement('span');
+          chip.className = 'chip chip-rose';
+          chip.textContent = 'Compost: needs manager approval';
+          container.appendChild(chip);
+        } else if (act.kind === 'no_buyer') {
+          const chip = document.createElement('span');
+          chip.className = 'chip chip-slate';
+          chip.textContent = 'No more buyers nearby';
+          container.appendChild(chip);
+        } else if (act.kind === 'needs_search') {
+          const btnSearch = document.createElement('button');
+          btnSearch.type = 'button';
+          btnSearch.className = 'btn-secondary';
+          btnSearch.textContent = 'Search again';
+          btnSearch.disabled = isCallInProgress;
+          btnSearch.addEventListener('click', () => {
+            fetchScoutBuyers(itemKey, true);
+          });
+          container.appendChild(btnSearch);
+        } else if (act.kind === 'busy') {
+          const chip = document.createElement('span');
+          chip.className = 'chip chip-amber';
+          chip.textContent = 'Call in progress…';
+          const btnRef = document.createElement('button');
+          btnRef.type = 'button';
+          btnRef.className = 'btn-secondary';
+          btnRef.textContent = 'Refresh';
+          btnRef.addEventListener('click', () => {
+            loadBatchesForBranch();
+          });
+          container.appendChild(chip);
+          container.appendChild(btnRef);
+        }
+      } else if (buyers && buyers.length > 0) {
+        const btnCall = document.createElement('button');
+        btnCall.type = 'button';
+        btnCall.className = 'btn-primary';
+        btnCall.textContent = `Start calling #1 ${buyers[0].name}`;
+        btnCall.disabled = isCallInProgress;
+        btnCall.addEventListener('click', () => {
+          startCallForItem(itemKey, buyers[0].buyer_id);
+        });
+        container.appendChild(btnCall);
+      }
+    }
+
+    // triggerDecide (from 63109cf, V5: no loadBatchesForBranch)
+    async function triggerDecide() {
+      if (!currentInspection || !currentInspection.inspection_id) return;
+      const code = inspectAccessCodeEl.value.trim();
+      if (!code) return;
+
+      const thisRequestId = ++decideRequestCounter;
+      isDeciding = true;
+      scoutResultsMap = {};
+      scoutErrorsMap = {};
+      scoutLoadingMap = {};
+      decideError.style.display = 'none';
+      decideError.textContent = '';
+      renderResults(currentInspection, currentDisplayUrl);
+
+      const hoursVal = closingTimeSelect.value ? parseFloat(closingTimeSelect.value) : null;
+      const payload = {
+        inspection_id: currentInspection.inspection_id,
+        hours_until_closing: hoursVal,
+        price_overrides: Object.keys(priceOverrides).length > 0 ? priceOverrides : null
+      };
+
+      try {
+        const res = await fetch('/demo/decide', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Demo-Access-Code': code
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (thisRequestId !== decideRequestCounter) return;
+
+        if (res.ok) {
+          currentLadderResult = await res.json();
+          decideError.style.display = 'none';
+          decideError.textContent = '';
+        } else {
+          currentLadderResult = null;
+          const errData = await res.json().catch(() => ({}));
+          const rawDetail = errData.detail;
+          const detail = (typeof rawDetail === 'string' && rawDetail.trim())
+            ? rawDetail.trim()
+            : (res.status === 429 ? 'Hourly limit reached. Please try again later.' : 'Decision failed, please try again.');
+          decideError.textContent = detail;
+          decideError.style.display = 'block';
+        }
+      } catch (err) {
+        if (thisRequestId !== decideRequestCounter) return;
+        currentLadderResult = null;
+        decideError.textContent = err.message || 'Decision failed, please try again.';
+        decideError.style.display = 'block';
+      } finally {
+        if (thisRequestId === decideRequestCounter) {
+          isDeciding = false;
+          renderResults(currentInspection, currentDisplayUrl);
+        }
+      }
+    }
+
+    // handleInspect (from 63109cf verbatim)
+    async function handleInspect() {
+      const code = inspectAccessCodeEl.value.trim();
+      if (!code) {
+        inspectError.textContent = 'Please enter the Demo Access Code.';
+        inspectError.style.display = 'block';
+        inspectAccessCodeEl.focus();
+        return;
+      }
+      setStoredItem('lc_code', code);
+      inspectAccessCodeEl.value = code;
+
+      let photoFile = null;
+      let displayUrl = null;
+
+      if (shelfPhotoInput.files && shelfPhotoInput.files.length > 0) {
+        photoFile = shelfPhotoInput.files[0];
+        displayUrl = URL.createObjectURL(photoFile);
+      } else if (activeSampleBlob) {
+        photoFile = activeSampleBlob;
+        displayUrl = activeSampleUrl;
+      } else if (activeSampleUrl) {
+        try {
+          const sRes = await fetch(activeSampleUrl);
+          if (sRes.ok) {
+            photoFile = await sRes.blob();
+            activeSampleBlob = photoFile;
+            displayUrl = activeSampleUrl;
+          }
+        } catch (e) {}
+      }
+
+      if (!photoFile) {
+        inspectError.textContent = 'Please select a sample photo or upload a shelf photo.';
+        inspectError.style.display = 'block';
+        return;
+      }
+
+      inspectError.style.display = 'none';
+      decideError.style.display = 'none';
+      decideError.textContent = '';
+      inspectLoading.style.display = 'flex';
+      isInspecting = true;
+      btnInspect.disabled = true;
+
+      currentInspection = null;
+      currentLadderResult = null;
+      priceOverrides = {};
+      isDeciding = false;
+      scoutResultsMap = {};
+      scoutErrorsMap = {};
+      scoutLoadingMap = {};
+      scoutRequestCounters = {};
+      currentBatchesMap = {};
+      quantityInputs = {};
+      quantityEdited = {};
+      staffCheckedMap = {};
+      currentActiveCall = null;
+      updateShelfLock();
+
+      const shelfId = getOrCreateShelfId();
+      const formData = new FormData();
+      formData.append('photo', photoFile, 'shelf_photo.jpg');
+      formData.append('shelf_id', shelfId);
+
+      const binKg = binCapacityEl.value.trim();
+      if (binKg) {
+        formData.append('bin_capacity_kg', binKg);
+      }
+
+      try {
+        const res = await fetch('/demo/inspect', {
+          method: 'POST',
+          headers: {
+            'X-Demo-Access-Code': code
+          },
+          body: formData
+        });
+
+        if (res.status === 401) {
+          throw new Error('Invalid access code.');
+        } else if (res.status === 415) {
+          throw new Error('Please upload a JPEG or PNG photo.');
+        } else if (res.status === 413) {
+          throw new Error('Image exceeds maximum upload size (8 MB).');
+        } else if (res.status === 429) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Rate limit reached. Please try again later.');
+        } else if (res.status === 502) {
+          throw new Error('Inspection failed, please try again.');
+        } else if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Inspection request failed (${res.status})`);
+        }
+
+        const data = await res.json();
+        currentInspection = data;
+        renderResults(data, displayUrl);
+        if (data.photo_status === 'ok' && data.items && data.items.length > 0) {
+          triggerDecide();
+        }
+      } catch (err) {
+        inspectError.textContent = err.message;
+        inspectError.style.display = 'block';
+      } finally {
+        isInspecting = false;
+        inspectLoading.style.display = 'none';
+        btnInspect.disabled = false;
+        updateShelfLock();
+      }
+    }
+
+    btnInspect.addEventListener('click', handleInspect);
+
+    // Call status and transcript helpers (from 63109cf + UI Redesign)
+    function setStatus(text, type = '') {
+      if (statusText) statusText.textContent = text;
+      let chipClass = 'chip chip-slate';
+      if (type === 'live') chipClass = 'chip chip-emerald';
+      else if (type === 'busy') chipClass = 'chip chip-amber';
+      else if (type === 'error') chipClass = 'chip chip-rose';
+      if (statusBadge) statusBadge.className = 'status-badge ' + chipClass + ' ' + type;
+    }
+
+    function appendMessage(speaker, text) {
+      const msg = document.createElement('div');
+      msg.className = 'transcript-bubble ' + (speaker === 'agent' ? 'agent' : 'buyer');
+
+      const speakerSpan = document.createElement('div');
+      speakerSpan.className = 'msg-speaker';
+      speakerSpan.style.fontSize = '0.6875rem';
+      speakerSpan.style.fontWeight = '700';
+      speakerSpan.style.marginBottom = '0.25rem';
+      speakerSpan.style.opacity = '0.75';
+      speakerSpan.textContent = speaker === 'agent' ? 'AI Assistant (Mart)' : 'You (Buyer)';
+
+      const textSpan = document.createElement('div');
+      textSpan.textContent = text;
+
+      msg.appendChild(speakerSpan);
+      msg.appendChild(textSpan);
+      transcript.appendChild(msg);
+      transcript.scrollTop = transcript.scrollHeight;
+    }
+
+    function appendNotice(text) {
+      const notice = document.createElement('div');
+      notice.className = 'transcript-notice';
+      notice.textContent = text;
+      transcript.appendChild(notice);
+      transcript.scrollTop = transcript.scrollHeight;
+    }
+
+    // advanceBatchStep (from 63109cf verbatim)
+    async function advanceBatchStep(batchId, itemKey) {
+      const code = inspectAccessCodeEl.value.trim();
+      if (!code) {
+        alert('Please enter your Demo Access Code first.');
+        inspectAccessCodeEl.focus();
+        return;
+      }
+      try {
+        const res = await fetch(`/demo/batches/${encodeURIComponent(batchId)}/next-step`, {
+          method: 'POST',
+          headers: {
+            'X-Demo-Access-Code': code
+          }
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          currentBatchesMap[itemKey] = updated;
+          await fetchScoutBuyers(itemKey, false);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          alert(errData.detail || 'Failed to advance step');
+        }
+      } catch (e) {
+        alert(e.message || 'Failed to advance step');
+      }
+    }
+
+    // Call timer helpers
+    function startCallTimer() {
+      callStartTime = Date.now();
+      if (callDuration) callDuration.textContent = '00:00';
+      if (callTimerInterval) clearInterval(callTimerInterval);
+      callTimerInterval = setInterval(() => {
+        const sec = Math.floor((Date.now() - callStartTime) / 1000);
+        const m = String(Math.floor(sec / 60)).padStart(2, '0');
+        const s = String(sec % 60).padStart(2, '0');
+        if (callDuration) callDuration.textContent = `${m}:${s}`;
+      }, 1000);
+    }
+
+    function stopCallTimer() {
+      if (callTimerInterval) {
+        clearInterval(callTimerInterval);
+        callTimerInterval = null;
+      }
+    }
+
+    function triggerWaveformAnimation() {
+      if (!waveformBox) return;
+      waveformBox.classList.add('waveform-active');
+      if (waveformTimer) clearTimeout(waveformTimer);
+      waveformTimer = setTimeout(() => {
+        waveformBox.classList.remove('waveform-active');
+      }, 500);
+    }
+
+    // startCallForItem (from 63109cf verbatim + element references)
+    async function startCallForItem(itemKey, buyerId) {
+      retryCount = 0;
+      const code = inspectAccessCodeEl.value.trim();
+      if (!code) {
+        alert('Please enter your Demo Access Code first.');
+        inspectAccessCodeEl.focus();
+        return;
+      }
+      setStoredItem('lc_code', code);
+
+      if (!currentInspection || !currentInspection.inspection_id) {
+        alert('Please run a shelf inspection first.');
+        return;
+      }
+
+      const branchId = branchSelect.value || null;
+      let qty = null;
+      if (quantityEdited[itemKey]) {
+        const parsed = parseFloat(quantityInputs[itemKey]);
+        qty = (!isNaN(parsed) && parsed > 0) ? parsed : null;
+      }
+      const staffChecked = !!staffCheckedMap[itemKey];
+
+      isCallInProgress = true;
+      updateShelfLock();
+      renderResults(currentInspection, currentDisplayUrl);
+
+      const liveSection = document.getElementById('voiceSection') || document.getElementById('section-live-call');
+      if (liveSection) {
+        liveSection.style.display = 'block';
+        liveSection.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      btnHangup.disabled = false;
+      startCallTimer();
+      setStatus('Starting session...', 'busy');
+      transcript.replaceChildren();
+      if (resultCard) {
+        resultCard.style.display = 'none';
+        resultCard.classList.remove('visible');
+      }
+
+      try {
+        const payload = {
+          inspection_id: currentInspection.inspection_id,
+          item_key: itemKey,
+          branch_id: branchId,
+          quantity: qty,
+          staff_checked: staffChecked,
+          buyer_id: buyerId || null
+        };
+
+        const res = await fetch('/demo/calls', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Demo-Access-Code': code
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.status === 401) {
+          throw new Error('Invalid access code.');
+        } else if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || errData.error || `Failed to create call (${res.status})`);
+        }
+
+        const data = await res.json();
+        currentActiveCall = {
+          itemKey: itemKey,
+          batchId: data.batch_id,
+          callId: data.call_id,
+          buyerId: data.buyer ? data.buyer.buyer_id : buyerId
+        };
+
+        // Populate Call info panel
+        const bName = data.buyer ? data.buyer.name : 'Buyer';
+        callBuyerName.textContent = `${bName} (from Google Maps)`;
+
+        const itmName = data.deal ? data.deal.item : 'Produce';
+        const dealQ = data.deal ? data.deal.quantity : (qty || '—');
+        const dealU = data.deal ? data.deal.unit : 'kg';
+        callItemQty.textContent = `${itmName} · ${dealQ} ${dealU}`;
+
+        if (data.deal && data.deal.opening != null) {
+          callOpeningQuote.textContent = `Rs ${data.deal.opening} / ${dealU}`;
+        } else {
+          callOpeningQuote.textContent = 'Free donation';
+        }
+
+        if (data.deal && data.deal.floor != null) {
+          callFloorPrice.textContent = `floor Rs ${data.deal.floor} / ${dealU} (never told to the AI)`;
+        } else {
+          callFloorPrice.textContent = 'None (donation)';
+        }
+
+        callPickupWindow.textContent = (data.deal && data.deal.pickup_window) ? data.deal.pickup_window : 'Today';
+
+        // Initialize AudioContext and microphone in order (24 kHz)
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+        await audioCtx.audioWorklet.addModule('/static/capture-worklet.js');
+        await audioCtx.audioWorklet.addModule('/static/playback-worklet.js');
+
+        playbackNode = new AudioWorkletNode(audioCtx, 'playback-worklet');
+        playbackNode.connect(audioCtx.destination);
+
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
+        const micSource = audioCtx.createMediaStreamSource(micStream);
+        captureNode = new AudioWorkletNode(audioCtx, 'capture-worklet');
+        micSource.connect(captureNode);
+
+        setStatus('Connecting audio...', 'busy');
+        connectWebSocket(data.ws_url, data.token);
+
+      } catch (err) {
+        scoutErrorsMap[itemKey] = err.message;
+        alert(err.message);
+        setStatus('Ready');
+        btnHangup.disabled = true;
+        isCallInProgress = false;
+        cleanupAudio();
+        updateShelfLock();
+        renderResults(currentInspection, currentDisplayUrl);
+      }
+    }
+
+    // connectWebSocket (from 63109cf verbatim + waveform trigger)
+    function connectWebSocket(wsUrl, token) {
+      ws = new WebSocket(wsUrl);
+      ws.binaryType = 'arraybuffer';
+
+      let speechEndTs = 0;
+      let waitingForAgentAudio = false;
+
+      ws.onopen = () => {
+        setStatus('Authenticating...', 'busy');
+        ws.send(JSON.stringify({ type: 'auth', token: token }));
+
+        captureNode.port.onmessage = (event) => {
+          if (event.data instanceof ArrayBuffer) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(event.data);
+            }
+          } else if (event.data && event.data.type === 'speech_end') {
+            speechEndTs = performance.now();
+            waitingForAgentAudio = true;
+          }
+        };
+      };
+
+      ws.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+          triggerWaveformAnimation();
+          if (waitingForAgentAudio && speechEndTs > 0) {
+            const latMs = Math.round(performance.now() - speechEndTs);
+            waitingForAgentAudio = false;
+            speechEndTs = 0;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'latency', ms: latMs }));
+            }
+          }
+          playbackNode.port.postMessage(event.data, [event.data]);
+        } else {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'transcript') {
+              if (data.speaker === 'agent') {
+                setStatus('Live Call', 'live');
+              }
+              appendMessage(data.speaker, data.text);
+            } else if (data.type === 'interrupted') {
+              playbackNode.port.postMessage({ type: 'clear' });
+              appendNotice('⚡ Interrupted');
+            } else if (data.type === 'tool') {
+              appendNotice(`🛠️ Tool: ${data.name} (${data.decision || 'executing'})`);
+            } else if (data.type === 'busy') {
+              appendNotice('Server capacity reached. Retrying...');
+              handleBusyRetry(wsUrl, token);
+            }
+          } catch (e) {}
+        }
+      };
+
+      ws.onclose = async (event) => {
+        if (event.code === 1013) {
+          setStatus('Server Busy');
+          return;
+        }
+
+        cleanupAudio();
+        btnHangup.disabled = true;
+
+        if (event.code === 4401 || event.code === 4409 || event.code === 4423 || (event.code >= 4000 && event.code < 5000)) {
+          isCallInProgress = false;
+          updateShelfLock();
+          if (event.code === 4401) {
+            setStatus('Auth Failed');
+            alert('WebSocket Auth failed (Code 4401)');
+          } else if (event.code === 4409) {
+            setStatus('Token Expired / Reused');
+            alert('Session token already used or expired (Code 4409)');
+          } else if (event.code === 4423) {
+            setStatus('Batch Locked');
+            alert('Call already in progress on this batch (Code 4423)');
+          } else {
+            setStatus('Call Failed');
+            alert(`Call closed with error code ${event.code}`);
+          }
+          if (currentInspection) renderResults(currentInspection, currentDisplayUrl);
+          return;
+        }
+
+        setStatus('Call Ended');
+        appendNotice(`Call closed (Code: ${event.code})`);
+
+        if (currentActiveCall && currentActiveCall.batchId) {
+          await pollBatchUntilCompleted(currentActiveCall.batchId, currentActiveCall.callId);
+        } else {
+          isCallInProgress = false;
+          updateShelfLock();
+          if (currentInspection) renderResults(currentInspection, currentDisplayUrl);
+        }
+      };
+
+      ws.onerror = () => {
+        cleanupAudio();
+        setStatus('Connection Error');
+      };
+    }
+
+    // pollBatchUntilCompleted (from 63109cf verbatim)
+    async function pollBatchUntilCompleted(batchId, callId) {
+      const code = inspectAccessCodeEl.value.trim();
+      setStatus('Saving call result...', 'busy');
+      let attemptFound = false;
+      let batchData = null;
+
+      for (let i = 0; i < 8; i++) {
+        await new Promise(r => setTimeout(r, 1000));
+        try {
+          const res = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
+            headers: code ? { 'X-Demo-Access-Code': code } : {}
+          });
+          if (res.ok) {
+            batchData = await res.json();
+            const att = (batchData.attempts || []).find(a => a.call_id === callId);
+            if (att && att.call_status === 'completed') {
+              attemptFound = true;
+              break;
+            }
+          }
+        } catch (e) {
+          console.error('Error polling batch:', e);
+        }
+      }
+
+      isCallInProgress = false;
+      updateShelfLock();
+      setStatus('Call Ended');
+
+      if (currentActiveCall && currentActiveCall.itemKey) {
+        if (batchData) {
+          currentBatchesMap[currentActiveCall.itemKey] = batchData;
+        }
+        renderResults(currentInspection, currentDisplayUrl);
+      }
+
+      if (attemptFound && batchData) {
+        renderCallResult(batchData, callId);
+      } else {
+        renderCallPendingResult(batchId, callId);
+      }
+    }
+
+    // renderCallResult (from 63109cf verbatim + resultCard display)
+    function renderCallResult(batchData, callId) {
+      resultCard.style.display = 'block';
+      resultCard.classList.add('visible');
+      resultContent.replaceChildren();
+      resultNextAction.replaceChildren();
+
+      const attempt = (batchData.attempts || []).find(a => a.call_id === callId) ||
+        (batchData.attempts && batchData.attempts[batchData.attempts.length - 1]);
+
+      if (attempt) {
+        const summary = document.createElement('div');
+        if (attempt.outcome === 'deal' || attempt.outcome === 'partial_deal') {
+          if (attempt.step === 'donate' || attempt.agreed_price === 0) {
+            summary.textContent = `Donated ${attempt.agreed_quantity || 0} ${batchData.unit || 'kg'}`;
+          } else {
+            const priceStr = attempt.agreed_price == null ? '—' : attempt.agreed_price;
+            summary.textContent = `Deal agreed: ${attempt.agreed_quantity || 0} ${batchData.unit || 'kg'} @ Rs ${priceStr} / ${batchData.unit || 'kg'}`;
+          }
+        } else if (attempt.outcome === 'declined') {
+          summary.textContent = 'Outcome: Declined by buyer';
+        } else if (attempt.outcome === 'call_back') {
+          summary.textContent = `Outcome: Call back ${attempt.callback_at ? 'at ' + attempt.callback_at : ''}`;
+        } else if (attempt.outcome === 'no_answer') {
+          summary.textContent = 'Outcome: No answer';
+        } else if (attempt.outcome === 'do_not_call') {
+          summary.textContent = 'Outcome: Buyer asked not to be called';
+        } else {
+          summary.textContent = `Outcome: ${(attempt.outcome || 'Completed').replace(/_/g, ' ')}`;
+        }
+        resultContent.appendChild(summary);
+
+        const stockInfo = document.createElement('div');
+        stockInfo.style.marginTop = '4px';
+        stockInfo.style.fontSize = '0.8rem';
+        stockInfo.style.color = '#94a3b8';
+        stockInfo.textContent = `Remaining batch stock: ${batchData.remaining_quantity} of ${batchData.total_quantity} ${batchData.unit || 'kg'}`;
+        resultContent.appendChild(stockInfo);
+      }
+
+      const scout = currentActiveCall ? scoutResultsMap[currentActiveCall.itemKey] : null;
+      const buyers = (scout && scout.buyers) ? scout.buyers : [];
+      renderNextActionRow(resultNextAction, batchData, currentActiveCall ? currentActiveCall.itemKey : null, buyers);
+    }
+
+    // renderCallPendingResult (from 63109cf verbatim + resultCard display)
+    function renderCallPendingResult(batchId, callId) {
+      resultCard.style.display = 'block';
+      resultCard.classList.add('visible');
+      resultContent.textContent = 'Saving the call result…';
+      resultNextAction.replaceChildren();
+
+      const btnRef = document.createElement('button');
+      btnRef.type = 'button';
+      btnRef.className = 'btn-secondary';
+      btnRef.textContent = 'Refresh';
+      btnRef.addEventListener('click', () => {
+        pollBatchUntilCompleted(batchId, callId);
+      });
+      resultNextAction.appendChild(btnRef);
+    }
+
+    // handleBusyRetry (from 63109cf verbatim)
+    function handleBusyRetry(wsUrl, token) {
+      if (retryCount < 3) {
+        retryCount++;
+        setTimeout(() => {
+          connectWebSocket(wsUrl, token);
+        }, 3000);
+      } else {
+        alert('Server is currently at maximum concurrency. Please try again later.');
+        cleanupAudio();
+        isCallInProgress = false;
+        btnHangup.disabled = true;
+        setStatus('Server Busy');
+        updateShelfLock();
+        if (currentInspection) {
+          renderResults(currentInspection, currentDisplayUrl);
+        }
+      }
+    }
+
+    // hangup (from 63109cf verbatim)
+    function hangup() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'hangup' }));
+        ws.close();
+      }
+      cleanupAudio();
+      setStatus('Call Ended');
+      btnHangup.disabled = true;
+    }
+
+    btnHangup.addEventListener('click', hangup);
+
+    // cleanupAudio (from 63109cf verbatim + timers and waveform reset)
+    function cleanupAudio() {
+      if (micStream) {
+        micStream.getTracks().forEach(t => t.stop());
+        micStream = null;
+      }
+      if (audioCtx) {
+        audioCtx.close().catch(() => {});
+        audioCtx = null;
+      }
+      stopCallTimer();
+      if (waveformBox) waveformBox.classList.remove('waveform-active');
+    }
+
+    // Progress Bar Updater (UI Redesign)
     function updateProgressBar() {
       const step1 = document.getElementById('progStep1');
       const step2 = document.getElementById('progStep2');
@@ -869,128 +1934,11 @@
       }
     });
 
-    // Formatting Helpers
-    function getStageColor(stage) {
-      switch (stage) {
-        case 'fresh': return '#059669';
-        case 'ripening': return '#10B981';
-        case 'overripe': return '#F59E0B';
-        case 'spoiled':
-        case 'unsafe': return '#E11D48';
-        default: return '#64748B';
-      }
-    }
-
-    function formatObserved(obs) {
-      if (!obs) return '—';
-      if (obs.count !== undefined) return `${obs.count} count`;
-      if (obs.min !== undefined && obs.max !== undefined) return `${obs.min}–${obs.max} count`;
-      return '—';
-    }
-
-    function formatQuantity(qty) {
-      if (!qty) return '—';
-      const u = qty.unit || 'kg';
-      if (qty.low !== undefined && qty.high !== undefined) {
-        if (qty.low === qty.high) return `${qty.low} ${u}`;
-        return `${qty.low}–${qty.high} ${u}`;
-      }
-      return '—';
-    }
-
-    function formatUncertainFields(fields) {
-      if (!fields || fields.length === 0) return '';
-      const map = {
-        'shelf_life_fresh_days': 'fresh shelf life',
-        'shelf_life_ripening_days': 'ripening shelf life',
-        'shelf_life_overripe_days': 'overripe shelf life',
-        'uses_overripe': 'overripe uses',
-        'suitable_for_cattle': 'cattle feed suitability'
-      };
-      const mapped = fields.map(f => map[f] || f.replace(/_/g, ' '));
-      return `Uncertain fields: ${mapped.join(', ')}`;
-    }
-
-    function formatDecisionLine(decision) {
-      const step = decision.step;
-      const unit = decision.unit;
-      const p = decision.shelf_price ? `Rs ${decision.shelf_price}/${unit}` : 'price needed';
-
-      switch (step) {
-        case 'keep':
-          return `Keep on shelf at standard price (${p})`;
-        case 'discount':
-          return `Store discount 40% off · Rs ${decision.discount_price}/${unit} (was ${p})`;
-        case 'bulk_sale':
-          return `Bulk sale · AI offers Rs ${decision.opening_price}/${unit}, floor Rs ${decision.floor_price}/${unit}`;
-        case 'donate':
-          return `Donate to charity (${decision.buyer_condition || 'free'})`;
-        case 'animal_feed':
-          return `Animal feed · AI offers Rs ${decision.opening_price}/${unit}, floor Rs ${decision.floor_price}/${unit}`;
-        case 'compost':
-          return `Compost (${decision.reason || 'spoiled'})`;
-        default:
-          return `${step} · ${p}`;
-      }
-    }
-
-    function formatProfileLine(decision) {
-      const profile = decision.profile;
-      if (!profile) return '';
-      const parts = [];
-      if (profile.uncertain_fields && profile.uncertain_fields.length > 0) {
-        parts.push(formatUncertainFields(profile.uncertain_fields));
-      }
-      if (profile.vote_count) {
-        parts.push(`Profile agreed by ${profile.vote_count.agreed}/${profile.vote_count.total} Gemini calls`);
-      }
-      if (profile.is_fallback) {
-        parts.push('Using conservative fallback profile');
-      }
-      if (profile.source === 'manager') {
-        parts.push('Manager-verified profile');
-      }
-      return parts.join(' · ');
-    }
-
-    // Rank Items
-    function rankItems(items, decisionsMap = null) {
-      function getTier(item) {
-        const dec = decisionsMap ? decisionsMap[item.item_key] : null;
-        if (dec) {
-          if (['bulk_sale', 'donate', 'animal_feed'].includes(dec.step)) return 1;
-          if (dec.step === 'discount') return 2;
-          if (dec.step === 'compost') return 3;
-          if (dec.step === 'keep') return 4;
-        }
-        if (item.stage === 'overripe') return 1;
-        if (item.stage === 'spoiled' || item.stage === 'unsafe') return 3;
-        return 4;
-      }
-
-      function boxArea(pos) {
-        if (!pos) return 0;
-        return Math.max(0, (pos.xmax - pos.xmin) * (pos.ymax - pos.ymin));
-      }
-
-      return [...items].sort((a, b) => {
-        const tA = getTier(a);
-        const tB = getTier(b);
-        if (tA !== tB) return tA - tB;
-        if (a.score !== b.score) return a.score - b.score;
-        const areaA = boxArea(a.position);
-        const areaB = boxArea(b.position);
-        if (areaA !== areaB) return areaB - areaA;
-        return (a.item_key || '').localeCompare(b.item_key || '');
-      });
-    }
-
     // Active Item Selection
     function setActiveItem(itemKey) {
       if (isCallInProgress) return;
       activeItemKey = itemKey;
 
-      // Re-render item rows in Section 2
       if (currentInspection) {
         renderItemsList(currentInspection);
         highlightActiveBox(activeItemKey);
@@ -1050,143 +1998,155 @@
         header.className = 'item-row-header';
 
         const titleGroup = document.createElement('div');
-        titleGroup.className = 'item-row-title-group';
+        titleGroup.className = 'item-title-group';
 
-        const nameEl = document.createElement('span');
-        nameEl.className = 'item-name';
-        nameEl.textContent = item.name;
-        titleGroup.appendChild(nameEl);
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'item-name';
+        nameSpan.textContent = item.name;
+        titleGroup.appendChild(nameSpan);
 
         const stageChip = document.createElement('span');
-        stageChip.className = 'chip';
-        stageChip.style.backgroundColor = getStageColor(item.stage) + '1A';
+        stageChip.className = 'chip chip-slate';
+        stageChip.style.borderColor = getStageColor(item.stage);
         stageChip.style.color = getStageColor(item.stage);
-        stageChip.style.border = `1px solid ${getStageColor(item.stage)}40`;
-        stageChip.textContent = `${item.stage} · ${item.stage_level}`;
+        stageChip.textContent = item.stage;
         titleGroup.appendChild(stageChip);
 
-        if (item.zoomed) {
-          const zoomedChip = document.createElement('span');
-          zoomedChip.className = 'chip chip-indigo';
-          zoomedChip.textContent = 'Zoomed in';
-          titleGroup.appendChild(zoomedChip);
+        if (item.stage_level) {
+          const lvlSpan = document.createElement('span');
+          lvlSpan.className = 'font-mono text-muted';
+          lvlSpan.style.fontSize = '0.75rem';
+          lvlSpan.textContent = `L${item.stage_level}`;
+          titleGroup.appendChild(lvlSpan);
+        }
+
+        if (item.needs_staff_check) {
+          const alertChip = document.createElement('span');
+          alertChip.className = 'chip chip-amber';
+          alertChip.textContent = 'Staff Check';
+          titleGroup.appendChild(alertChip);
+        }
+
+        if (item.zoom_source_group) {
+          const zChip = document.createElement('span');
+          zChip.className = 'chip chip-indigo';
+          zChip.textContent = 'Zoomed';
+          titleGroup.appendChild(zChip);
         }
 
         header.appendChild(titleGroup);
 
-        if (isActive) {
-          const activeBadge = document.createElement('span');
-          activeBadge.className = 'chip chip-emerald';
-          activeBadge.textContent = 'Active target';
-          header.appendChild(activeBadge);
-        }
+        // Degradation Score Indicator
+        const scoreWrap = document.createElement('div');
+        scoreWrap.style.display = 'flex';
+        scoreWrap.style.alignItems = 'center';
+        scoreWrap.style.gap = '0.5rem';
 
-        row.appendChild(header);
-
-        // Score bar
-        const scoreRow = document.createElement('div');
-        scoreRow.className = 'score-bar-wrapper';
-
-        const scoreBg = document.createElement('div');
-        scoreBg.className = 'score-bar-bg';
+        const scoreBar = document.createElement('div');
+        scoreBar.className = 'score-bar-bg';
 
         const scoreFill = document.createElement('div');
         scoreFill.className = 'score-bar-fill';
-        scoreFill.style.width = Math.min(100, Math.max(0, item.score)) + '%';
+        scoreFill.style.width = Math.min(100, Math.max(0, item.score || 0)) + '%';
         scoreFill.style.backgroundColor = getStageColor(item.stage);
-        scoreBg.appendChild(scoreFill);
+        scoreBar.appendChild(scoreFill);
+        scoreWrap.appendChild(scoreBar);
 
-        const scoreText = document.createElement('span');
-        scoreText.className = 'score-bar-text';
-        scoreText.textContent = `${Math.round(item.score)}/100`;
+        const scoreVal = document.createElement('span');
+        scoreVal.className = 'font-mono text-muted';
+        scoreVal.style.fontSize = '0.75rem';
+        scoreVal.textContent = `${item.score != null ? Math.round(item.score) : '—'}/100`;
+        scoreWrap.appendChild(scoreVal);
 
-        scoreRow.appendChild(scoreBg);
-        scoreRow.appendChild(scoreText);
-        row.appendChild(scoreRow);
+        header.appendChild(scoreWrap);
+        row.appendChild(header);
 
-        // Expanded view for active item
+        // Active Details Drawer
         if (isActive) {
           const details = document.createElement('div');
-          details.className = 'item-expanded-details';
+          details.className = 'item-row-details';
 
-          if (item.evidence) {
-            const ev = document.createElement('div');
-            ev.className = 'evidence-text';
-            ev.textContent = item.evidence;
-            details.appendChild(ev);
+          // Degradation Evidence
+          if (item.degradation_evidence && item.degradation_evidence.length > 0) {
+            const evBox = document.createElement('div');
+            evBox.className = 'evidence-box';
+
+            const evTitle = document.createElement('div');
+            evTitle.style.fontWeight = '600';
+            evTitle.style.fontSize = '0.75rem';
+            evTitle.style.color = 'var(--text-muted)';
+            evTitle.style.marginBottom = '0.25rem';
+            evTitle.textContent = 'Observed Degradation Evidence:';
+            evBox.appendChild(evTitle);
+
+            const ul = document.createElement('ul');
+            ul.style.paddingLeft = '1.25rem';
+            ul.style.fontSize = '0.8125rem';
+            item.degradation_evidence.forEach(ev => {
+              const li = document.createElement('li');
+              li.textContent = ev;
+              ul.appendChild(li);
+            });
+            evBox.appendChild(ul);
+            details.appendChild(evBox);
           }
 
+          // Issues Chips
           if (item.issues && item.issues.length > 0) {
-            const issuesBox = document.createElement('div');
-            issuesBox.className = 'issues-chips';
+            const issuesWrap = document.createElement('div');
+            issuesWrap.className = 'issues-chips';
             item.issues.forEach(iss => {
               const chip = document.createElement('span');
               chip.className = 'issue-chip';
               chip.textContent = iss.replace(/_/g, ' ');
-              issuesBox.appendChild(chip);
+              issuesWrap.appendChild(chip);
             });
-            details.appendChild(issuesBox);
+            details.appendChild(issuesWrap);
           }
 
-          const metricsGrid = document.createElement('div');
-          metricsGrid.className = 'metrics-summary-grid';
+          // Stock and Observed Count
+          const stockRow = document.createElement('div');
+          stockRow.style.display = 'flex';
+          stockRow.style.gap = '1.5rem';
+          stockRow.style.fontSize = '0.8125rem';
+          stockRow.style.flexWrap = 'wrap';
 
-          const obsGroup = document.createElement('div');
-          obsGroup.className = 'metric-item-group';
-          const obsLabel = document.createElement('span');
-          obsLabel.className = 'metric-item-label';
-          obsLabel.textContent = 'Observed Pieces';
-          const obsVal = document.createElement('span');
-          obsVal.className = 'metric-item-value';
-          obsVal.textContent = formatObserved(item.observed);
-          obsGroup.appendChild(obsLabel);
-          obsGroup.appendChild(obsVal);
-          metricsGrid.appendChild(obsGroup);
-
-          const qtyGroup = document.createElement('div');
-          qtyGroup.className = 'metric-item-group';
-          const qtyLabel = document.createElement('span');
-          qtyLabel.className = 'metric-item-label';
-          qtyLabel.textContent = 'Estimated Stock';
-          const qtyVal = document.createElement('span');
-          qtyVal.className = 'metric-item-value';
-          qtyVal.textContent = `${formatQuantity(item.quantity)} (${item.confidence_level} conf.)`;
-          qtyGroup.appendChild(qtyLabel);
-          qtyGroup.appendChild(qtyVal);
-          metricsGrid.appendChild(qtyGroup);
-
-          details.appendChild(metricsGrid);
-
-          if (item.change_note) {
-            const chgBox = document.createElement('div');
-            chgBox.className = 'banner banner-info';
-            chgBox.textContent = `Progression: ${item.change_note}`;
-            details.appendChild(chgBox);
+          if (item.observed) {
+            const obsSpan = document.createElement('span');
+            obsSpan.textContent = `Observed count: ${formatObserved(item.observed)}`;
+            stockRow.appendChild(obsSpan);
           }
 
-          if (item.needs_staff_check) {
-            const staffBox = document.createElement('div');
-            staffBox.className = 'staff-check-notice';
-            const stHeader = document.createElement('div');
-            stHeader.className = 'staff-check-header';
-            stHeader.textContent = '⚠️ Staff Check Required: ' + (item.check_reason || 'Manual review recommended');
-            staffBox.appendChild(stHeader);
+          if (item.quantity) {
+            const qtySpan = document.createElement('span');
+            qtySpan.textContent = `Estimated stock: ${formatQuantity(item.quantity)}`;
+            stockRow.appendChild(qtySpan);
+          }
 
-            if (item.staff_check_reasons && item.staff_check_reasons.length > 0) {
-              const rList = document.createElement('div');
-              rList.style.display = 'flex';
-              rList.style.gap = '0.25rem';
-              rList.style.flexWrap = 'wrap';
-              rList.style.marginTop = '0.25rem';
-              item.staff_check_reasons.forEach(r => {
-                const rChip = document.createElement('span');
-                rChip.className = 'chip chip-amber';
-                rChip.textContent = STAFF_REASON_LABELS[r] || r.replace(/_/g, ' ');
-                rList.appendChild(rChip);
-              });
-              staffBox.appendChild(rList);
-            }
-            details.appendChild(staffBox);
+          if (item.confidence != null) {
+            const confSpan = document.createElement('span');
+            confSpan.className = 'font-mono text-muted';
+            confSpan.textContent = `Confidence: ${Math.round(item.confidence * 100)}%`;
+            stockRow.appendChild(confSpan);
+          }
+
+          details.appendChild(stockRow);
+
+          // Change Notes (Progression)
+          if (item.change_notes) {
+            const noteDiv = document.createElement('div');
+            noteDiv.className = 'change-notes-banner';
+            noteDiv.textContent = `Progression: ${item.change_notes}`;
+            details.appendChild(noteDiv);
+          }
+
+          // Staff Check Reasons
+          if (item.needs_staff_check && item.staff_reasons && item.staff_reasons.length > 0) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'staff-alert-banner';
+            const reasons = item.staff_reasons.map(r => STAFF_REASON_LABELS[r] || r.replace(/_/g, ' ')).join(', ');
+            alertDiv.textContent = `⚠️ Staff check required: ${reasons}`;
+            details.appendChild(alertDiv);
           }
 
           row.appendChild(details);
@@ -1200,53 +2160,37 @@
       });
     }
 
-    // Section 3: Render Decision for Active Item
+    // Section 3: Render Decision Engine for Active Item (V2 & V3 Fixes)
     function renderActiveDecision() {
-      if (!currentInspection || !activeItemKey) {
+      if (!currentInspection || !activeItemKey || !currentLadderResult) {
+        sectionDecision.style.display = 'none';
+        return;
+      }
+
+      const decision = currentLadderResult.decisions
+        ? currentLadderResult.decisions.find(d => d.item_key === activeItemKey)
+        : null;
+
+      if (!decision) {
         sectionDecision.style.display = 'none';
         return;
       }
 
       sectionDecision.style.display = 'block';
 
-      if (isDeciding) {
-        decideLoading.style.display = 'flex';
-        decisionContent.style.display = 'none';
-        return;
-      }
+      // Header Chips
+      const activeItemObj = currentInspection.items.find(i => i.item_key === activeItemKey);
+      decisionActiveProduceChip.textContent = activeItemObj ? activeItemObj.name : 'Active Item';
 
-      decideLoading.style.display = 'none';
-      decisionContent.style.display = 'block';
+      const hoursLeft = closingTimeSelect.value ? parseFloat(closingTimeSelect.value) : 2.0;
+      decisionRunwayChip.textContent = `${hoursLeft} h to closing`;
 
-      const decision = currentLadderResult && currentLadderResult.decisions
-        ? currentLadderResult.decisions.find(d => d.item_key === activeItemKey)
-        : null;
-
-      if (!decision) {
-        decisionActiveProduceChip.textContent = '—';
-        decisionRunwayChip.textContent = '—';
-        decisionPriceCards.replaceChildren();
-        decisionReasonLine.textContent = 'Waiting for decision…';
-        decisionProfileLine.textContent = '';
-        decisionBadgesRow.replaceChildren();
-        return;
-      }
-
-      decisionActiveProduceChip.textContent = decision.name || 'Produce';
-
-      if (currentLadderResult.hours_until_closing != null) {
-        decisionRunwayChip.textContent = `${currentLadderResult.hours_until_closing} h to closing`;
-        decisionRunwayChip.style.display = 'inline-flex';
-      } else {
-        decisionRunwayChip.style.display = 'none';
-      }
-
-      // Update Stepper
-      const steps = ladderStepper.querySelectorAll('.stepper-item');
+      // Stepper
+      const steps = ladderStepper.querySelectorAll('.ladder-step');
       steps.forEach(st => {
+        st.classList.remove('step-active', 'step-next', 'step-disabled');
         const sName = st.dataset.step;
-        st.className = 'stepper-item';
-        if (sName === decision.step) {
+        if (decision.step === sName) {
           st.classList.add('step-active');
         } else if (decision.next_steps && decision.next_steps.includes(sName)) {
           st.classList.add('step-next');
@@ -1255,51 +2199,57 @@
         }
       });
 
-      // Price Cards
+      // Price Cards (V2: Zero innerHTML; V3: discounted_price and discount_pct)
       decisionPriceCards.replaceChildren();
       const unitStr = decision.unit || 'kg';
 
+      function createPriceCard(label, valText, unitText, extraClass = '') {
+        const card = document.createElement('div');
+        card.className = 'price-card' + (extraClass ? ' ' + extraClass : '');
+
+        const lbl = document.createElement('div');
+        lbl.className = 'price-card-label';
+        lbl.textContent = label;
+        card.appendChild(lbl);
+
+        const val = document.createElement('div');
+        val.className = 'price-card-value';
+        val.textContent = valText;
+
+        if (unitText) {
+          const unitSpan = document.createElement('span');
+          unitSpan.style.fontSize = '0.75rem';
+          unitSpan.style.color = 'var(--text-muted)';
+          unitSpan.textContent = ' /' + unitText;
+          val.appendChild(document.createTextNode(' '));
+          val.appendChild(unitSpan);
+        }
+        card.appendChild(val);
+        return card;
+      }
+
       if (decision.step === 'discount') {
-        const c1 = document.createElement('div');
-        c1.className = 'price-card';
-        c1.innerHTML = `<div class="price-card-label">Standard Shelf Price</div><div class="price-card-value">Rs ${decision.shelf_price || '—'} <span style="font-size: 0.75rem; color: var(--text-muted);">/${unitStr}</span></div>`;
-
-        const c2 = document.createElement('div');
-        c2.className = 'price-card card-emerald';
-        c2.innerHTML = `<div class="price-card-label">Store Discount (−40%)</div><div class="price-card-value">Rs ${decision.discount_price || '—'} <span style="font-size: 0.75rem; color: var(--text-muted);">/${unitStr}</span></div>`;
-
+        const c1 = createPriceCard('Standard Shelf Price', 'Rs ' + (decision.shelf_price != null ? decision.shelf_price : '—'), unitStr);
+        const discPct = decision.discount_pct != null ? decision.discount_pct : 0;
+        const discPrice = decision.discounted_price != null ? decision.discounted_price : '—';
+        const c2 = createPriceCard(`Store Discount (−${discPct}%)`, 'Rs ' + discPrice, unitStr, 'card-emerald');
         decisionPriceCards.appendChild(c1);
         decisionPriceCards.appendChild(c2);
       } else if (['bulk_sale', 'animal_feed'].includes(decision.step)) {
-        const c1 = document.createElement('div');
-        c1.className = 'price-card';
-        c1.innerHTML = `<div class="price-card-label">Standard Shelf Price</div><div class="price-card-value">Rs ${decision.shelf_price || '—'} <span style="font-size: 0.75rem; color: var(--text-muted);">/${unitStr}</span></div>`;
-
-        const c2 = document.createElement('div');
-        c2.className = 'price-card card-indigo';
-        c2.innerHTML = `<div class="price-card-label">AI Opening Offer</div><div class="price-card-value">Rs ${decision.opening_price || '—'} <span style="font-size: 0.75rem; color: var(--text-muted);">/${unitStr}</span></div>`;
-
-        const c3 = document.createElement('div');
-        c3.className = 'price-card card-emerald';
-        c3.innerHTML = `<div class="price-card-label">🔒 Floor · never told to the AI</div><div class="price-card-value">Rs ${decision.floor_price || '—'} <span style="font-size: 0.75rem; color: var(--text-muted);">/${unitStr}</span></div>`;
-
+        const c1 = createPriceCard('Standard Shelf Price', 'Rs ' + (decision.shelf_price != null ? decision.shelf_price : '—'), unitStr);
+        const c2 = createPriceCard('AI Opening Offer', 'Rs ' + (decision.opening_price != null ? decision.opening_price : '—'), unitStr, 'card-indigo');
+        const c3 = createPriceCard('🔒 Floor · never told to the AI', 'Rs ' + (decision.floor_price != null ? decision.floor_price : '—'), unitStr, 'card-emerald');
         decisionPriceCards.appendChild(c1);
         decisionPriceCards.appendChild(c2);
         decisionPriceCards.appendChild(c3);
       } else if (decision.step === 'donate') {
-        const c1 = document.createElement('div');
-        c1.className = 'price-card card-indigo';
-        c1.innerHTML = `<div class="price-card-label">Charity Routing</div><div class="price-card-value">Free to charities</div>`;
+        const c1 = createPriceCard('Charity Routing', 'Free to charities', '', 'card-indigo');
         decisionPriceCards.appendChild(c1);
       } else if (decision.step === 'keep') {
-        const c1 = document.createElement('div');
-        c1.className = 'price-card card-emerald';
-        c1.innerHTML = `<div class="price-card-label">Shelf Valuation</div><div class="price-card-value">Rs ${decision.shelf_price || '—'} <span style="font-size: 0.75rem; color: var(--text-muted);">/${unitStr} · Stays at full price</span></div>`;
+        const c1 = createPriceCard('Shelf Valuation', 'Rs ' + (decision.shelf_price != null ? decision.shelf_price : '—'), unitStr + ' · Stays at full price', 'card-emerald');
         decisionPriceCards.appendChild(c1);
       } else {
-        const c1 = document.createElement('div');
-        c1.className = 'price-card';
-        c1.innerHTML = `<div class="price-card-label">${decision.step}</div><div class="price-card-value">${decision.reason || '—'}</div>`;
+        const c1 = createPriceCard(decision.step || 'Status', decision.reason || '—', '');
         decisionPriceCards.appendChild(c1);
       }
 
@@ -1462,7 +2412,25 @@
         buyerHoursBanner.style.display = 'none';
       }
 
-      // Buyers Cards
+      // W2: Determine highlighted buyer card
+      // Highlighted card is next_action buyer (match buyer_rank) when next_action.kind is 'call',
+      // else buyers[0] when there is no batch. No highlighted card when next_action isn't 'call'.
+      let highlightedBuyer = null;
+      if (batch && batch.next_action) {
+        if (batch.next_action.kind === 'call') {
+          highlightedBuyer = buyers.find(b => b.rank === batch.next_action.buyer_rank) ||
+                             buyers.find(b => b.buyer_id === batch.next_action.buyer_id) || null;
+        } else {
+          highlightedBuyer = null;
+        }
+      } else if (!batch) {
+        highlightedBuyer = buyers.length > 0 ? buyers[0] : null;
+      }
+
+      // Filter other buyers (all remaining buyers in rank order)
+      const otherBuyers = buyers.filter(b => !highlightedBuyer || b.buyer_id !== highlightedBuyer.buyer_id);
+
+      // Buyers Cards Container
       buyersListContainer.replaceChildren();
       if (scoutResult && buyers.length === 0) {
         const emptyMsg = document.createElement('div');
@@ -1471,152 +2439,317 @@
         emptyMsg.textContent = 'No suitable buyers found nearby';
         buyersListContainer.appendChild(emptyMsg);
       } else if (buyers.length > 0) {
-        // Next buyer to call (#1)
-        const nextBuyer = buyers[0];
-        const nextCard = document.createElement('div');
-        nextCard.className = 'buyer-card-top-pick';
+        // Highlighted Next to Call Card (if present)
+        if (highlightedBuyer) {
+          const nextCard = document.createElement('div');
+          nextCard.className = 'buyer-card-top-pick';
 
-        const topPickHead = document.createElement('div');
-        topPickHead.style.display = 'flex';
-        topPickHead.style.justifyContent = 'space-between';
-        topPickHead.style.alignItems = 'center';
-        topPickHead.style.flexWrap = 'wrap';
-        topPickHead.style.gap = '0.5rem';
+          // Header
+          const topPickHead = document.createElement('div');
+          topPickHead.style.display = 'flex';
+          topPickHead.style.justifyContent = 'space-between';
+          topPickHead.style.alignItems = 'center';
+          topPickHead.style.flexWrap = 'wrap';
+          topPickHead.style.gap = '0.5rem';
 
-        const bTitleGroup = document.createElement('div');
-        bTitleGroup.style.display = 'flex';
-        bTitleGroup.style.alignItems = 'center';
-        bTitleGroup.style.gap = '0.5rem';
+          const bTitleGroup = document.createElement('div');
+          bTitleGroup.style.display = 'flex';
+          bTitleGroup.style.alignItems = 'center';
+          bTitleGroup.style.gap = '0.5rem';
+          bTitleGroup.style.flexWrap = 'wrap';
 
-        const rankBadge = document.createElement('span');
-        rankBadge.className = 'chip chip-indigo';
-        rankBadge.textContent = '#1 Match';
-        bTitleGroup.appendChild(rankBadge);
+          // W2: Label is "#<rank> · Next to call"
+          const rankBadge = document.createElement('span');
+          rankBadge.className = 'chip chip-indigo';
+          rankBadge.textContent = `#${highlightedBuyer.rank || 1} · Next to call`;
+          bTitleGroup.appendChild(rankBadge);
 
-        const bName = document.createElement('span');
-        bName.style.fontFamily = 'var(--font-heading)';
-        bName.style.fontSize = '1.05rem';
-        bName.style.fontWeight = '700';
-        bName.dir = 'auto';
-        bName.textContent = nextBuyer.name;
-        bTitleGroup.appendChild(bName);
+          const bName = document.createElement('span');
+          bName.style.fontFamily = 'var(--font-heading)';
+          bName.style.fontSize = '1.05rem';
+          bName.style.fontWeight = '700';
+          bName.dir = 'auto';
+          bName.textContent = highlightedBuyer.name;
+          bTitleGroup.appendChild(bName);
 
-        const typeChip = document.createElement('span');
-        typeChip.className = 'chip chip-slate';
-        typeChip.textContent = (nextBuyer.buyer_type || '').replace(/_/g, ' ');
-        bTitleGroup.appendChild(typeChip);
+          // W4: Type chip
+          const typeChip = document.createElement('span');
+          typeChip.className = 'chip chip-slate';
+          typeChip.textContent = (highlightedBuyer.buyer_type || '').replace(/_/g, ' ');
+          bTitleGroup.appendChild(typeChip);
 
-        topPickHead.appendChild(bTitleGroup);
+          // W4: Fit chip with fit_why
+          const fitChip = document.createElement('span');
+          if (highlightedBuyer.fit === 'likely') {
+            fitChip.className = 'chip chip-emerald';
+            fitChip.textContent = 'Likely';
+          } else {
+            fitChip.className = 'chip chip-slate';
+            fitChip.textContent = 'Possible';
+          }
+          bTitleGroup.appendChild(fitChip);
 
-        const openStatus = document.createElement('span');
-        if (nextBuyer.open_now === true) {
-          openStatus.className = 'chip chip-emerald';
-          openStatus.textContent = 'Open now';
-        } else if (nextBuyer.open_now === false) {
-          openStatus.className = 'chip chip-rose';
-          openStatus.textContent = 'Closed now';
-        } else {
-          openStatus.className = 'chip chip-slate';
-          openStatus.textContent = 'Hours unknown';
+          topPickHead.appendChild(bTitleGroup);
+
+          // W4: Open now / closed now / hours unknown
+          const openStatus = document.createElement('span');
+          if (highlightedBuyer.open_now === true) {
+            openStatus.className = 'chip chip-emerald';
+            openStatus.textContent = 'Open now';
+          } else if (highlightedBuyer.open_now === false) {
+            openStatus.className = 'chip chip-rose';
+            openStatus.textContent = 'Closed now';
+          } else {
+            openStatus.className = 'chip chip-slate';
+            openStatus.textContent = 'Hours unknown';
+          }
+          topPickHead.appendChild(openStatus);
+          nextCard.appendChild(topPickHead);
+
+          // Meta Row: distance, masked phone, maps link
+          const metaRow = document.createElement('div');
+          metaRow.style.display = 'flex';
+          metaRow.style.gap = '1rem';
+          metaRow.style.fontSize = '0.8125rem';
+          metaRow.style.flexWrap = 'wrap';
+          metaRow.style.alignItems = 'center';
+
+          const distEl = document.createElement('span');
+          distEl.textContent = `📍 ${highlightedBuyer.distance_km} km`;
+          metaRow.appendChild(distEl);
+
+          // W4: Masked phone on one line
+          const phoneEl = document.createElement('span');
+          phoneEl.className = 'buyer-phone-masked';
+          phoneEl.textContent = `📞 ${highlightedBuyer.phone_masked || 'No phone'}`;
+          metaRow.appendChild(phoneEl);
+
+          // W4: View on Google Maps (https only, target _blank, rel noopener)
+          if (highlightedBuyer.maps_uri && highlightedBuyer.maps_uri.startsWith('https://')) {
+            const mapsLink = document.createElement('a');
+            mapsLink.className = 'buyer-maps-link';
+            mapsLink.href = highlightedBuyer.maps_uri;
+            mapsLink.target = '_blank';
+            mapsLink.rel = 'noopener';
+            mapsLink.textContent = 'View on Google Maps ↗';
+            metaRow.appendChild(mapsLink);
+          }
+
+          nextCard.appendChild(metaRow);
+
+          // W4: Facts line (reason) & fit_why
+          const factsRow = document.createElement('div');
+          factsRow.style.display = 'flex';
+          factsRow.style.flexDirection = 'column';
+          factsRow.style.gap = '0.2rem';
+          factsRow.style.fontSize = '0.75rem';
+          factsRow.style.color = 'var(--text-secondary)';
+
+          if (highlightedBuyer.reason) {
+            const rEl = document.createElement('div');
+            rEl.textContent = highlightedBuyer.reason;
+            factsRow.appendChild(rEl);
+          }
+
+          if (highlightedBuyer.fit_why) {
+            const fitEl = document.createElement('div');
+            fitEl.style.color = 'var(--emerald-dark)';
+            fitEl.style.fontWeight = '500';
+            fitEl.textContent = highlightedBuyer.fit_why;
+            factsRow.appendChild(fitEl);
+          }
+
+          if (factsRow.childNodes.length > 0) {
+            nextCard.appendChild(factsRow);
+          }
+
+          // Call button
+          const callBtn = document.createElement('button');
+          callBtn.type = 'button';
+          callBtn.className = 'btn-ai';
+          callBtn.style.alignSelf = 'flex-start';
+          callBtn.textContent = 'Start call · you play the buyer';
+          callBtn.disabled = isCallInProgress;
+          callBtn.addEventListener('click', () => {
+            startCallForItem(activeItemKey, highlightedBuyer.buyer_id);
+          });
+          nextCard.appendChild(callBtn);
+
+          buyersListContainer.appendChild(nextCard);
         }
-        topPickHead.appendChild(openStatus);
-        nextCard.appendChild(topPickHead);
 
-        const metaRow = document.createElement('div');
-        metaRow.style.display = 'flex';
-        metaRow.style.gap = '1rem';
-        metaRow.style.fontSize = '0.8125rem';
-        metaRow.style.flexWrap = 'wrap';
-
-        const distEl = document.createElement('span');
-        distEl.textContent = `📍 ${nextBuyer.distance_km} km`;
-        metaRow.appendChild(distEl);
-
-        const phoneEl = document.createElement('span');
-        phoneEl.className = 'buyer-phone-masked';
-        phoneEl.textContent = `📞 ${nextBuyer.phone_masked || 'No phone'}`;
-        metaRow.appendChild(phoneEl);
-
-        if (nextBuyer.fit_why) {
-          const fitEl = document.createElement('span');
-          fitEl.style.color = 'var(--emerald-dark)';
-          fitEl.style.fontWeight = '500';
-          fitEl.textContent = nextBuyer.fit_why;
-          metaRow.appendChild(fitEl);
-        }
-
-        nextCard.appendChild(metaRow);
-
-        if (nextBuyer.maps_uri && nextBuyer.maps_uri.startsWith('https://')) {
-          const mapsLink = document.createElement('a');
-          mapsLink.className = 'buyer-maps-link';
-          mapsLink.href = nextBuyer.maps_uri;
-          mapsLink.target = '_blank';
-          mapsLink.rel = 'noopener';
-          mapsLink.textContent = 'View on Google Maps ↗';
-          nextCard.appendChild(mapsLink);
-        }
-
-        const callBtn = document.createElement('button');
-        callBtn.type = 'button';
-        callBtn.className = 'btn-ai';
-        callBtn.style.alignSelf = 'flex-start';
-        callBtn.textContent = 'Start call · you play the buyer';
-        callBtn.disabled = isCallInProgress;
-        callBtn.addEventListener('click', () => {
-          startCallForItem(activeItemKey, nextBuyer.buyer_id);
-        });
-        nextCard.appendChild(callBtn);
-
-        buyersListContainer.appendChild(nextCard);
-
-        // Other buyers in compact rows
-        for (let i = 1; i < buyers.length; i++) {
-          const b = buyers[i];
+        // W2, W3, W4: Other buyers in rank order (including already-called ones)
+        otherBuyers.forEach(b => {
           const bRow = document.createElement('div');
           bRow.className = 'buyer-card-row';
 
-          const left = document.createElement('div');
-          left.style.display = 'flex';
-          left.style.alignItems = 'center';
-          left.style.gap = '0.75rem';
-          left.style.flexWrap = 'wrap';
+          const mainCol = document.createElement('div');
+          mainCol.style.display = 'flex';
+          mainCol.style.flexDirection = 'column';
+          mainCol.style.gap = '0.375rem';
+          mainCol.style.flex = '1';
+          mainCol.style.minWidth = '240px';
+
+          // Line 1: Header (rank, name, type chip, open/closed status, fit chip)
+          const line1 = document.createElement('div');
+          line1.style.display = 'flex';
+          line1.style.alignItems = 'center';
+          line1.style.gap = '0.5rem';
+          line1.style.flexWrap = 'wrap';
 
           const rNum = document.createElement('span');
           rNum.className = 'chip chip-slate font-mono';
-          rNum.textContent = String(i + 1);
-          left.appendChild(rNum);
+          rNum.textContent = `#${b.rank}`;
+          line1.appendChild(rNum);
 
           const nameS = document.createElement('span');
           nameS.style.fontWeight = '700';
           nameS.dir = 'auto';
           nameS.textContent = b.name;
-          left.appendChild(nameS);
+          line1.appendChild(nameS);
 
-          const distS = document.createElement('span');
-          distS.style.color = 'var(--text-muted)';
-          distS.style.fontSize = '0.75rem';
-          distS.textContent = `(${b.distance_km} km)`;
-          left.appendChild(distS);
+          // W4: Type chip
+          const typeChip = document.createElement('span');
+          typeChip.className = 'chip chip-slate';
+          typeChip.textContent = (b.buyer_type || '').replace(/_/g, ' ');
+          line1.appendChild(typeChip);
 
-          const phoneS = document.createElement('span');
-          phoneS.className = 'buyer-phone-masked';
-          phoneS.textContent = b.phone_masked || '';
-          left.appendChild(phoneS);
+          // W4: Open now / closed now / hours unknown
+          const openStatus = document.createElement('span');
+          if (b.open_now === true) {
+            openStatus.className = 'chip chip-emerald';
+            openStatus.textContent = 'Open now';
+          } else if (b.open_now === false) {
+            openStatus.className = 'chip chip-rose';
+            openStatus.textContent = 'Closed now';
+          } else {
+            openStatus.className = 'chip chip-slate';
+            openStatus.textContent = 'Hours unknown';
+          }
+          line1.appendChild(openStatus);
 
-          bRow.appendChild(left);
+          // W4: Fit chip
+          const fitChip = document.createElement('span');
+          if (b.fit === 'likely') {
+            fitChip.className = 'chip chip-emerald';
+            fitChip.textContent = 'Likely';
+          } else {
+            fitChip.className = 'chip chip-slate';
+            fitChip.textContent = 'Possible';
+          }
+          line1.appendChild(fitChip);
 
-          const right = document.createElement('div');
-          right.style.display = 'flex';
-          right.style.alignItems = 'center';
-          right.style.gap = '0.5rem';
+          mainCol.appendChild(line1);
 
-          const att = (batch && batch.attempts) ? batch.attempts.find(a => a.buyer_id === b.buyer_id) : null;
-          if (att) {
-            const stChip = document.createElement('span');
-            stChip.className = 'chip chip-slate';
-            stChip.textContent = att.outcome || 'Called';
-            right.appendChild(stChip);
+          // Line 2: Details (distance, masked phone on one line, maps link)
+          const line2 = document.createElement('div');
+          line2.style.display = 'flex';
+          line2.style.alignItems = 'center';
+          line2.style.gap = '0.75rem';
+          line2.style.flexWrap = 'wrap';
+          line2.style.fontSize = '0.8125rem';
+
+          const distEl = document.createElement('span');
+          distEl.textContent = `📍 ${b.distance_km} km`;
+          line2.appendChild(distEl);
+
+          // W4: Masked phone on one line
+          const phoneEl = document.createElement('span');
+          phoneEl.className = 'buyer-phone-masked';
+          phoneEl.textContent = `📞 ${b.phone_masked || 'No phone'}`;
+          line2.appendChild(phoneEl);
+
+          // W4: View on Google Maps (https only, target _blank, rel noopener)
+          if (b.maps_uri && b.maps_uri.startsWith('https://')) {
+            const mapsLink = document.createElement('a');
+            mapsLink.className = 'buyer-maps-link';
+            mapsLink.href = b.maps_uri;
+            mapsLink.target = '_blank';
+            mapsLink.rel = 'noopener';
+            mapsLink.textContent = 'View on Google Maps ↗';
+            line2.appendChild(mapsLink);
+          }
+
+          mainCol.appendChild(line2);
+
+          // Line 3: Facts line (reason) & fit_why
+          const line3 = document.createElement('div');
+          line3.style.display = 'flex';
+          line3.style.flexDirection = 'column';
+          line3.style.gap = '0.2rem';
+          line3.style.fontSize = '0.75rem';
+          line3.style.color = 'var(--text-secondary)';
+
+          if (b.reason) {
+            const reasonEl = document.createElement('div');
+            reasonEl.textContent = b.reason;
+            line3.appendChild(reasonEl);
+          }
+
+          if (b.fit_why) {
+            const fitWhyEl = document.createElement('div');
+            fitWhyEl.style.color = 'var(--emerald-dark)';
+            fitWhyEl.style.fontWeight = '500';
+            fitWhyEl.textContent = b.fit_why;
+            line3.appendChild(fitWhyEl);
+          }
+
+          if (line3.childNodes.length > 0) {
+            mainCol.appendChild(line3);
+          }
+
+          bRow.appendChild(mainCol);
+
+          // Right Column: W3 Row status chips in plain words or "Play this buyer"
+          const rightCol = document.createElement('div');
+          rightCol.style.display = 'flex';
+          rightCol.style.alignItems = 'center';
+          rightCol.style.gap = '0.5rem';
+          rightCol.style.flexShrink = '0';
+
+          const att = (batch && batch.attempts)
+            ? batch.attempts.findLast(a => a.buyer_id === b.buyer_id && a.call_status !== 'pending')
+            : null;
+          // W3: Attempts with call_status 'pending' don't count as called; show "Play this buyer" again.
+          if (att && att.call_status !== 'pending') {
+            const chip = document.createElement('span');
+            if (att.call_status === 'completed') {
+              if (att.outcome === 'deal' || att.outcome === 'partial_deal') {
+                chip.className = 'chip chip-emerald';
+                if (att.step === 'donate' || att.agreed_price === 0) {
+                  chip.textContent = `Donated ${att.agreed_quantity || 0} ${batch.unit || 'kg'}`;
+                } else {
+                  const priceStr = att.agreed_price == null ? '—' : att.agreed_price;
+                  chip.textContent = `Deal ${att.agreed_quantity || 0} ${batch.unit || 'kg'} @ Rs ${priceStr}`;
+                }
+              } else if (att.outcome === 'declined') {
+                chip.className = 'chip chip-rose';
+                chip.textContent = 'Declined';
+              } else if (att.outcome === 'call_back') {
+                chip.className = 'chip chip-amber';
+                const cbTime = att.callback_at ? ` ${att.callback_at}` : (att.notes ? ` ${att.notes}` : '');
+                chip.textContent = `Call back${cbTime}`;
+              } else if (att.outcome === 'no_answer') {
+                chip.className = 'chip chip-slate';
+                chip.textContent = 'No answer';
+              } else if (att.outcome === 'do_not_call') {
+                chip.className = 'chip chip-rose';
+                chip.textContent = 'Asked not to be called';
+              } else if (att.outcome === 'wants_photo') {
+                chip.className = 'chip chip-rose';
+                chip.textContent = 'Wants photo';
+              } else if (att.outcome === 'wants_manager') {
+                chip.className = 'chip chip-rose';
+                chip.textContent = 'Wants manager';
+              } else {
+                chip.className = 'chip chip-slate';
+                chip.textContent = (att.outcome || 'Completed').replace(/_/g, ' ');
+              }
+            } else {
+              chip.className = 'chip chip-indigo';
+              chip.textContent = 'In progress…';
+            }
+            rightCol.appendChild(chip);
           } else {
             const playBtn = document.createElement('button');
             playBtn.type = 'button';
@@ -1628,24 +2761,69 @@
             playBtn.addEventListener('click', () => {
               startCallForItem(activeItemKey, b.buyer_id);
             });
-            right.appendChild(playBtn);
+            rightCol.appendChild(playBtn);
           }
 
-          bRow.appendChild(right);
+          bRow.appendChild(rightCol);
           buyersListContainer.appendChild(bRow);
-        }
+        });
       }
 
-      // Footer
+      // W5: Footer with plain-word non-zero skipped counts and Refresh button
       if (scoutResult) {
         buyersFooter.replaceChildren();
+
+        const skipMap = {
+          no_phone: 'no phone',
+          too_far: 'too far',
+          unlikely_buyer: 'unlikely',
+          unlikely: 'unlikely',
+          no_name: 'no name',
+          closed: 'closed',
+          dnc: 'on do-not-call list',
+          cooldown: 'called recently',
+          not_screened: 'not screened'
+        };
+        const skippedParts = [];
+        if (scoutResult.skipped) {
+          for (const [k, count] of Object.entries(scoutResult.skipped)) {
+            if (count > 0) {
+              skippedParts.push(`${count} ${skipMap[k] || k.replace(/_/g, ' ')}`);
+            }
+          }
+        }
+
+        if (skippedParts.length > 0) {
+          const skipLine = document.createElement('div');
+          skipLine.className = 'font-mono text-muted';
+          skipLine.style.fontSize = '0.8125rem';
+          skipLine.style.width = '100%';
+          skipLine.style.marginBottom = '0.5rem';
+          skipLine.textContent = `Skipped: ${skippedParts.join(' · ')}`;
+          buyersFooter.appendChild(skipLine);
+        }
+
+        const footerMeta = document.createElement('div');
+        footerMeta.style.display = 'flex';
+        footerMeta.style.justifyContent = 'space-between';
+        footerMeta.style.alignItems = 'center';
+        footerMeta.style.width = '100%';
+        footerMeta.style.flexWrap = 'wrap';
+        footerMeta.style.gap = '0.5rem';
+
+        const metaLeft = document.createElement('div');
+        metaLeft.style.display = 'flex';
+        metaLeft.style.alignItems = 'center';
+        metaLeft.style.flexWrap = 'wrap';
+        metaLeft.style.gap = '0.25rem';
+
         const attrStrong = document.createElement('strong');
         attrStrong.textContent = 'Results from Google Maps';
-        buyersFooter.appendChild(attrStrong);
+        metaLeft.appendChild(attrStrong);
 
         const nearSpan = document.createElement('span');
         nearSpan.textContent = ` · Near ${scoutResult.branch_name} · within 10 km`;
-        buyersFooter.appendChild(nearSpan);
+        metaLeft.appendChild(nearSpan);
 
         let timeStr = 'Searched just now';
         if (scoutResult.searched_at) {
@@ -1656,9 +2834,26 @@
         if (scoutResult.meta && scoutResult.meta.reused) timeStr += ' · reused';
         const tSpan = document.createElement('span');
         tSpan.textContent = ` · ${timeStr}`;
-        buyersFooter.appendChild(tSpan);
+        metaLeft.appendChild(tSpan);
 
+        footerMeta.appendChild(metaLeft);
+
+        // W5: Refresh button (fetchScoutBuyers(activeItemKey, true)), disabled during call
+        const btnRefresh = document.createElement('button');
+        btnRefresh.type = 'button';
+        btnRefresh.className = 'btn-ghost';
+        btnRefresh.style.minHeight = '32px';
+        btnRefresh.style.padding = '0.25rem 0.625rem';
+        btnRefresh.textContent = 'Refresh';
+        btnRefresh.disabled = isCallInProgress;
+        btnRefresh.addEventListener('click', () => {
+          fetchScoutBuyers(activeItemKey, true);
+        });
+        footerMeta.appendChild(btnRefresh);
+
+        buyersFooter.appendChild(footerMeta);
         buyersFooter.style.display = 'flex';
+        buyersFooter.style.flexDirection = 'column';
 
         // Screened out details
         buyersScreenedOutContainer.replaceChildren();
@@ -1696,306 +2891,77 @@
       }
     });
 
-    // Fetch Scout Buyers (Module 4)
-    async function fetchScoutBuyers(itemKey, refresh = false) {
-      if (!currentInspection || !currentInspection.inspection_id) return;
-      const code = inspectAccessCodeEl.value.trim();
-      if (!code) return;
-
-      const reqId = (scoutRequestCounters[itemKey] || 0) + 1;
-      scoutRequestCounters[itemKey] = reqId;
-
-      scoutLoadingMap[itemKey] = true;
-      scoutErrorsMap[itemKey] = null;
-      renderActiveBuyers();
-
-      try {
-        const resp = await fetch('/demo/scout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Demo-Access-Code': code
-          },
-          body: JSON.stringify({
-            inspection_id: currentInspection.inspection_id,
-            item_key: itemKey,
-            branch_id: branchSelect.value,
-            refresh: refresh
-          })
-        });
-
-        if (scoutRequestCounters[itemKey] !== reqId) return;
-
-        if (!resp.ok) {
-          const errData = await resp.json().catch(() => ({}));
-          const errMsg = typeof errData.detail === 'string' ? errData.detail : 'Search failed, please try again.';
-          scoutErrorsMap[itemKey] = errMsg;
-          scoutResultsMap[itemKey] = null;
-        } else {
-          scoutResultsMap[itemKey] = await resp.json();
-          scoutErrorsMap[itemKey] = null;
-        }
-      } catch (err) {
-        if (scoutRequestCounters[itemKey] === reqId) {
-          scoutErrorsMap[itemKey] = 'Network error during buyer search.';
-        }
-      } finally {
-        if (scoutRequestCounters[itemKey] === reqId) {
-          scoutLoadingMap[itemKey] = false;
-          renderActiveBuyers();
-          updateProgressBar();
-        }
-      }
-    }
-
-    // Shared Next Action Row Renderer (plan & review P2)
-    function renderNextActionRow(container, batch, itemKey, buyers = []) {
-      container.replaceChildren();
-      if (!batch || !batch.next_action) return;
-
-      const action = batch.next_action;
-      const isCardLoading = !!scoutLoadingMap[itemKey];
-
-      switch (action.kind) {
-        case 'call': {
-          const buyer = buyers.find(b => b.rank === action.buyer_rank);
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'btn-ai';
-          btn.textContent = buyer ? `Start call · #${action.buyer_rank} ${buyer.name}` : `Call buyer #${action.buyer_rank}`;
-          btn.disabled = isCallInProgress;
-          btn.addEventListener('click', () => {
-            startCallForItem(itemKey, buyer ? buyer.buyer_id : undefined);
-          });
-          container.appendChild(btn);
-          break;
-        }
-        case 'next_step': {
-          const nextTarget = getNextStepTargetLabel(batch);
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'btn-primary';
-          btn.textContent = `Next step: find ${nextTarget}`;
-          btn.disabled = isCallInProgress;
-          btn.addEventListener('click', () => {
-            advanceBatchStep(batch.batch_id, itemKey);
-          });
-          container.appendChild(btn);
-          break;
-        }
-        case 'sold': {
-          const span = document.createElement('span');
-          span.className = 'chip chip-emerald';
-          span.textContent = 'All stock placed ✓';
-          container.appendChild(span);
-          break;
-        }
-        case 'compost_approval': {
-          const span = document.createElement('span');
-          span.className = 'chip chip-amber';
-          span.textContent = 'Compost: needs manager approval';
-          container.appendChild(span);
-          break;
-        }
-        case 'no_buyer': {
-          const span = document.createElement('span');
-          span.className = 'chip chip-slate';
-          span.textContent = 'No more buyers nearby';
-          container.appendChild(span);
-          break;
-        }
-        case 'needs_search': {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'btn-primary';
-          btn.textContent = 'Search again';
-          btn.disabled = isCallInProgress || isCardLoading;
-          btn.addEventListener('click', () => {
-            fetchScoutBuyers(itemKey, false);
-          });
-          container.appendChild(btn);
-          break;
-        }
-        case 'busy': {
-          const span = document.createElement('span');
-          span.className = 'chip chip-amber';
-          span.textContent = 'Call in progress…';
-          container.appendChild(span);
-          break;
-        }
-      }
-    }
-
-    function getNextStepTargetLabel(batch) {
-      if (!batch || !batch.plans) return 'buyers';
-      const nextPlan = batch.plans[batch.step_index + 1];
-      if (!nextPlan) return 'buyers';
-      if (nextPlan.step === 'donate') return 'charities';
-      if (nextPlan.step === 'animal_feed') return 'cattle farms';
-      return 'buyers';
-    }
-
-    async function advanceBatchStep(batchId, itemKey) {
-      if (isCallInProgress) return;
-      const code = inspectAccessCodeEl.value.trim();
-      if (!code) return;
-
-      try {
-        const resp = await fetch(`/demo/batches/${encodeURIComponent(batchId)}/next-step`, {
-          method: 'POST',
-          headers: { 'X-Demo-Access-Code': code }
-        });
-        if (resp.ok) {
-          const updated = await resp.json();
-          currentBatchesMap[itemKey] = updated;
-          await fetchScoutBuyers(itemKey, true);
-        } else {
-          const err = await resp.json().catch(() => ({}));
-          alert(typeof err.detail === 'string' ? err.detail : 'Could not advance step.');
-        }
-      } catch (err) {
-        alert('Network error advancing step.');
-      }
-    }
-
-    // Section 6: Impact Renderer
+    // W7: Section 6 Impact Renderer
     function renderImpact() {
       let revenue = 0;
       const rescuedByUnit = {};
       const donatedByUnit = {};
+      const feedByUnit = {};
       let dealsClosed = 0;
+      let callsMade = 0;
 
       for (const k in currentBatchesMap) {
         const b = currentBatchesMap[k];
         if (!b || !b.attempts) continue;
 
         b.attempts.forEach(att => {
-          if (att.call_status === 'completed' && (att.outcome === 'deal' || att.outcome === 'partial_deal')) {
-            dealsClosed++;
-            const u = b.unit || 'kg';
-            const qty = att.agreed_quantity || 0;
+          if (att.call_status === 'completed') {
+            callsMade++;
+            if (att.outcome === 'deal' || att.outcome === 'partial_deal') {
+              dealsClosed++;
+              const u = b.unit || 'kg';
+              const qty = att.agreed_quantity || 0;
 
-            if (att.step !== 'donate') {
-              revenue += (att.agreed_price || 0) * qty;
-            } else {
-              donatedByUnit[u] = (donatedByUnit[u] || 0) + qty;
+              if (att.step === 'donate') {
+                donatedByUnit[u] = (donatedByUnit[u] || 0) + qty;
+              } else if (att.step === 'animal_feed') {
+                feedByUnit[u] = (feedByUnit[u] || 0) + qty;
+                revenue += (att.agreed_price || 0) * qty;
+              } else {
+                revenue += (att.agreed_price || 0) * qty;
+              }
+              rescuedByUnit[u] = (rescuedByUnit[u] || 0) + qty;
             }
-            rescuedByUnit[u] = (rescuedByUnit[u] || 0) + qty;
           }
         });
       }
 
-      document.getElementById('impactRevenue').textContent = `Rs ${Math.round(revenue).toLocaleString()}`;
-
-      const rescuedParts = Object.entries(rescuedByUnit).map(([u, q]) => `${q} ${u}`);
-      document.getElementById('impactRescued').textContent = rescuedParts.length > 0 ? rescuedParts.join(', ') : '0 kg';
-
-      const donatedParts = Object.entries(donatedByUnit).map(([u, q]) => `${q} ${u}`);
-      document.getElementById('impactDonated').textContent = donatedParts.length > 0 ? donatedParts.join(', ') : '0 kg';
-
-      document.getElementById('impactDeals').textContent = `${dealsClosed} Deals`;
-    }
-
-    // Main Inspection Trigger
-    async function handleInspect() {
-      if (isInspecting || isCallInProgress) return;
-      const code = inspectAccessCodeEl.value.trim();
-      if (!code) {
-        inspectError.textContent = 'Please enter the demo access code.';
-        inspectError.style.display = 'block';
-        return;
+      function formatQty(n, unit) {
+        const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
+        return `${rounded} ${unit}`;
       }
-      setStoredItem('lc_code', code);
 
-      let imageBlob = null;
-      let displayUrl = null;
+      const revEl = document.getElementById('impactRevenue');
+      const resEl = document.getElementById('impactRescued');
+      const donEl = document.getElementById('impactDonated');
+      const feedEl = document.getElementById('impactFeed');
+      const callsEl = document.getElementById('impactCalls');
+      const dealsEl = document.getElementById('impactDeals');
+      const hintEl = document.getElementById('impactHint');
 
-      if (shelfPhotoInput.files && shelfPhotoInput.files[0]) {
-        imageBlob = shelfPhotoInput.files[0];
-        displayUrl = URL.createObjectURL(imageBlob);
-      } else if (activeSampleBlob) {
-        imageBlob = activeSampleBlob;
-        displayUrl = activeSampleUrl;
-      } else if (activeSampleUrl) {
-        try {
-          const resp = await fetch(activeSampleUrl);
-          if (!resp.ok) throw new Error('Failed to fetch sample');
-          imageBlob = await resp.blob();
-          activeSampleBlob = imageBlob;
-          displayUrl = activeSampleUrl;
-        } catch (e) {
-          inspectError.textContent = 'Could not load sample image.';
-          inspectError.style.display = 'block';
-          return;
+      revEl.textContent = `Rs ${Math.round(revenue).toLocaleString()}`;
+
+      const rescuedParts = Object.entries(rescuedByUnit).map(([u, q]) => formatQty(q, u));
+      resEl.textContent = rescuedParts.length > 0 ? rescuedParts.join(', ') : '0';
+
+      const donatedParts = Object.entries(donatedByUnit).map(([u, q]) => formatQty(q, u));
+      donEl.textContent = donatedParts.length > 0 ? donatedParts.join(', ') : '0';
+
+      const feedParts = Object.entries(feedByUnit).map(([u, q]) => formatQty(q, u));
+      if (feedEl) feedEl.textContent = feedParts.length > 0 ? feedParts.join(', ') : '0';
+
+      if (callsEl) callsEl.textContent = String(callsMade);
+      dealsEl.textContent = `${dealsClosed} Deals`;
+
+      if (hintEl) {
+        if (dealsClosed === 0) {
+          hintEl.style.display = 'block';
+          hintEl.textContent = 'Start a call to see the impact here';
+        } else {
+          hintEl.style.display = 'none';
         }
-      } else {
-        inspectError.textContent = 'Please choose a sample photo or upload an image.';
-        inspectError.style.display = 'block';
-        return;
-      }
-
-      isInspecting = true;
-      btnInspect.disabled = true;
-      inspectLoading.style.display = 'flex';
-      inspectError.style.display = 'none';
-      decideError.style.display = 'none';
-      decideError.textContent = '';
-      sectionAiReading.style.display = 'none';
-      sectionDecision.style.display = 'none';
-      sectionBuyers.style.display = 'none';
-
-      const shelfId = getOrCreateShelfId();
-      const formData = new FormData();
-      formData.append('photo', imageBlob, 'shelf.jpg');
-      formData.append('shelf_id', shelfId);
-
-      const binCapVal = binCapacityEl.value.trim();
-      if (binCapVal) {
-        formData.append('bin_capacity_kg', binCapVal);
-      }
-
-      try {
-        const resp = await fetch('/demo/inspect', {
-          method: 'POST',
-          headers: { 'X-Demo-Access-Code': code },
-          body: formData
-        });
-
-        if (!resp.ok) {
-          const errData = await resp.json().catch(() => ({}));
-          const errMsg = typeof errData.detail === 'string' ? errData.detail : 'Inspection failed, please try again.';
-          inspectError.textContent = errMsg;
-          inspectError.style.display = 'block';
-          return;
-        }
-
-        const data = await resp.json();
-        currentInspection = data;
-        currentDisplayUrl = displayUrl;
-        currentLadderResult = null;
-        scoutResultsMap = {};
-        scoutErrorsMap = {};
-        scoutLoadingMap = {};
-        currentBatchesMap = {};
-        quantityInputs = {};
-        quantityEdited = {};
-        activeItemKey = null;
-
-        renderResults(data, displayUrl);
-        await triggerDecide();
-      } catch (err) {
-        inspectError.textContent = 'Network or server error during inspection.';
-        inspectError.style.display = 'block';
-      } finally {
-        isInspecting = false;
-        btnInspect.disabled = false;
-        inspectLoading.style.display = 'none';
-        updateShelfLock();
-        updateProgressBar();
       }
     }
-
-    btnInspect.addEventListener('click', handleInspect);
 
     // Render Inspection Results (Section 2)
     function renderResults(data, imgSrc) {
@@ -2006,7 +2972,7 @@
       bboxOverlay.replaceChildren();
 
       // Bounding Boxes on photo
-      if (data.items && data.items.length > 0) {
+      if (data && data.items && data.items.length > 0) {
         data.items.forEach(item => {
           if (!item.position) return;
           const box = document.createElement('div');
@@ -2039,19 +3005,19 @@
       }
 
       // Status banners
-      if (data.photo_status !== 'ok') {
+      if (data && data.photo_status !== 'ok') {
         inspectStatusBanner.textContent = `Photo status: ${data.photo_status}. ${data.photo_note || ''}`;
         inspectStatusBanner.style.display = 'block';
       } else {
         inspectStatusBanner.style.display = 'none';
       }
 
-      const hasInstruction = (data.photo_issues && data.photo_issues.includes('instruction_text')) ||
-        (data.items && data.items.some(i => i.issues && i.issues.includes('instruction_text')));
+      const hasInstruction = data && ((data.photo_issues && data.photo_issues.includes('instruction_text')) ||
+        (data.items && data.items.some(i => i.issues && i.issues.includes('instruction_text'))));
       inspectInstructionBanner.style.display = hasInstruction ? 'block' : 'none';
 
       // Section Footer Metadata
-      if (data.inspector) {
+      if (data && data.inspector) {
         inspectFooter.replaceChildren();
         const meta = data.inspector;
         const callsOrCached = meta.from_cache
@@ -2075,327 +3041,16 @@
         inspectFooter.style.display = 'none';
       }
 
-      sectionAiReading.style.display = 'block';
-      renderItemsList(data);
-      highlightActiveBox(activeItemKey);
-      renderActiveDecision();
-      renderActiveBuyers();
-      updateShelfLock();
-      updateProgressBar();
-    }
-
-    // Trigger Ladder Decision (Module 3)
-    async function triggerDecide() {
-      if (!currentInspection || !currentInspection.inspection_id) return;
-      const code = inspectAccessCodeEl.value.trim();
-      if (!code) return;
-
-      const thisRequestId = ++decideRequestCounter;
-      isDeciding = true;
-      decideError.style.display = 'none';
-      decideError.textContent = '';
-      renderActiveDecision();
-
-      const hoursVal = closingTimeSelect.value ? parseFloat(closingTimeSelect.value) : null;
-      const payload = {
-        inspection_id: currentInspection.inspection_id,
-        hours_until_closing: hoursVal,
-        price_overrides: priceOverrides
-      };
-
-      try {
-        const resp = await fetch('/demo/decide', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Demo-Access-Code': code
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (decideRequestCounter !== thisRequestId) return;
-
-        if (!resp.ok) {
-          const errData = await resp.json().catch(() => ({}));
-          const errMsg = typeof errData.detail === 'string' ? errData.detail : 'Decision failed, please try again.';
-          decideError.textContent = errMsg;
-          decideError.style.display = 'block';
-          currentLadderResult = null;
-        } else {
-          currentLadderResult = await resp.json();
-          await loadBatchesForBranch();
-        }
-      } catch (err) {
-        if (decideRequestCounter === thisRequestId) {
-          decideError.textContent = 'Network or server error during decision.';
-          decideError.style.display = 'block';
-          currentLadderResult = null;
-        }
-      } finally {
-        if (decideRequestCounter === thisRequestId) {
-          isDeciding = false;
-          renderActiveDecision();
-          renderActiveBuyers();
-          updateShelfLock();
-          updateProgressBar();
-        }
-      }
-    }
-
-    // Call Flow (Module 6)
-    async function startCallForItem(itemKey, buyerId) {
-      if (isCallInProgress) return;
-      const code = inspectAccessCodeEl.value.trim();
-      if (!code) return;
-
-      const decision = currentLadderResult ? currentLadderResult.decisions.find(d => d.item_key === itemKey) : null;
-      if (!decision) return;
-
-      const batch = currentBatchesMap[itemKey];
-      let qtyVal = undefined;
-      if (!batch) {
-        if (quantityEdited[itemKey]) {
-          const raw = parseFloat(quantityInputs[itemKey]);
-          if (!isNaN(raw) && raw > 0) qtyVal = raw;
-        }
-      }
-
-      const payload = {
-        inspection_id: currentInspection.inspection_id,
-        item_key: itemKey,
-        branch_id: branchSelect.value,
-        buyer_id: buyerId,
-        quantity: qtyVal,
-        staff_checked: !!staffCheckedMap[itemKey]
-      };
-
-      isCallInProgress = true;
-      updateShelfLock();
-      renderActiveBuyers();
-      voiceSection.style.display = 'flex';
-      voiceSection.scrollIntoView({ behavior: 'smooth' });
-
-      callStatusText.textContent = 'Connecting…';
-      callBuyerName.textContent = '—';
-      callItemQty.textContent = '—';
-      callOpeningQuote.textContent = '—';
-      callPickupWindow.textContent = '—';
-      transcript.replaceChildren();
-      resultCard.style.display = 'none';
-
-      try {
-        const resp = await fetch('/demo/calls', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Demo-Access-Code': code
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (!resp.ok) {
-          const errData = await resp.json().catch(() => ({}));
-          alert(typeof errData.detail === 'string' ? errData.detail : 'Call request failed.');
-          isCallInProgress = false;
-          voiceSection.style.display = 'none';
-          updateShelfLock();
-          renderActiveBuyers();
-          return;
-        }
-
-        const callData = await resp.json();
-        currentActiveCall = callData;
-
-        // Populate call card
-        callBuyerName.textContent = callData.buyer ? callData.buyer.name : 'Counterparty';
-        const deal = callData.deal;
-        if (deal) {
-          callItemQty.textContent = `${deal.quantity} ${deal.unit} ${deal.item}`;
-          callOpeningQuote.textContent = deal.deal_type === 'donation' ? 'Free' : `Rs ${deal.opening} (Floor Rs ${deal.floor})`;
-          callPickupWindow.textContent = deal.pickup_window || 'Today before closing';
-        }
-
-        btnHangup.disabled = false;
-        startCallTimer();
-        connectWebSocket(callData.ws_url, callData.token);
-      } catch (err) {
-        alert('Network error initiating call.');
-        isCallInProgress = false;
-        voiceSection.style.display = 'none';
-        updateShelfLock();
-        renderActiveBuyers();
-      }
-    }
-
-    // Call Timer
-    function startCallTimer() {
-      callStartTime = Date.now();
-      clearInterval(callTimerInterval);
-      callTimerInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
-        const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
-        const secs = String(elapsed % 60).padStart(2, '0');
-        callDuration.textContent = `${mins}:${secs}`;
-      }, 1000);
-    }
-
-    function stopCallTimer() {
-      clearInterval(callTimerInterval);
-    }
-
-    // Live Audio & WebSocket Code
-    let ws = null;
-    let audioContext = null;
-    let audioInputWorklet = null;
-    let audioOutputWorklet = null;
-    let mediaStream = null;
-
-    function appendTranscript(speaker, text, isNotice = false) {
-      if (isNotice) {
-        const n = document.createElement('div');
-        n.className = 'transcript-notice';
-        n.textContent = text;
-        transcript.appendChild(n);
-      } else {
-        const b = document.createElement('div');
-        b.className = 'transcript-bubble ' + speaker;
-        b.dir = 'auto';
-        b.textContent = text;
-        transcript.appendChild(b);
-      }
-      transcript.scrollTop = transcript.scrollHeight;
-    }
-
-    function triggerWaveformAnimation() {
-      waveformBox.classList.add('waveform-active');
-      clearTimeout(audioAnimTimeout);
-      audioAnimTimeout = setTimeout(() => {
-        waveformBox.classList.remove('waveform-active');
-      }, 400);
-    }
-
-    function connectWebSocket(wsUrl, token) {
-      ws = new WebSocket(wsUrl);
-
-      ws.onopen = async () => {
-        callStatusText.textContent = 'Live';
-        ws.send(JSON.stringify({ type: 'auth', token: token }));
-        appendTranscript(null, 'Call connected. Voice stream active.', true);
-
-        try {
-          audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-          mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          const source = audioContext.createMediaStreamSource(mediaStream);
-
-          await audioContext.audioWorklet.addModule('/static/input-processor.js').catch(() => {});
-          // Simple script processor fallback if worklet file missing
-        } catch (e) {
-          appendTranscript(null, 'Microphone error or permission denied.', true);
-        }
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.type === 'agent_audio') {
-            triggerWaveformAnimation();
-          } else if (msg.type === 'transcript') {
-            appendTranscript(msg.speaker === 'agent' ? 'agent' : 'buyer', msg.text);
-          } else if (msg.type === 'notice') {
-            appendTranscript(null, msg.text, true);
-          }
-        } catch (e) {}
-      };
-
-      ws.onclose = async () => {
-        callStatusText.textContent = 'Ended';
-        btnHangup.disabled = true;
-        stopCallTimer();
-        cleanupAudio();
-        appendTranscript(null, 'Call disconnected.', true);
-
-        if (currentActiveCall && currentActiveCall.batch_id) {
-          await pollBatchUntilCompleted(currentActiveCall.batch_id, currentActiveCall.call_id);
-        }
-
-        isCallInProgress = false;
-        updateShelfLock();
+      if (data) {
+        sectionAiReading.style.display = 'block';
+        renderItemsList(data);
+        highlightActiveBox(activeItemKey);
+        renderActiveDecision();
         renderActiveBuyers();
         renderImpact();
-        updateProgressBar();
-      };
-
-      ws.onerror = () => {
-        appendTranscript(null, 'WebSocket error occurred.', true);
-      };
-    }
-
-    function hangup() {
-      if (ws) ws.close();
-      btnHangup.disabled = true;
-      stopCallTimer();
-      cleanupAudio();
-    }
-
-    btnHangup.addEventListener('click', hangup);
-
-    function cleanupAudio() {
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(t => t.stop());
-        mediaStream = null;
       }
-      if (audioContext) {
-        audioContext.close().catch(() => {});
-        audioContext = null;
-      }
-    }
-
-    // Batch Polling after Call
-    async function pollBatchUntilCompleted(batchId, callId) {
-      const code = inspectAccessCodeEl.value.trim();
-      let tries = 0;
-
-      while (tries < 8) {
-        await new Promise(r => setTimeout(r, 1000));
-        tries++;
-        try {
-          const resp = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
-            headers: { 'X-Demo-Access-Code': code }
-          });
-          if (resp.ok) {
-            const batch = await resp.json();
-            if (activeItemKey) {
-              currentBatchesMap[activeItemKey] = batch;
-            }
-            const att = batch.attempts ? batch.attempts.find(a => a.call_id === callId) : null;
-            if (att && att.call_status === 'completed') {
-              renderCallResult(batch, callId);
-              renderActiveBuyers();
-              renderImpact();
-              return;
-            }
-          }
-        } catch (e) {}
-      }
-    }
-
-    function renderCallResult(batchData, callId) {
-      const att = batchData.attempts ? batchData.attempts.find(a => a.call_id === callId) : null;
-      if (!att) return;
-
-      resultCard.style.display = 'block';
-      let outcomeStr = '';
-      if (att.outcome === 'deal' || att.outcome === 'partial_deal') {
-        outcomeStr = att.step === 'donate'
-          ? `Donated ${att.agreed_quantity} ${batchData.unit || 'kg'} to charity!`
-          : `Deal closed! ${att.agreed_quantity} ${batchData.unit || 'kg'} @ Rs ${att.agreed_price}/${batchData.unit || 'kg'}`;
-      } else {
-        outcomeStr = `Outcome: ${(att.outcome || 'Completed').replace(/_/g, ' ')}`;
-      }
-      resultContent.textContent = `${outcomeStr} · Remaining: ${batchData.remaining_quantity} of ${batchData.total_quantity} ${batchData.unit || 'kg'}`;
-
-      resultNextAction.replaceChildren();
-      renderNextActionRow(resultNextAction, batchData, activeItemKey, []);
+      updateShelfLock();
+      updateProgressBar();
     }
 
     // Initialize Page
@@ -2403,6 +3058,9 @@
     if (savedCode) {
       inspectAccessCodeEl.value = savedCode;
     }
+    inspectAccessCodeEl.addEventListener('input', () => {
+      setStoredItem('lc_code', inspectAccessCodeEl.value.trim());
+    });
 
     loadSamples();
     loadBranches();
