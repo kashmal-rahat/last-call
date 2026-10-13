@@ -42,6 +42,13 @@ def _name_matches(label_item: str, pred_name: str) -> bool:
     return False
 
 
+def _candidate_rank(lbl: "LabelRow", item: ItemAssessment) -> tuple[int, float]:
+    """Grid match first, then the largest box."""
+    grid_match = 1 if lbl.grid and item.grid == lbl.grid else 0
+    box_area = (item.position.ymax - item.position.ymin) * (item.position.xmax - item.position.xmin)
+    return (grid_match, box_area)
+
+
 def match_labels_to_predictions(
     labels: list[LabelRow],
     predictions: list[ItemAssessment],
@@ -76,13 +83,7 @@ def match_labels_to_predictions(
         # Sort candidates:
         # 1. grid match (True first, so 1 before 0)
         # 2. box area (largest first)
-        def _sort_key(item_tuple: tuple[int, ItemAssessment]):
-            _, item = item_tuple
-            grid_match = 1 if lbl.grid and item.grid == lbl.grid else 0
-            box_area = (item.position.ymax - item.position.ymin) * (item.position.xmax - item.position.xmin)
-            return (grid_match, box_area)
-
-        candidates.sort(key=_sort_key, reverse=True)
+        candidates.sort(key=lambda c, lbl=lbl: _candidate_rank(lbl, c[1]), reverse=True)
         best_idx, best_pred = candidates[0]
         used_pred_indices.add(best_idx)
         matched.append((lbl, best_pred))

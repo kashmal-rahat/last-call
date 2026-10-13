@@ -256,7 +256,6 @@ async def check_profiles_flow(
     cost_raw1 = calculate_cost(usage1)
 
     # 2. Raw run 2
-    t1 = time.monotonic()
     deadline2 = time.monotonic() + 45.0
     out2, usage2, attempts2, _ = await call_structured(
         client=client,
@@ -266,7 +265,6 @@ async def check_profiles_flow(
         deadline=deadline2,
         label="ProduceProfiles_Raw2",
     )
-    lat_raw2 = int((time.monotonic() - t1) * 1000)
     cost_raw2 = calculate_cost(usage2)
 
     # 3. Compare raw runs

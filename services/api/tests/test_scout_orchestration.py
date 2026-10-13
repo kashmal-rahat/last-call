@@ -3,6 +3,7 @@
 import json
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
@@ -35,8 +36,6 @@ def make_branch(branch_id: str = "johar_town", name: str = "Johar Town") -> Bran
         geo=GeoPoint(lat=31.4697, lng=74.2728),
     )
 
-
-from pathlib import Path
 
 DEMO_MART_PATH = Path(__file__).resolve().parents[3] / "shared/lastcall_shared/marts/demo_mart.json"
 
@@ -632,6 +631,7 @@ async def test_run_scout_structured_logging_never_logs_phones_or_raw_names(monke
         )
 
     log_text = " ".join(record.message for record in caplog.records)
+    assert "7654321" not in log_text and raw_name not in log_text
     for record in caplog.records:
         # Check formatted output if structured json logging is used
         if hasattr(record, "__dict__"):

@@ -1,6 +1,7 @@
 """Unit tests for Scout filtering, ranking, and reason construction (D50, D52, Step 5)."""
 
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -24,7 +25,6 @@ from lastcall_shared.models import (
 
 SECRET = "test-secret-at-least-32-chars-long-12345"
 CENTER = GeoPoint(lat=31.448133, lng=74.270334)  # Johar Town
-from pathlib import Path
 
 DEMO_MART_PATH = Path(__file__).resolve().parents[3] / "shared/lastcall_shared/marts/demo_mart.json"
 RULES = MartRules.model_validate_json(DEMO_MART_PATH.read_text())

@@ -89,7 +89,6 @@ def assign_keys(
     """
     # Find candidate matches between drafts and previous items
     matches: dict[int, ItemAssessment] = {}  # draft_idx -> previous_item
-    used_prev_keys: set[str] = set()
 
     if previous and previous.items:
         candidates = []

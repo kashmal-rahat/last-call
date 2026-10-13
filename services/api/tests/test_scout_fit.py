@@ -1,6 +1,7 @@
 """Unit tests for Gemini fit screening (D46, Step 6)."""
 
 import json
+import logging
 from unittest.mock import MagicMock
 
 import pytest
@@ -173,9 +174,6 @@ async def test_screen_fit_unknown_and_duplicate_refs_ignored(monkeypatch):
 
     assert len(result_fits) == 1
     assert result_fits["p1"] == ("likely", "First valid")
-
-
-import logging
 
 
 @pytest.mark.asyncio

@@ -163,7 +163,7 @@ async def test_decide_inspection_end_to_end_and_consistency_guarantee():
     assert res2.meta.profiles_generated == 0
     # Decisions are completely identical
     assert len(res2.decisions) == len(res1.decisions)
-    for d1, d2 in zip(res1.decisions, res2.decisions):
+    for d1, d2 in zip(res1.decisions, res2.decisions, strict=True):
         assert d1.step == d2.step
         assert d1.discount_pct == d2.discount_pct
         assert d1.discounted_price == d2.discounted_price

@@ -478,7 +478,6 @@ async def test_no_hedge_when_less_than_3s_left(monkeypatch):
 
     fake_client = FakeClient()
     img_bytes = _make_dummy_image()
-    now = datetime(2026, 10, 9, 12, 0, 0, tzinfo=timezone.utc)
 
     # Call _call directly with per_attempt_timeout = 1.0s (less than 3s left after 0.05s hedge delay: 0.95s < 3.0s)
     output, usage, attempts, was_hedged = await insp_mod._call(

@@ -181,14 +181,14 @@ def decide_item(
     discount_pct: int | None = None
     reason: str
 
-    O = rules.overnight_hours
-    W = rules.discount_window_hours
+    overnight_h = rules.overnight_hours
+    window_h = rules.discount_window_hours
 
     ref_date = datetime(2026, 10, 10)
     close_dt = datetime.combine(ref_date, rules.closing_time)
     open_str = rules.opening_time.strftime("%H:%M")
     close_str = rules.closing_time.strftime("%H:%M")
-    window_start_dt = close_dt - timedelta(hours=W)
+    window_start_dt = close_dt - timedelta(hours=window_h)
     window_start_str = window_start_dt.strftime("%H:%M")
 
     photo_dt = close_dt - timedelta(hours=H)
@@ -205,10 +205,10 @@ def decide_item(
     # Step 4 v2 (D44) decision branches
     if item.stage in ("fresh", "ripening"):
         recheck_next_photo = True
-        if life >= H + O:
+        if life >= H + overnight_h:
             chosen_step = "keep"
             reason = f"{item.name.capitalize()}, {item.stage}: sells until {sells_until_str}; still fine at tomorrow's {open_str} opening → keep"
-        elif H > W:
+        elif H > window_h:
             chosen_step = "keep"
             reason = f"{item.name.capitalize()}, {item.stage}: sells until {sells_until_str}; discount decided in the evening window from {window_start_str} → keep for now"
         else:
@@ -217,7 +217,9 @@ def decide_item(
                 discount_pct = rules.max_discount_pct
                 reason = f"{item.name.capitalize()}, {item.stage}: sells until {sells_until_str}; stops selling before {close_str} closing → {discount_pct}% off"
             else:
-                raw_pct = rules.min_discount_pct + (rules.max_discount_pct - rules.min_discount_pct) * (1.0 - H / W)
+                raw_pct = rules.min_discount_pct + (rules.max_discount_pct - rules.min_discount_pct) * (
+                    1.0 - H / window_h
+                )
                 discount_pct = round_to(raw_pct, 5)
                 discount_pct = max(rules.min_discount_pct, min(rules.max_discount_pct, discount_pct))
                 reason = f"{item.name.capitalize()}, {item.stage} ({item.stage_level}): about {life:.0f} h of selling left, sells until {sells_until_str}; closes {close_str}, not fine at tomorrow's {open_str} opening → {discount_pct}% off"

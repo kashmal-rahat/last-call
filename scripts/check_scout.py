@@ -239,7 +239,7 @@ async def main() -> None:
         "|---|---|---|---|---|---|---|---|---|",
     ]
 
-    for run_name, r, elapsed_s in results:
+    for run_name, r, _elapsed_s in results:
         md.append(
             f"| {sanitize_table_text(run_name)} | {r.step} ({', '.join(r.buyer_types)}) | {r.branch_name} | "
             f"{r.meta.places_requests} | {r.meta.places_results} | {len(r.buyers)} | {r.meta.latency_ms} ms | "
@@ -248,7 +248,7 @@ async def main() -> None:
 
     md.extend(["", "---", ""])
 
-    for run_name, r, elapsed_s in results:
+    for run_name, r, _elapsed_s in results:
         md.extend(
             [
                 f"## {run_name}",

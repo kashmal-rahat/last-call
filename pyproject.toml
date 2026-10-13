@@ -42,6 +42,8 @@ extend-exclude = ["design", "data", "plans", "docs"]
 [tool.ruff.lint]
 # Real errors (F), style basics (E, W), import order (I) and likely bugs (B). No taste rules.
 select = ["E", "F", "W", "I", "B"]
+# Line length is owned by `ruff format`; it leaves long strings (prompts, tool docs) intact on purpose.
+ignore = ["E501"]
 
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI's parameter markers are meant to be called in defaults.
@@ -50,6 +52,8 @@ extend-immutable-calls = ["fastapi.File", "fastapi.Form", "fastapi.Header", "fas
 [tool.ruff.lint.per-file-ignores]
 # Scripts set environment variables before importing the services they drive.
 "scripts/*" = ["E402"]
+# Markdown report template: trailing double spaces are line breaks.
+"scripts/probe_live_3_8.py" = ["W291"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["lastcall_shared", "lastcall_api", "lastcall_voice"]

@@ -502,6 +502,7 @@ async def test_fresh_state_in_price_guard_c1():
     c2_price = ans2["price_per_unit"]
 
     assert ctx.negotiation is not None
+    assert c1_price in ctx.negotiation.approved_prices
     assert c2_price in ctx.negotiation.approved_prices
 
     agent_text = f"Main Rs {c2_price} mein de sakta hoon"

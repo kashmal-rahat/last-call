@@ -110,8 +110,8 @@ async def run_evaluation(
 
         # Group labels by filename
         files_map: dict[str, list[LabelRow]] = {}
-        for l in labels:
-            files_map.setdefault(l.filename, []).append(l)
+        for row in labels:
+            files_map.setdefault(row.filename, []).append(row)
 
         # Identify series vs single photos
         series_groups: dict[str, list[str]] = {}
@@ -125,7 +125,7 @@ async def run_evaluation(
                 single_files.append(fname)
 
         # Sort series files by seq
-        for s_id, s_files in series_groups.items():
+        for _s_id, s_files in series_groups.items():
             s_files.sort(key=lambda fn: files_map[fn][0].seq or 0)
 
         sem = asyncio.Semaphore(concurrency)
@@ -136,7 +136,15 @@ async def run_evaluation(
         results_by_run: dict[tuple[str, int], FreshnessResult | None] = {}
         errors_by_run: dict[tuple[str, int], str] = {}
 
-        async def inspect_single(fname: str, run_idx: int, prev: FreshnessResult | None):
+        async def inspect_single(
+            fname: str,
+            run_idx: int,
+            prev: FreshnessResult | None,
+            *,
+            deadline: float = deadline,
+            sem: asyncio.Semaphore = sem,
+            zoom_flag: bool = zoom_flag,
+        ):
             if time.monotonic() > deadline:
                 return fname, run_idx, None, "Timeout: run deadline exceeded"
             img_path = photos_dir / fname
@@ -182,7 +190,7 @@ async def run_evaluation(
 
         # Execute series photos in seq order
         for run_i in range(runs):
-            for s_id, s_files in series_groups.items():
+            for _s_id, s_files in series_groups.items():
                 prev_res = None
                 for fname in s_files:
                     _, _, cur_res, err = await inspect_single(fname, run_i, prev_res)
@@ -236,10 +244,10 @@ async def run_evaluation(
             matches = match_labels_to_predictions(lbl_list, items)
             run0_matches.extend(matches)
 
-            for l in lbl_list:
-                if l.photo_kind != "normal":
+            for row in lbl_list:
+                if row.photo_kind != "normal":
                     edge_total_count += 1
-                    if res and check_edge_photo(l.photo_kind, res):
+                    if res and check_edge_photo(row.photo_kind, res):
                         edge_pass_count += 1
 
         strict_acc = calculate_strict_stage_accuracy(run0_matches)
@@ -329,7 +337,7 @@ async def run_evaluation(
         # Time-lapse monotonicity check
         series_violations = 0
         max_score_rise = 0.0
-        for s_id, s_files in series_groups.items():
+        for _s_id, s_files in series_groups.items():
             prev_shelf_score = None
             for fname in s_files:
                 if fname in errored_photos_run0:
@@ -452,7 +460,7 @@ async def run_evaluation(
             r_off = off_res.get((fname, 0))
             r_on = on_res.get((fname, 0))
             if r_off and r_on:
-                for it_off, it_on in zip(r_off.items, r_on.items):
+                for it_off, it_on in zip(r_off.items, r_on.items, strict=False):
                     if (it_off.stage != it_on.stage) or (it_off.worst_stage != it_on.worst_stage):
                         zoom_stage_changes += 1
     if "zoom_on" in all_mode_results:

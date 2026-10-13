@@ -154,8 +154,8 @@ def generate_report(
     if total_unapproved > 0:
         lines.append("### Unapproved Price Quotes")
         for r in part_a_results:
-            for l in r.get("unapproved_lines", []):
-                lines.append(f'- `[{r["scenario"]}]`: "{l}"')
+            for unapproved in r.get("unapproved_lines", []):
+                lines.append(f'- `[{r["scenario"]}]`: "{unapproved}"')
         lines.append("")
 
     lines.extend(

@@ -31,6 +31,8 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 os.environ.setdefault("APP_SIGNING_KEY", "default-app-signing-key-for-offline-scripts-32chars")
+from lastcall_shared.config import get_settings  # noqa: E402  (needs the env default above)
+
 settings = get_settings()
 # Set Vertex AI environment variables before importing ADK / GenAI
 os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
@@ -132,7 +134,7 @@ Rubric:
 Answer in strictly valid JSON format:
 {{"pass": true or false, "reason": "brief 1-sentence rationale"}}
 """
-    for attempt, delay in enumerate(BACKOFF_DELAYS):
+    for delay in BACKOFF_DELAYS:
         try:
             resp = await client.aio.models.generate_content(
                 model=model,

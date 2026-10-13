@@ -150,7 +150,6 @@ def test_hours_until_closing():
     assert hours_until_closing(rules, NOW, override=4.5) == 4.5
 
     # Fixed time in PKT: 20:00 PKT with closing 23:00 -> 3.0 hours
-    dt = datetime(2026, 10, 10, 20, 0, 0, tzinfo=timezone.utc)
     from zoneinfo import ZoneInfo
 
     tz = ZoneInfo("Asia/Karachi")

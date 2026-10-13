@@ -505,18 +505,6 @@ def test_next_action_table_driven(demo_rules):
     assert act_no_buyer.kind == "no_buyer"
 
     # m1 (a): 5 completed calls in current step with buyers still on the list -> next_step
-    candidate6 = ScoutCandidate(
-        rank=6,
-        buyer_id="places:b6",
-        place_id="b6",
-        name="Buyer 6",
-        buyer_type="juice_shop",
-        phone="+923006666666",
-        distance_km=3.0,
-        open_now=True,
-        fit="likely",
-        reason="Nearby",
-    )
     scout_with_remaining = scout_bulk.model_copy(
         update={
             "buyers": [

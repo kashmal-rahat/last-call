@@ -133,7 +133,9 @@ def build_router(
             twiml = build_twiml(stream_url(), body.token)
         except TwilioError as exc:
             logger.error("phone_demo_not_configured", extra={"error": str(exc)})
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Phone demo is not configured")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Phone demo is not configured"
+            ) from exc
 
         try:
             await get_dialer()(config, twiml)
@@ -142,7 +144,7 @@ def build_router(
             logger.error("phone_demo_dial_failed", extra={"call_id": body.call_id, "error": reason})
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY, detail="Could not ring the phone, please try again"
-            )
+            ) from exc
 
         await store.add_flag(body.call_id, "phone_demo")
         logger.info("phone_demo_dialed", extra={"call_id": body.call_id})

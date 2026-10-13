@@ -129,7 +129,7 @@ def build_router(
         try:
             jpeg = await asyncio.to_thread(crop_item, shelf_jpeg, item.position)
         except ImageError:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo not available")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo not available") from None
         return Response(content=jpeg, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=3600"})
 
     return router

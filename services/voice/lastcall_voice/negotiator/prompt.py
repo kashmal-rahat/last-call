@@ -128,7 +128,6 @@ CITY_STYLES: dict[str, str] = {
 
 
 def generate_pitch(view: AgentDealBrief) -> str:
-    u = unit_words(view.quantity_unit)
     q = quantity_words(view.quantity, view.quantity_unit, view.quantity_confirmed_by_staff)
     if view.deal_type == "donation":
         return f"Humare paas {q} {view.item} hain jo abhi theek hain, aap ke idaare ke liye bilkul free dene ko tayyar hain."

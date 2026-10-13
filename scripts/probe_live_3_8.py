@@ -349,7 +349,7 @@ async def probe_input_audio_and_latency(wav_path: Path) -> dict[str, Any]:
         t_end_speech = 0.0
         t_first_out = 0.0
 
-        async def collect_latency():
+        async def collect_latency(session_id=session_id, queue=queue, run_config=run_config):
             nonlocal t_first_out
             async for event in runner.run_live(
                 session_id=session_id, user_id="probe_user", live_request_queue=queue, run_config=run_config

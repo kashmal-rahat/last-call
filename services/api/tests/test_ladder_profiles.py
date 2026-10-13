@@ -378,7 +378,7 @@ async def test_resolve_profiles_race_condition_reads_back_stored(monkeypatch):
         note="Winner banana from concurrent writer",
         fresh=sp,
         ripening=sp,
-        overripe=over_sp if "over_sp" in locals() else sp,
+        overripe=sp,
         spoiled_ok_for_cattle=False,
         overripe_ok_for_cattle=True,
         source="gemini",

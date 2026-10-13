@@ -312,7 +312,9 @@ async def demo_create_call(
     try:
         branch = rules.branch(body.branch_id.strip() if body.branch_id else None)
     except KeyError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown branch_id '{body.branch_id}'")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown branch_id '{body.branch_id}'"
+        ) from None
 
     batch_id = f"{body.inspection_id.strip()}__{body.item_key.strip()}__{branch.branch_id}"
 
@@ -323,9 +325,9 @@ async def demo_create_call(
         try:
             plans, then_compost = build_step_plans(decision, rules)
         except ScoutNotApplicable:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This item stays in store")
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This item stays in store") from None
         except NeedsPrice:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Enter the shelf price first")
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Enter the shelf price first") from None
 
         if decision.on_hold and not body.staff_checked:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Waiting for staff check")
@@ -642,13 +644,13 @@ async def demo_inspect(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Not a readable image",
-        )
+        ) from None
     except InspectorError as exc:
         logger.error("inspector_call_failed", extra={"error": str(exc)})
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Inspection failed, please try again",
-        )
+        ) from exc
 
     # 9. Keep the shelf photo for item photos (D62, best effort), then save and return the result
     if await save_shelf_photo(_get_photo_store(), result.inspection_id, contents):
@@ -756,7 +758,7 @@ async def demo_decide(
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Decision failed",
-        )
+        ) from exc
 
     # 6. Save decisions and return
     await store.save_decisions(ladder_result)
@@ -866,7 +868,7 @@ async def demo_scout(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Buyer search isn't set up for this mart",
-        )
+        ) from None
 
     batch_id = f"{body.inspection_id}__{body.item_key}__{branch.branch_id}"
     batch = await store.get_batch(batch_id)
@@ -887,7 +889,7 @@ async def demo_scout(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="This item stays in store; no buyers needed",
-            )
+            ) from None
 
     # 6. Reuse within 1h (freshness check)
     key = f"{body.inspection_id}__{body.item_key}__{branch.branch_id}"
@@ -925,18 +927,18 @@ async def demo_scout(
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Daily buyer-search limit reached",
-        )
+        ) from None
     except ScoutNotApplicable:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="This item stays in store; no buyers needed",
-        )
+        ) from None
     except Exception as exc:
         logger.error("scout_failed", extra={"error_class": exc.__class__.__name__})
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Buyer search failed, please try again",
-        )
+        ) from exc
 
     # 8. Return public view (run_scout already saved to store)
     return scout_result.public_view()
