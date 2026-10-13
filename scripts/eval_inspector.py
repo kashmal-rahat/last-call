@@ -8,21 +8,20 @@ and outputs results to data/inspector_runs/<timestamp>.jsonl and plans/module-1/
 import argparse
 import asyncio
 import csv
-from datetime import datetime, timezone
 import json
-import math
-from pathlib import Path
 import statistics
 import sys
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 
 REPO_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_DIR / "shared"))
 sys.path.insert(0, str(REPO_DIR / "services/api"))
 
 from lastcall_api.inspector.eval_metrics import (
-    LabelRow,
     STAGES,
+    LabelRow,
     calculate_confusion_matrix,
     calculate_consistency,
     calculate_lenient_stage_accuracy,

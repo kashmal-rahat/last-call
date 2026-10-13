@@ -1,19 +1,16 @@
 """Tests for shared gemini_call.call_structured helper."""
 
 import asyncio
-from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import MagicMock
+
 import pytest
 from google.genai import errors, types
 from pydantic import BaseModel
 
 from lastcall_api.gemini_call import (
-    CallUsage,
     GeminiCallError,
-    _is_retryable_error,
     call_structured,
-    get_genai_client,
 )
 
 

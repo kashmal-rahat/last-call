@@ -2,13 +2,13 @@
 
 import asyncio
 import io
-import os
 import sys
 import time
-from PIL import Image
-from pydantic import BaseModel
+
 from google import genai
 from google.genai import types
+from PIL import Image
+from pydantic import BaseModel
 
 from lastcall_shared.config import get_settings
 
@@ -86,7 +86,7 @@ async def smoke_live() -> bool:
 
 
 async def main():
-    print(f"=== Last Call Gemini Smoke Verification ===")
+    print("=== Last Call Gemini Smoke Verification ===")
     print(f"Project: {PROJECT_ID}")
     try:
         await smoke_flash()

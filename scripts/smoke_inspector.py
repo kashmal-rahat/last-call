@@ -9,10 +9,10 @@ Writes smoke verification results to plans/module-1/results/smoke.md.
 
 import argparse
 import asyncio
-from datetime import datetime, timezone
 import io
-from pathlib import Path
 import sys
+from datetime import datetime, timezone
+from pathlib import Path
 
 from PIL import Image, ImageDraw
 
@@ -22,7 +22,7 @@ sys.path.insert(0, str(REPO_DIR / "services/api"))
 
 from lastcall_api.inspector.images import crop_group, prepare_image
 from lastcall_api.inspector.inspector import THINKING_LEVEL, estimate_cost, inspect_photo
-from lastcall_shared.models import FreshnessResult, ItemAssessment
+from lastcall_shared.models import ItemAssessment
 
 
 def draw_bounding_boxes(

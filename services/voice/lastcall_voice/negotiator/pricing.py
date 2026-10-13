@@ -1,8 +1,10 @@
 """Pricing and offer evaluation pure logic for Module 2 Negotiator."""
 
 from typing import Annotated, Literal
+
 from pydantic import BaseModel, Field
-from lastcall_shared.models import DealType, NegotiationPolicy, NegotiationState, Unit, build_ladder
+
+from lastcall_shared.models import DealType, NegotiationPolicy, NegotiationState, Unit
 
 
 class OfferDecision(BaseModel):

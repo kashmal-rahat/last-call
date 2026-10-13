@@ -1,10 +1,10 @@
 """Unit tests for scripts/produce_profiles.py (Step 7)."""
 
 import json
-from pathlib import Path
+
 import pytest
 
-from lastcall_api.ladder.profiles import PROFILE_PROMPT_VERSION, ProfileOut, ProfilesOut
+from lastcall_api.ladder.profiles import PROFILE_PROMPT_VERSION
 from lastcall_shared.models import ProduceProfile, StageProfile
 from lastcall_shared.store import InMemoryStore
 from scripts.produce_profiles import cmd_delete, cmd_set, cmd_show, cmd_warm

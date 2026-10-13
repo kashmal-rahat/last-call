@@ -1,6 +1,5 @@
 """Unit tests for zoom selection and merging (Step 4, D29)."""
 
-import pytest
 
 from lastcall_api.inspector.schema import DetectedItem, InspectorOutput, ObservedOut
 from lastcall_api.inspector.zoom import merge_zoom, select_for_zoom

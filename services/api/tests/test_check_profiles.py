@@ -1,10 +1,10 @@
 """Unit tests for scripts/check_profiles.py."""
 
-import asyncio
-from pathlib import Path
 from unittest.mock import MagicMock
+
 import pytest
 
+from lastcall_api.gemini_call import CallUsage
 from lastcall_api.ladder.profiles import ProfileOut, ProfilesOut
 from lastcall_shared.models import StageProfile
 from scripts.check_profiles import (
@@ -12,7 +12,6 @@ from scripts.check_profiles import (
     check_profiles_flow,
     compare_profiles,
 )
-from lastcall_api.gemini_call import CallUsage
 
 
 class FakeResponse:

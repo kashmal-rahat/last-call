@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import datetime, timezone
+
 from google.cloud import firestore
 
 from lastcall_shared.config import get_settings

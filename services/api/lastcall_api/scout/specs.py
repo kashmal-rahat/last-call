@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from typing import Literal
+
 from lastcall_shared.models import BuyerType
 
 # Enterprise SKU constant field mask (Pro + Enterprise fields only, NO Atmosphere fields).

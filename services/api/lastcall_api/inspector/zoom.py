@@ -1,10 +1,9 @@
 """Pass-2 zoom selection and reading merger (Module 1, D29)."""
 
-from typing import Any
 from lastcall_api.inspector.guardrails import STAGE_ORDER
 from lastcall_api.inspector.matching import names_match
 from lastcall_api.inspector.schema import DetectedItem, InspectorOutput
-from lastcall_shared.models import ConfidenceLevel, ProduceIssue, ProduceStage, StaffCheckReason
+from lastcall_shared.models import ConfidenceLevel, ProduceStage, StaffCheckReason
 
 _DOUBT_ISSUES = {"mould", "slime", "rot", "leaking", "pest_damage"}
 MAX_ZOOM_BOX_AREA = 0.40

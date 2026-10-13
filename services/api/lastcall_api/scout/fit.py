@@ -1,18 +1,18 @@
 """Gemini fit screening for Scout candidates (D46, Step 6)."""
 
 import json
-from pathlib import Path
 import time
+from pathlib import Path
 from typing import Any
 
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
+from lastcall_api.gemini_call import call_structured, get_genai_client
+from lastcall_api.scout.rank import FilteredCandidate
 from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.models import BuyerFit, ScoutStep, UsageRecord
-from lastcall_api.gemini_call import CallUsage, GeminiCallError, call_structured, get_genai_client
-from lastcall_api.scout.rank import FilteredCandidate
 
 logger = setup_structured_logging(service_name="scout_fit")
 

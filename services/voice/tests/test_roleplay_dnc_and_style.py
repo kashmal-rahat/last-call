@@ -1,17 +1,16 @@
 """Tests for Module 6 Step 5: role-play do-not-call safety and city style."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
+
 import pytest
 
-from google.adk.tools.tool_context import ToolContext
-from lastcall_shared.models import BatchRecord, CallRecord
 from lastcall_shared.scenarios.loader import build_call
 from lastcall_shared.store import InMemoryStore
 from lastcall_voice.call_context import CallContext, register_context, unregister_context
 from lastcall_voice.negotiator.prompt import render_instruction
 from lastcall_voice.negotiator.tools import record_outcome
-from lastcall_voice.text_session import start_text_call, end_text_call, get_context
+from lastcall_voice.text_session import end_text_call, get_context, start_text_call
 
 PKT = ZoneInfo("Asia/Karachi")
 NOW = datetime(2026, 10, 11, 14, 0, 0, tzinfo=PKT)

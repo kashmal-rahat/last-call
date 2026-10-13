@@ -8,13 +8,13 @@ Tests exclusively the latest Gemini 3.8 models:
 import asyncio
 import io
 import os
-import sys
 import time
 from typing import Any
-from PIL import Image
-from pydantic import BaseModel
+
 from google import genai
 from google.genai import types
+from PIL import Image
+from pydantic import BaseModel
 
 from lastcall_shared.config import get_settings
 

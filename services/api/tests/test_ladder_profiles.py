@@ -4,20 +4,15 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import MagicMock
-import pytest
-from google.genai import types
 
-from lastcall_api.gemini_call import CallUsage, GeminiCallError
+import pytest
+
 from lastcall_api.ladder.profiles import (
-    CATTLE_MIN_SHARE,
-    MIN_VOTES,
     PROFILE_PROMPT_VERSION,
-    PROFILE_VOTES,
     ProfileOut,
     ProfilesOut,
     build_profile_config,
     check_profile,
-    fallback_profile,
     merge_votes,
     produce_key,
     resolve_profiles,

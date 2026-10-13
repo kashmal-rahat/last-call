@@ -1,13 +1,15 @@
 """Tests for Negotiator text session lifecycle and agent setup."""
 
-import pytest
-from datetime import datetime, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
+
+import pytest
+
 from lastcall_shared.store import InMemoryStore
 from lastcall_voice.call_context import get_context
 from lastcall_voice.text_session import (
-    start_text_call,
     end_text_call,
+    start_text_call,
 )
 
 PKT = ZoneInfo("Asia/Karachi")

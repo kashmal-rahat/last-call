@@ -1,21 +1,18 @@
 """Text session runner for automated and simulated negotiation turns."""
 
-import os
 import re
-import uuid
 from datetime import datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
-from pydantic import AwareDatetime
 
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.adk.workflow._retry_config import RetryConfig
 from google.genai import types
+from pydantic import AwareDatetime
 
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import (
-    CallRecord,
     CallResult,
     TranscriptEntry,
 )
@@ -30,6 +27,8 @@ from lastcall_voice.call_context import (
 from lastcall_voice.negotiator.agent import build_negotiator
 from lastcall_voice.negotiator.price_guard import (
     classify as classify_price,
+)
+from lastcall_voice.negotiator.price_guard import (
     find_prices,
 )
 

@@ -1,25 +1,23 @@
 """Tests for Module 4 Scout domain models and MartRules branch/scout configuration."""
 
 import json
-from datetime import datetime, timezone, time
+from datetime import datetime, time, timezone
+
 import pytest
 from pydantic import ValidationError
 
+from lastcall_shared.buyer_keys import mask_phone, phone_key
+from lastcall_shared.marts.loader import load_mart_rules
 from lastcall_shared.models import (
     Branch,
-    BuyerHistory,
     BuyerInfo,
     GeoPoint,
     MartInfo,
     MartRules,
-    PriceEntry,
     ScoutCandidate,
-    ScreenedOut,
     ScoutMeta,
     ScoutResult,
 )
-from lastcall_shared.buyer_keys import mask_phone, phone_key
-from lastcall_shared.marts.loader import load_mart_rules
 
 
 def test_geopoint_validation():

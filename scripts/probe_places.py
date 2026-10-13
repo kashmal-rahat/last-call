@@ -11,20 +11,20 @@ and writes plans/module-4/results/probe.md (NEVER raw phone numbers).
 """
 
 import asyncio
-from datetime import datetime, timezone
 import json
 import math
-from pathlib import Path
 import sys
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 
 REPO_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_DIR / "shared"))
 sys.path.insert(0, str(REPO_DIR / "services/api"))
 
+from lastcall_api.scout.places import PlaceRaw, PlacesClient, PlacesError
+from lastcall_api.scout.specs import SEARCH_SPECS, SearchSpec
 from lastcall_shared.models import GeoPoint, MartRules
-from lastcall_api.scout.places import PlacesClient, PlaceRaw, PlacesError
-from lastcall_api.scout.specs import FIELD_MASK, SEARCH_SPECS, SearchSpec
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:

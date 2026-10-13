@@ -9,11 +9,11 @@ Commands:
 
 import argparse
 import asyncio
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import sys
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 
 from lastcall_api.ladder.keys import produce_key
 from lastcall_api.ladder.profiles import (
@@ -22,7 +22,7 @@ from lastcall_api.ladder.profiles import (
     resolve_profiles,
 )
 from lastcall_shared.firestore_store import FirestoreStore
-from lastcall_shared.models import ProduceProfile, StageProfile
+from lastcall_shared.models import ProduceProfile
 
 
 def get_store() -> FirestoreStore:

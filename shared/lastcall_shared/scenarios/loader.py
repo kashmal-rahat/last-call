@@ -6,6 +6,7 @@ from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
+
 from pydantic import AwareDatetime
 
 from lastcall_shared.models import (

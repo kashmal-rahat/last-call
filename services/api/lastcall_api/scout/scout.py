@@ -1,15 +1,18 @@
 """Scout orchestration: parallel Places searches, filtering, fit screening, ranking, and storage (D46, D48, D50, D52, Step 8)."""
 
 import asyncio
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-import logging
-import time
 from typing import Any, Awaitable, Callable
 from zoneinfo import ZoneInfo
 
 import httpx
 
+from lastcall_api.scout.fit import screen_fit
+from lastcall_api.scout.places import PlaceRaw, PlacesClient
+from lastcall_api.scout.rank import apply_filters, normalise_phone, rank
+from lastcall_api.scout.specs import SEARCH_SPECS
 from lastcall_shared.buyer_keys import phone_key
 from lastcall_shared.config import get_settings
 from lastcall_shared.logging_utils import setup_structured_logging
@@ -18,18 +21,11 @@ from lastcall_shared.models import (
     BuyerType,
     LadderDecision,
     MartRules,
-    ScoutCandidate,
     ScoutMeta,
     ScoutResult,
     ScoutStep,
-    ScreenedOut,
-    SkipReason,
 )
 from lastcall_shared.store import CallStore
-from lastcall_api.scout.fit import screen_fit
-from lastcall_api.scout.places import PlaceRaw, PlacesClient, PlacesError
-from lastcall_api.scout.rank import apply_filters, normalise_phone, rank
-from lastcall_api.scout.specs import SEARCH_SPECS
 
 logger = setup_structured_logging(service_name="scout")
 

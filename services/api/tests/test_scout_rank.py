@@ -2,15 +2,9 @@
 
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
+
 import pytest
 
-from lastcall_shared.models import (
-    BuyerHistory,
-    GeoPoint,
-    MartRules,
-    ScoutCandidate,
-    ScreenedOut,
-)
 from lastcall_api.scout.places import PlaceRaw
 from lastcall_api.scout.rank import (
     MAX_FIT_CANDIDATES,
@@ -21,6 +15,11 @@ from lastcall_api.scout.rank import (
     normalise_phone,
     rank,
     sanitise_name,
+)
+from lastcall_shared.models import (
+    BuyerHistory,
+    GeoPoint,
+    MartRules,
 )
 
 SECRET = "test-secret-at-least-32-chars-long-12345"

@@ -1,24 +1,23 @@
 """Tests for Module 1 follow-up F1: inspector reading cache (D45)."""
 
-import io
 import inspect
+import io
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
+
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
 from lastcall_api.inspector.inspector import (
-    READING_CACHE_VERSION,
-    build_config,
     inspect_photo,
     reading_key,
 )
 from lastcall_api.inspector.prompt import PROMPT_VERSION
 from lastcall_api.inspector.schema import DetectedItem, InspectorOutput, ObservedOut
-from lastcall_api.main import app, _IP_REQUEST_HISTORY
+from lastcall_api.main import _IP_REQUEST_HISTORY, app
 from lastcall_shared.config import get_settings
-from lastcall_shared.models import FreshnessResult, ItemAssessment
+from lastcall_shared.models import FreshnessResult
 from lastcall_shared.store import InMemoryStore
 
 KEY = "test-signing-key-12345-at-least-32-chars-long"

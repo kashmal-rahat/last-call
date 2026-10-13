@@ -1,29 +1,30 @@
 """Firestore-backed CallStore implementation using AsyncClient and async transactions (Milestone 2B Step 9)."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
-from pydantic import AwareDatetime
-from google.cloud import firestore
+
 from google.api_core.exceptions import AlreadyExists, NotFound
+from google.cloud import firestore
+from pydantic import AwareDatetime
 
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import (
     BatchAttempt,
     BatchRecord,
+    BuyerHistory,
+    CallOutcome,
     CallRecord,
     CallResult,
     DealRecord,
     FreshnessResult,
+    LadderResult,
     NegotiationState,
     OutboxMessage,
+    ProduceProfile,
+    ScoutResult,
     StaffTask,
     TranscriptEntry,
-    ProduceProfile,
-    LadderResult,
-    BuyerHistory,
-    CallOutcome,
-    ScoutResult,
     Unit,
 )
 

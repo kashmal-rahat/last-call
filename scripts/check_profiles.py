@@ -6,13 +6,11 @@ measures variation, evaluates Step 4 worked examples, and presents a sense-check
 
 import argparse
 import asyncio
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
-
-from google.genai import types
 
 from lastcall_api.gemini_call import CallUsage, call_structured, get_genai_client
 from lastcall_api.ladder.engine import decide_item

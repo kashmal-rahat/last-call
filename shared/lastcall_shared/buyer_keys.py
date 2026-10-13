@@ -3,8 +3,9 @@
 Note: Rotating APP_SIGNING_KEY orphans phone-based do-not-call entries.
 """
 
-import hmac
 import hashlib
+import hmac
+
 from pydantic import SecretStr
 
 

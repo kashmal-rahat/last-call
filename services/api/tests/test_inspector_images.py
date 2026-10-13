@@ -1,8 +1,9 @@
 """Tests for image preparation and crop functions (Step 4)."""
 
 import io
+
 import pytest
-from PIL import Image, ImageDraw
+from PIL import Image
 
 from lastcall_api.inspector.images import crop_group, prepare_image
 

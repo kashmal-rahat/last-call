@@ -2,7 +2,9 @@
 
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Literal
+
 from pydantic import AwareDatetime
+
 from lastcall_shared.models import NegotiationState
 from lastcall_shared.store import CallStore
 

@@ -1,14 +1,14 @@
 """Tests for POST /demo/inspect and GET /demo/samples endpoints (Milestone 1B Step 9)."""
 
-import io
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
 import pytest
 from fastapi.testclient import TestClient
 
 from lastcall_api.inspector.images import ImageError
 from lastcall_api.inspector.inspector import InspectorError
-from lastcall_api.main import app, _IP_REQUEST_HISTORY
+from lastcall_api.main import _IP_REQUEST_HISTORY, app
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import (
     BoundingBox,
@@ -304,6 +304,7 @@ def test_post_demo_inspect_inspector_error():
 @pytest.mark.asyncio
 async def test_post_demo_inspect_concurrency_semaphore():
     import asyncio
+
     from httpx import ASGITransport, AsyncClient
 
     current_concurrent = 0

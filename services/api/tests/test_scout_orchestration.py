@@ -1,24 +1,11 @@
 """Unit tests for Scout orchestration (D46, D48, D50, D52, Step 8)."""
 
-import asyncio
-from datetime import datetime, timezone
 import json
 import logging
-from unittest.mock import AsyncMock, MagicMock
+from datetime import datetime, timezone
+
 import pytest
 
-from lastcall_shared.buyer_keys import phone_key
-from lastcall_shared.config import get_settings
-from lastcall_shared.models import (
-    Branch,
-    BuyerHistory,
-    BuyerType,
-    GeoPoint,
-    LadderDecision,
-    MartRules,
-    ScoutResult,
-)
-from lastcall_shared.store import InMemoryStore
 from lastcall_api.gemini_call import CallUsage, GeminiCallError
 from lastcall_api.scout.fit import FitOut, FitsOut
 from lastcall_api.scout.places import PlaceRaw, PlacesError
@@ -29,7 +16,15 @@ from lastcall_api.scout.scout import (
     ScoutTarget,
     run_scout,
 )
-from lastcall_api.scout.specs import SEARCH_SPECS
+from lastcall_shared.buyer_keys import phone_key
+from lastcall_shared.config import get_settings
+from lastcall_shared.models import (
+    Branch,
+    GeoPoint,
+    LadderDecision,
+    MartRules,
+)
+from lastcall_shared.store import InMemoryStore
 
 
 def make_branch(branch_id: str = "johar_town", name: str = "Johar Town") -> Branch:

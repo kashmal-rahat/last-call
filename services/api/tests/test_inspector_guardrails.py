@@ -1,6 +1,7 @@
 """Unit tests for inspector guardrails (Step 4)."""
 
 import pytest
+
 from lastcall_api.inspector.guardrails import (
     CONFIDENCE_MAP,
     SCORE_TABLE,

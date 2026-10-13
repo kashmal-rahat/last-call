@@ -4,26 +4,23 @@ import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
+
 import pytest
 
+from lastcall_shared.firestore_store import FirestoreStore
 from lastcall_shared.models import (
     BatchAttempt,
     BatchRecord,
-    CallRecord,
-    CallResult,
     DealRecord,
     FreshnessResult,
     OutboxMessage,
-    StaffTask,
-    TranscriptEntry,
-    BuyerHistory,
     ScoutCandidate,
     ScoutMeta,
     ScoutResult,
+    StaffTask,
 )
-from lastcall_shared.scenarios.loader import build_call, list_scenarios, load_scenario
+from lastcall_shared.scenarios.loader import build_call, list_scenarios
 from lastcall_shared.store import InMemoryStore
-from lastcall_shared.firestore_store import FirestoreStore
 
 PKT = ZoneInfo("Asia/Karachi")
 NOW = datetime(2026, 10, 7, 14, 0, 0, tzinfo=PKT)
@@ -314,6 +311,7 @@ async def test_produce_profile_lifecycle(store):
 async def test_firestore_store_get_profiles_async_generator():
     """C1: FirestoreStore.get_profiles must iterate self.client.get_all(...) with async for, not await."""
     from unittest.mock import MagicMock
+
     from lastcall_shared.models import ProduceProfile, StageProfile
 
     sp = StageProfile(sellable_for="6_to_24h", juice_shop=True, restaurant=True, bakery=False, charity=True)

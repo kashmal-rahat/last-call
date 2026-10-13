@@ -1,6 +1,7 @@
 """Health endpoint tests for Last Call Voice service."""
 
 from fastapi.testclient import TestClient
+
 from lastcall_voice.main import app
 
 

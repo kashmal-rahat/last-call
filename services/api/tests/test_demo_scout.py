@@ -1,17 +1,15 @@
 """Tests for GET /demo/branches and POST /demo/scout endpoints (Step 9)."""
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 from zoneinfo import ZoneInfo
+
 import pytest
 from fastapi.testclient import TestClient
 
 from lastcall_api.main import app
-from lastcall_api.scout.scout import ScoutCapReached, ScoutFailed, ScoutNotApplicable, ScoutTarget
+from lastcall_api.scout.scout import ScoutCapReached, ScoutFailed, ScoutNotApplicable
 from lastcall_shared.models import (
-    Branch,
-    BuyerHistory,
-    GeoPoint,
     LadderDecision,
     LadderMeta,
     LadderResult,

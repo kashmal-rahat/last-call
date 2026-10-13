@@ -1,9 +1,8 @@
 """Produce profile resolution and storage using Gemini 3.8 Flash (Module 3)."""
 
 import asyncio
-from datetime import datetime, timezone
 import json
-import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -13,7 +12,6 @@ from pydantic import BaseModel
 
 from lastcall_api.gemini_call import (
     CallUsage,
-    GeminiCallError,
     call_structured,
     get_genai_client,
 )

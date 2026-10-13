@@ -7,11 +7,11 @@ Computes min, p50, p90, max and writes plans/module-1/results/latency.md.
 """
 
 import asyncio
-from datetime import datetime, timezone
 import math
-from pathlib import Path
 import sys
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 
 REPO_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_DIR / "shared"))

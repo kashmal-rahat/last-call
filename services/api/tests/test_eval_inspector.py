@@ -1,13 +1,12 @@
 """End-to-end unit test for eval runner using fake inspect function (Step 6)."""
 
-import asyncio
+import io
 from datetime import datetime, timezone
 from pathlib import Path
+
 import pytest
 from PIL import Image
-import io
 
-from scripts.eval_inspector import run_evaluation
 from lastcall_shared.models import (
     BoundingBox,
     FreshnessResult,
@@ -16,6 +15,7 @@ from lastcall_shared.models import (
     ObservedQuantity,
     QuantityEstimate,
 )
+from scripts.eval_inspector import run_evaluation
 
 
 def _make_photo_file(p: Path) -> None:

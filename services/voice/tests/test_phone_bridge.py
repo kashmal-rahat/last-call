@@ -16,7 +16,7 @@ from lastcall_shared.scenarios.loader import build_call
 from lastcall_shared.session_tokens import mint
 from lastcall_shared.store import InMemoryStore
 from lastcall_voice.main import app
-from lastcall_voice.phone.audio import InboundConverter, OutboundConverter, _DECODE, _ENCODE
+from lastcall_voice.phone.audio import _DECODE, _ENCODE, InboundConverter, OutboundConverter
 from lastcall_voice.phone.bridge import TwilioStreamAdapter
 
 PKT = ZoneInfo("Asia/Karachi")

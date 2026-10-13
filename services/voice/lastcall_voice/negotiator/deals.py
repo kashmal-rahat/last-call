@@ -1,7 +1,7 @@
 """Deal term validation and outcome resolution pure logic."""
 
-from typing import Any
 from pydantic import AwareDatetime
+
 from lastcall_shared.models import BatchRecord, DealBrief, NegotiationState
 
 

@@ -2,21 +2,21 @@
 
 import json
 import math
-import pytest
-import httpx
 
-from lastcall_shared.models import GeoPoint
-from lastcall_api.scout.specs import FIELD_MASK, ATMOSPHERE_FIELDS, SEARCH_SPECS
+import httpx
+import pytest
+
 from lastcall_api.scout.places import (
+    PLACES_SEARCH_NEARBY_URL,
+    PLACES_SEARCH_TEXT_URL,
     PlacesClient,
     PlacesError,
-    PlaceRaw,
     compute_bounding_rectangle,
     compute_circle_restriction,
     parse_place_raw,
-    PLACES_SEARCH_TEXT_URL,
-    PLACES_SEARCH_NEARBY_URL,
 )
+from lastcall_api.scout.specs import ATMOSPHERE_FIELDS, FIELD_MASK, SEARCH_SPECS
+from lastcall_shared.models import GeoPoint
 
 
 def test_field_mask_contains_no_atmosphere_fields():

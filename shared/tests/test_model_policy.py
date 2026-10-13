@@ -10,6 +10,7 @@ Rules:
 import re
 import subprocess
 from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -109,4 +110,4 @@ def test_scan_tracked_files_for_unapproved_models():
                 if m not in ALLOWED_MODELS:
                     violations.append(f"{rel_path}:{line_no}: Found forbidden model '{m}' in line: {line.strip()}")
 
-    assert not violations, f"Forbidden Gemini models detected in codebase:\n" + "\n".join(violations)
+    assert not violations, "Forbidden Gemini models detected in codebase:\n" + "\n".join(violations)

@@ -1,6 +1,7 @@
 """Tests for pure Ladder decision engine (Step 4)."""
 
-from datetime import datetime, time, timezone
+from datetime import datetime, timezone
+
 import pytest
 
 from lastcall_api.ladder.engine import (
@@ -13,7 +14,6 @@ from lastcall_shared.marts.loader import load_mart_rules
 from lastcall_shared.models import (
     BoundingBox,
     ItemAssessment,
-    MartRules,
     ObservedQuantity,
     ProduceProfile,
     QuantityEstimate,

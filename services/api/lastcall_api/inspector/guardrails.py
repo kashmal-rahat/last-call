@@ -2,6 +2,7 @@
 
 import math
 import re
+
 from pydantic import BaseModel, Field
 
 from lastcall_api.inspector.schema import DetectedItem, InspectorOutput

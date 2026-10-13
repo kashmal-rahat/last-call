@@ -12,12 +12,14 @@ ZERO phone numbers written!
 """
 
 import asyncio
-from datetime import datetime, timezone
-from pathlib import Path
 import sys
 import time
-from typing import Any
+from datetime import datetime, timezone
+from pathlib import Path
 
+from lastcall_api.gemini_call import get_genai_client
+from lastcall_api.ladder.engine import decide_item, find_price
+from lastcall_api.scout.scout import ScoutTarget, run_scout
 from lastcall_shared.models import (
     BoundingBox,
     ItemAssessment,
@@ -27,9 +29,6 @@ from lastcall_shared.models import (
     ScoutResult,
 )
 from lastcall_shared.store import InMemoryStore
-from lastcall_api.gemini_call import get_genai_client
-from lastcall_api.ladder.engine import decide_item, find_price
-from lastcall_api.scout.scout import ScoutTarget, run_scout
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RESULTS_FILE = REPO_ROOT / "plans/module-4/results/scout-check.md"

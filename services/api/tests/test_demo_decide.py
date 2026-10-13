@@ -1,6 +1,7 @@
 """Tests for POST /demo/decide endpoint (Step 8)."""
 
 from datetime import datetime, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 

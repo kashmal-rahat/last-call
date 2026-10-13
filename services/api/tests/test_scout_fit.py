@@ -1,18 +1,18 @@
 """Unit tests for Gemini fit screening (D46, Step 6)."""
 
 import json
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
+
 import pytest
 
 from lastcall_api.gemini_call import CallUsage, GeminiCallError
-from lastcall_api.scout.rank import FilteredCandidate
 from lastcall_api.scout.fit import (
-    FIT_PROMPT_VERSION,
     FitOut,
     FitsOut,
     build_fit_config,
     screen_fit,
 )
+from lastcall_api.scout.rank import FilteredCandidate
 
 
 def make_candidate(place_id: str, name: str, buyer_type: str = "juice_shop") -> FilteredCandidate:

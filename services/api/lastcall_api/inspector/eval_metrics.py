@@ -1,11 +1,9 @@
 """Pure evaluation metric calculation and label matching for Freshness Inspector (Step 6)."""
 
-from typing import NamedTuple
 from pydantic import BaseModel
 
 from lastcall_api.inspector.guardrails import names_match
 from lastcall_shared.models import FreshnessResult, ItemAssessment, ProduceStage
-
 
 STAGES: list[ProduceStage] = ["fresh", "ripening", "overripe", "spoiled", "unsafe"]
 

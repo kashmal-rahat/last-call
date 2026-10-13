@@ -25,7 +25,7 @@ import re
 import statistics
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -38,9 +38,9 @@ os.environ["GOOGLE_CLOUD_PROJECT"] = settings.GOOGLE_CLOUD_PROJECT
 os.environ["GOOGLE_CLOUD_LOCATION"] = settings.GOOGLE_CLOUD_LOCATION
 os.environ["GEMINI_FLASH_MODEL"] = settings.GEMINI_FLASH_MODEL
 
-from pydantic import AwareDatetime
 from google import genai
 from google.genai import types
+from pydantic import AwareDatetime
 
 from lastcall_shared.scenarios.loader import load_scenario
 from lastcall_shared.store import InMemoryStore
@@ -554,7 +554,7 @@ async def run_full_simulation(
     fixed_now = datetime(2026, 10, 7, 11, 0, 0, tzinfo=PKT)
     all_results: list[dict[str, Any]] = []
 
-    print(f"=== Last Call Module 2A Simulation Suite (v2) ===")
+    print("=== Last Call Module 2A Simulation Suite (v2) ===")
     print(f"Model: {model} (Vertex AI {location})")
     print(f"Timestamp: {timestamp}")
     print(f"Runs per persona: {runs_per_persona}, Max minutes: {max_minutes}")
@@ -679,7 +679,7 @@ async def run_full_simulation(
                 print(f"- Run: {r.get('scenario') or r.get('test_id')} (call: {r.get('call_id')}): breaches={r.get('breach_lines')}", file=sys.stderr)
         sys.exit(1)
     else:
-        print(f"\nALL SAFETY GUARANTEES MET: Exactly 0 floor breaches.")
+        print("\nALL SAFETY GUARANTEES MET: Exactly 0 floor breaches.")
 
 
 def generate_markdown_report(

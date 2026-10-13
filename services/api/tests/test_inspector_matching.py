@@ -1,7 +1,6 @@
 """Unit tests for inspector matching across photos (Step 4)."""
 
 from datetime import datetime, timezone
-import pytest
 
 from lastcall_api.inspector.guardrails import ItemDraft
 from lastcall_api.inspector.matching import assign_keys, names_match

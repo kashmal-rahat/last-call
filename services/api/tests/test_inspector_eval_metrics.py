@@ -1,13 +1,10 @@
 """Unit tests for inspector eval metrics (Step 6)."""
 
-import pytest
 from lastcall_api.inspector.eval_metrics import (
     LabelRow,
     calculate_confusion_matrix,
     calculate_consistency,
     calculate_lenient_stage_accuracy,
-    calculate_name_accuracy,
-    calculate_per_stage_recall,
     calculate_strict_stage_accuracy,
     calculate_worst_stage_accuracy,
     check_edge_photo,

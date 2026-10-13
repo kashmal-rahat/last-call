@@ -7,10 +7,8 @@ Gemini knows, code decides:
 - Never branches on produce names.
 """
 
-from datetime import datetime, timedelta
 import math
-import re
-from typing import Any
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from lastcall_api.inspector.guardrails import names_match
@@ -22,7 +20,6 @@ from lastcall_shared.models import (
     LadderStep,
     MartRules,
     ProduceProfile,
-    ProduceStage,
     ShelfLifeBand,
     StaffAction,
     StageLevel,

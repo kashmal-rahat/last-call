@@ -4,9 +4,10 @@ Pure functions converting ladder decisions and scout candidates into batch step 
 and role-play call records.
 """
 
-from datetime import datetime, timedelta
 import uuid
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
 from pydantic import AwareDatetime
 
 from lastcall_api.ladder.engine import step_prices

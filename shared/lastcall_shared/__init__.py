@@ -1,7 +1,15 @@
 """Shared module for Last Call domain types and utilities."""
 
+from lastcall_shared.config import Settings, get_settings
+from lastcall_shared.logging_utils import (
+    CloudLoggingJsonFormatter,
+    mask_phone,
+    mask_pii_in_text,
+    setup_structured_logging,
+)
 from lastcall_shared.models import (
     AgentDealBrief,
+    BatchAttempt,
     BoundingBox,
     BuyerInfo,
     BuyerType,
@@ -15,38 +23,30 @@ from lastcall_shared.models import (
     FreshnessResult,
     InspectorMeta,
     ItemAssessment,
-    MartInfo,
-    ObservedQuantity,
-    PhotoIssue,
-    PhotoStatus,
-    ProduceIssue,
-    ProduceStage,
-    QuantityEstimate,
-    QuantityMethod,
-    StaffCheckReason,
-    StageLevel,
-    TranscriptEntry,
-    Unit,
-    LadderStep,
-    ShelfLifeBand,
-    StaffAction,
-    StageProfile,
-    ProduceProfile,
-    PriceEntry,
-    MartRules,
     LadderDecision,
     LadderMeta,
     LadderResult,
+    LadderStep,
+    MartInfo,
+    MartRules,
+    ObservedQuantity,
+    PhotoIssue,
+    PhotoStatus,
+    PriceEntry,
+    ProduceIssue,
+    ProduceProfile,
+    ProduceStage,
+    QuantityEstimate,
+    QuantityMethod,
     ScoutStep,
+    ShelfLifeBand,
+    StaffAction,
+    StaffCheckReason,
+    StageLevel,
+    StageProfile,
     StepPlan,
-    BatchAttempt,
-)
-from lastcall_shared.config import Settings, get_settings
-from lastcall_shared.logging_utils import (
-    CloudLoggingJsonFormatter,
-    mask_phone,
-    mask_pii_in_text,
-    setup_structured_logging,
+    TranscriptEntry,
+    Unit,
 )
 
 __all__ = [

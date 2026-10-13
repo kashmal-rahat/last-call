@@ -3,6 +3,7 @@
 import hashlib
 import io
 from typing import NamedTuple
+
 from PIL import Image, ImageOps
 
 Image.MAX_IMAGE_PIXELS = 40_000_000

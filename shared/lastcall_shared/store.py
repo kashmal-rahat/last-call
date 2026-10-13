@@ -4,24 +4,25 @@ import asyncio
 import copy
 from datetime import datetime, timezone
 from typing import Any, Protocol
+
 from pydantic import AwareDatetime
 
 from lastcall_shared.models import (
     BatchAttempt,
     BatchRecord,
+    BuyerHistory,
+    CallOutcome,
     CallRecord,
     CallResult,
     DealRecord,
     FreshnessResult,
+    LadderResult,
     NegotiationState,
     OutboxMessage,
+    ProduceProfile,
+    ScoutResult,
     StaffTask,
     TranscriptEntry,
-    ProduceProfile,
-    LadderResult,
-    BuyerHistory,
-    CallOutcome,
-    ScoutResult,
     Unit,
 )
 

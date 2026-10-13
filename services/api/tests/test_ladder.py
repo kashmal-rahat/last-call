@@ -1,9 +1,9 @@
 """Tests for decide_inspection orchestration and consistency guarantee (Step 5)."""
 
-import asyncio
 from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import MagicMock
+
 import pytest
 
 from lastcall_api.ladder.ladder import decide_inspection

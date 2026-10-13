@@ -1,32 +1,29 @@
 """Tests for shared domain models, constraints, and security isolation."""
 
-import io
 import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
-from lastcall_shared.models import (
-    AgentDealBrief,
-    BoundingBox,
-    BuyerInfo,
-    CallResult,
-    ConfirmedQuantity,
-    DealBrief,
-    FreshnessResult,
-    InspectorMeta,
-    ItemAssessment,
-    MartInfo,
-    ObservedQuantity,
-    QuantityEstimate,
-)
 from lastcall_shared.logging_utils import (
     CloudLoggingJsonFormatter,
     mask_phone,
     mask_pii_in_text,
     setup_structured_logging,
+)
+from lastcall_shared.models import (
+    AgentDealBrief,
+    BoundingBox,
+    CallResult,
+    DealBrief,
+    FreshnessResult,
+    ItemAssessment,
+    MartInfo,
+    ObservedQuantity,
+    QuantityEstimate,
 )
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -478,6 +475,7 @@ def test_cloud_logging_formatter():
 
 def test_calling_hours_validation():
     from datetime import time
+
     from lastcall_shared.models import CallingHours
 
     # 1. Valid calling hours
@@ -534,17 +532,16 @@ def test_uvicorn_error_masking(capsys):
 
 
 def test_ladder_models_valid():
-    from datetime import datetime, time, timezone
+    from datetime import time
+
+    from lastcall_shared.marts.loader import load_mart_rules
     from lastcall_shared.models import (
         LadderDecision,
         LadderMeta,
         LadderResult,
-        MartRules,
-        PriceEntry,
         ProduceProfile,
         StageProfile,
     )
-    from lastcall_shared.marts.loader import load_mart_rules
 
     # Load demo_mart rules
     rules = load_mart_rules("demo_mart")
@@ -660,7 +657,8 @@ def test_ladder_decision_discount_fields_only_on_discount():
 
 def test_mart_rules_invalid_percentages():
     from datetime import time
-    from lastcall_shared.models import MartInfo, MartRules
+
+    from lastcall_shared.models import MartRules
 
     mart = MartInfo(name="Test Mart", location="Karachi")
 

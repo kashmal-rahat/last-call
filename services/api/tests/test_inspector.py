@@ -1,13 +1,14 @@
 """Tests for inspector engine and D30 guard policy (Step 4)."""
 
 import asyncio
-from typing import Any
+import io
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
+
 import pytest
 from PIL import Image
-import io
 
 from lastcall_api.inspector.inspector import (
     FORBIDDEN_CONFIG_KEYS,
@@ -16,7 +17,7 @@ from lastcall_api.inspector.inspector import (
     inspect_photo,
 )
 from lastcall_api.inspector.schema import DetectedItem, InspectorOutput, ObservedOut
-from lastcall_shared.models import FreshnessResult, ItemAssessment, ObservedQuantity, QuantityEstimate, BoundingBox
+from lastcall_shared.models import BoundingBox, FreshnessResult, ItemAssessment, ObservedQuantity, QuantityEstimate
 
 
 def _make_dummy_image() -> bytes:

@@ -2,7 +2,8 @@ import math
 import re
 from datetime import time, timedelta
 from typing import Annotated, Any, Literal
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from zoneinfo import ZoneInfo
+
 from pydantic import (
     AwareDatetime,
     BaseModel,

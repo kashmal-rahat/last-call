@@ -2,25 +2,18 @@
 
 import asyncio
 import hashlib
-import json
-import logging
-import random
 import secrets
 import time
 from collections import Counter
 from datetime import datetime, timezone
-from functools import lru_cache
-from typing import Any, NamedTuple, Protocol
+from typing import Any, Protocol
 
-import pydantic
 from google import genai
 from google.genai import types
-from google.genai.errors import APIError
 
 from lastcall_api.gemini_call import (
     CallUsage,
     GeminiCallError,
-    _is_retryable_error,
     call_structured,
     get_genai_client,
 )

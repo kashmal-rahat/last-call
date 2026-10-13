@@ -2,6 +2,7 @@
 
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
+
 import pytest
 
 from lastcall_api.orchestration.handoff import (
@@ -13,7 +14,7 @@ from lastcall_api.orchestration.handoff import (
     pickup_window,
     time_words,
 )
-from lastcall_api.orchestration.loop import NextAction, next_action
+from lastcall_api.orchestration.loop import next_action
 from lastcall_shared import buyer_keys
 from lastcall_shared.models import (
     BatchAttempt,

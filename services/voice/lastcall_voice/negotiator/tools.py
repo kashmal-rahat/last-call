@@ -1,10 +1,10 @@
 """BLOCKING tool declarations and handlers for the Negotiator Agent."""
 
 import logging
-import uuid
 from datetime import datetime, time, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
+
 from google.adk.tools import FunctionTool
 from google.adk.tools.tool_context import ToolContext
 from google.genai import types

@@ -1,7 +1,6 @@
 """Tests for inspector prompt and text formatting (Step 3)."""
 
 from typing import get_args
-import pytest
 
 from lastcall_api.inspector.prompt import PROMPT_VERSION, SYSTEM_PROMPT, user_text, zoom_text
 from lastcall_shared.models import PhotoIssue, ProduceIssue

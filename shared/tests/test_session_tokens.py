@@ -1,7 +1,5 @@
 """Tests for short-lived HMAC session tokens (Milestone 2B Step 9)."""
 
-import time
-from datetime import datetime, timezone
 import pytest
 
 from lastcall_shared.session_tokens import mint, verify

@@ -11,6 +11,7 @@ import base64
 import json
 import logging
 import os
+
 import functions_framework
 from googleapiclient import discovery
 

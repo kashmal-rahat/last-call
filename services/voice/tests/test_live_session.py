@@ -1,20 +1,18 @@
 """Tests for live voice WebSocket endpoint (/ws/call) per Step 10 & 13."""
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
+
 import pytest
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from lastcall_shared.models import CallRecord
+from lastcall_shared.config import get_settings
 from lastcall_shared.scenarios.loader import build_call
 from lastcall_shared.session_tokens import mint
 from lastcall_shared.store import InMemoryStore
-from lastcall_voice.live_session import get_instance_semaphore
 from lastcall_voice.main import app
-
-from lastcall_shared.config import get_settings
 
 PKT = ZoneInfo("Asia/Karachi")
 NOW = datetime(2026, 10, 7, 14, 0, 0, tzinfo=PKT)

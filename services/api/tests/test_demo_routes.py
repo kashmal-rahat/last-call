@@ -1,12 +1,12 @@
 """Tests for API demo endpoints (/demo, /demo/calls, /demo/batches) per Step 6."""
 
-import os
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
 import pytest
 from fastapi.testclient import TestClient
 
-from lastcall_api.main import app, _IP_REQUEST_HISTORY
+from lastcall_api.main import _IP_REQUEST_HISTORY, app
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import (
     BoundingBox,

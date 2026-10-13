@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import Literal
+
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from pydantic import AwareDatetime
 

@@ -1,22 +1,21 @@
 """Unit and property tests for negotiator pure logic: pricing, deals, and price guard."""
 
 from datetime import datetime, time, timedelta, timezone
+
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 from pydantic import ValidationError
 
 from lastcall_shared.models import (
-    AgentDealBrief,
     BatchRecord,
     CallingHours,
     DealBrief,
     MartInfo,
     NegotiationPolicy,
-    NegotiationState,
     build_ladder,
     init_negotiation,
 )
-from lastcall_voice.negotiator.pricing import OfferDecision, verify_offer
 from lastcall_voice.negotiator.deals import validate_deal_terms
 from lastcall_voice.negotiator.price_guard import (
     classify,
@@ -25,6 +24,7 @@ from lastcall_voice.negotiator.price_guard import (
     find_spoken_prices,
     has_spoken_price_cue,
 )
+from lastcall_voice.negotiator.pricing import OfferDecision, verify_offer
 
 PKT = timezone(timedelta(hours=5))
 NOW = datetime(2026, 10, 7, 12, 0, 0, tzinfo=PKT)
@@ -393,11 +393,11 @@ def test_prompt_template_v1_6_male_voice_consistency():
 
 @pytest.mark.asyncio
 async def test_confirm_deal_c0_validations():
-    from lastcall_shared.store import InMemoryStore
+
     from lastcall_shared.scenarios.loader import build_call
+    from lastcall_shared.store import InMemoryStore
     from lastcall_voice.call_context import CallContext, register_context, unregister_context
     from lastcall_voice.negotiator.tools import confirm_deal
-    from google.adk.tools.tool_context import ToolContext
 
     store = InMemoryStore(clock=lambda: NOW)
     brief = make_test_brief(floor=100, opening=150)
@@ -472,11 +472,11 @@ async def test_confirm_deal_c0_validations():
 
 @pytest.mark.asyncio
 async def test_fresh_state_in_price_guard_c1():
-    from lastcall_shared.store import InMemoryStore
     from lastcall_shared.scenarios.loader import build_call
+    from lastcall_shared.store import InMemoryStore
     from lastcall_voice.call_context import CallContext, register_context, unregister_context
-    from lastcall_voice.negotiator.tools import verify_offer
     from lastcall_voice.negotiator import price_guard
+    from lastcall_voice.negotiator.tools import verify_offer
 
     store = InMemoryStore(clock=lambda: NOW)
     call, batch = build_call("hard_bargainer", now=NOW)
@@ -528,6 +528,7 @@ async def test_fresh_state_in_price_guard_c1():
 @pytest.mark.asyncio
 async def test_spoken_price_guard_fallback_c2():
     import asyncio
+
     from lastcall_voice.negotiator.price_guard import fallback_extract_prices
 
     class FakeResp:
@@ -574,7 +575,7 @@ async def test_spoken_price_guard_fallback_c2():
 
 
 def test_prompt_h5_cleanups():
-    from lastcall_voice.negotiator.prompt import generate_pitch, render_instruction, CITY_STYLES
+    from lastcall_voice.negotiator.prompt import generate_pitch, render_instruction
 
     # 1. Pitch: donation case uses "aap ke idaare ke liye"
     brief_donation = make_test_brief(deal_type="donation")

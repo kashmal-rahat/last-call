@@ -1,9 +1,8 @@
 """Orchestration of Ladder decisions for an inspection (Module 3)."""
 
-import asyncio
-from collections import Counter
-from datetime import datetime, timezone
 import time
+from collections import Counter
+from datetime import datetime
 from typing import Any
 
 from google import genai

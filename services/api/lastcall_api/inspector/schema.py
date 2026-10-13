@@ -6,6 +6,7 @@ Per D30 and Vertex AI guidelines:
 """
 
 from pydantic import BaseModel
+
 from lastcall_shared.models import (
     ConfidenceLevel,
     PhotoIssue,

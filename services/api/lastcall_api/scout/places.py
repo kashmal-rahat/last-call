@@ -1,16 +1,17 @@
 """Places API (New) client using ADC OAuth and Enterprise field masks (D47, D49, D52)."""
 
 import asyncio
-from dataclasses import dataclass, field
 import math
 import random
 import time
+from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable
 
 import httpx
+
+from lastcall_api.scout.specs import FIELD_MASK, SearchSpec
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import GeoPoint
-from lastcall_api.scout.specs import FIELD_MASK, SearchSpec
 
 PLACES_SEARCH_TEXT_URL = "https://places.googleapis.com/v1/places:searchText"
 PLACES_SEARCH_NEARBY_URL = "https://places.googleapis.com/v1/places:searchNearby"

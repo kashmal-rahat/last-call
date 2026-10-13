@@ -13,9 +13,7 @@ Probes the 9 items from Step 2 of Module 2 Negotiator plan:
 """
 
 import asyncio
-import os
 import statistics
-import sys
 import time
 import wave
 from pathlib import Path

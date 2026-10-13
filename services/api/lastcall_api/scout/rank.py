@@ -3,14 +3,15 @@
 D50, D52, Step 5.
 """
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
 import math
 import re
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from lastcall_shared.buyer_keys import mask_phone, phone_key
+from lastcall_api.scout.places import PlaceRaw
+from lastcall_shared.buyer_keys import phone_key
 from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.models import (
     BuyerFit,
@@ -22,7 +23,6 @@ from lastcall_shared.models import (
     ScreenedOut,
     SkipReason,
 )
-from lastcall_api.scout.places import PlaceRaw
 
 logger = setup_structured_logging(service_name="scout_rank")
 

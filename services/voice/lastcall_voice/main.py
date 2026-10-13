@@ -1,9 +1,10 @@
 """Last Call Voice service."""
 
-import logging
 import os
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+
 from lastcall_shared.logging_utils import setup_structured_logging
 
 SERVICE_NAME = "voice"
@@ -43,6 +44,7 @@ async def healthz():
 
 
 from starlette.websockets import WebSocket
+
 from lastcall_voice.live_session import handle_live_call_websocket
 
 

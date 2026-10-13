@@ -4,7 +4,6 @@ import asyncio
 import hmac
 import inspect
 import json
-import logging
 import os
 import re
 import time
@@ -13,20 +12,23 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
-from fastapi import FastAPI, File, Form, Header, HTTPException, Request, Response, UploadFile, status
+
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from lastcall_api.inspector.images import ImageError
 from lastcall_api.inspector.inspector import InspectorError, inspect_photo
-from lastcall_api.ladder.ladder import decide_inspection
-from lastcall_api.scout.scout import (
-    ScoutCapReached,
-    ScoutNotApplicable,
-    ScoutTarget,
-    run_scout,
+from lastcall_api.item_photos import (
+    PhotoStore,
+    default_photo_store,
+    save_shelf_photo,
 )
+from lastcall_api.item_photos import (
+    build_router as build_item_photo_router,
+)
+from lastcall_api.ladder.ladder import decide_inspection
 from lastcall_api.orchestration.handoff import (
     NeedsPrice,
     build_call_record,
@@ -34,11 +36,11 @@ from lastcall_api.orchestration.handoff import (
     initial_quantity,
 )
 from lastcall_api.orchestration.loop import next_action
-from lastcall_api.item_photos import (
-    PhotoStore,
-    build_router as build_item_photo_router,
-    default_photo_store,
-    save_shelf_photo,
+from lastcall_api.scout.scout import (
+    ScoutCapReached,
+    ScoutNotApplicable,
+    ScoutTarget,
+    run_scout,
 )
 from lastcall_shared.firestore_store import FirestoreStore
 from lastcall_shared.logging_utils import setup_structured_logging
@@ -633,7 +635,7 @@ async def demo_inspect(
     try:
         async with _INSPECT_SEMAPHORE:
             result = await inspect_fn(contents, **inspect_kwargs)
-    except ImageError as exc:
+    except ImageError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Not a readable image",
@@ -941,7 +943,8 @@ async def demo_scout(
 app.include_router(build_item_photo_router(get_store=_get_store, get_photo_store=_get_photo_store))
 
 # Phone demo (Module 9): separate router; every endpoint is 404 unless PHONE_DEMO_ENABLED=true.
-from lastcall_api.phone_demo import build_router as build_phone_router, dial_twilio
+from lastcall_api.phone_demo import build_router as build_phone_router
+from lastcall_api.phone_demo import dial_twilio
 
 app.include_router(
     build_phone_router(

@@ -11,12 +11,11 @@ Appends results to plans/module-4/results/probe.md (escaping any '|' characters)
 """
 
 import asyncio
-from datetime import datetime, timezone
-import json
-import math
-from pathlib import Path
 import sys
 import time
+from datetime import datetime, timezone
+from pathlib import Path
+
 import httpx
 
 REPO_DIR = Path(__file__).resolve().parent.parent
@@ -25,11 +24,12 @@ sys.path.insert(0, str(REPO_DIR / "services/api"))
 
 sys.path.insert(0, str(REPO_DIR / "scripts"))
 
-from lastcall_shared.models import GeoPoint, MartRules
-from lastcall_shared.config import get_settings
-from lastcall_api.scout.places import PlacesClient, PlaceRaw, parse_place_raw, get_oauth_token
+from probe_places import clean_name, haversine_km, probe_request
+
+from lastcall_api.scout.places import PlacesClient, get_oauth_token, parse_place_raw
 from lastcall_api.scout.specs import FIELD_MASK, SearchSpec
-from probe_places import haversine_km, probe_request, clean_name
+from lastcall_shared.config import get_settings
+from lastcall_shared.models import GeoPoint, MartRules
 
 
 def escape_table(s: str) -> str:
@@ -203,7 +203,7 @@ async def main():
         f"- **Status Code**: {status_code}",
         f"- **Latency**: {lat_nearby}ms",
         f"- **Raw Results Count**: {len(items_nearby)}",
-        f"- **Text Search Nearest Baseline**: 4.42 km (`Maulvi Juice Corner`)",
+        "- **Text Search Nearest Baseline**: 4.42 km (`Maulvi Juice Corner`)",
     ])
 
     if items_nearby:
