@@ -6,7 +6,8 @@ from zoneinfo import ZoneInfo
 import pytest
 from fastapi.testclient import TestClient
 
-from lastcall_api.main import _IP_REQUEST_HISTORY, app
+from lastcall_api.deps import _IP_REQUEST_HISTORY
+from lastcall_api.main import app
 from lastcall_shared.models import (
     BoundingBox,
     CallResult,

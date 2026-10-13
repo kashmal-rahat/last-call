@@ -7,6 +7,7 @@ lock status, scout results, and past call attempts.
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 from lastcall_shared.models import (
     BatchRecord,
@@ -89,3 +90,12 @@ def next_action(
 
     # If there is none (including an empty list) → go to rule 7
     return _steps_used_up()
+
+
+def outside_calling_hours(rules: MartRules, now: datetime) -> bool:
+    """True when `now` is outside the mart's calling hours (the demo calls anyway, with a note; D56)."""
+    hours = rules.calling_hours
+    if hours is None:
+        return False
+    local_time = now.astimezone(ZoneInfo(hours.timezone)).time()
+    return not (hours.start <= local_time < hours.end)

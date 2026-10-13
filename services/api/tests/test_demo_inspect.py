@@ -6,9 +6,10 @@ from zoneinfo import ZoneInfo
 import pytest
 from fastapi.testclient import TestClient
 
+from lastcall_api.deps import _IP_REQUEST_HISTORY
 from lastcall_api.inspector.images import ImageError
 from lastcall_api.inspector.inspector import InspectorError
-from lastcall_api.main import _IP_REQUEST_HISTORY, app
+from lastcall_api.main import app
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import (
     BoundingBox,
@@ -206,7 +207,7 @@ async def test_post_demo_inspect_success_and_repeat_shelf(setup_api_test):
 
     received_calls = []
 
-    async def fake_inspect(image, *, mart_id, shelf_id, previous, now, bin_capacity_kg=None):
+    async def fake_inspect(image, *, mart_id, shelf_id, previous, now, bin_capacity_kg=None, reading_cache=None):
         received_calls.append({"shelf_id": shelf_id, "previous": previous, "bin_capacity_kg": bin_capacity_kg})
         insp_id = f"insp_{len(received_calls)}"
         prev_id = previous.inspection_id if previous else None

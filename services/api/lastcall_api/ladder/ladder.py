@@ -1,5 +1,6 @@
 """Orchestration of Ladder decisions for an inspection (Module 3)."""
 
+import logging
 import time
 from collections import Counter
 from datetime import datetime
@@ -9,7 +10,6 @@ from google import genai
 
 from lastcall_api.ladder.engine import decide_item, find_price, hours_until_closing
 from lastcall_api.ladder.profiles import resolve_profiles
-from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.models import (
     FreshnessResult,
     LadderDecision,
@@ -18,7 +18,7 @@ from lastcall_shared.models import (
     MartRules,
 )
 
-logger = setup_structured_logging(service_name="ladder")
+logger = logging.getLogger("lastcall_api.ladder")
 
 
 async def decide_inspection(

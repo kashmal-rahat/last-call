@@ -3,6 +3,7 @@
 D50, D52, Step 5.
 """
 
+import logging
 import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -12,7 +13,6 @@ from zoneinfo import ZoneInfo
 from lastcall_api.scout.places import PlaceRaw
 from lastcall_shared import ids
 from lastcall_shared.buyer_keys import phone_key
-from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.models import (
     BuyerFit,
     BuyerHistory,
@@ -24,7 +24,7 @@ from lastcall_shared.models import (
     SkipReason,
 )
 
-logger = setup_structured_logging(service_name="scout_rank")
+logger = logging.getLogger("lastcall_api.scout.rank")
 
 MAX_FIT_CANDIDATES = 40
 

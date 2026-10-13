@@ -1,6 +1,7 @@
 """Scout orchestration: parallel Places searches, filtering, fit screening, ranking, and storage (D46, D48, D50, D52, Step 8)."""
 
 import asyncio
+import logging
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -15,7 +16,6 @@ from lastcall_api.scout.rank import apply_filters, normalise_phone, rank
 from lastcall_api.scout.specs import SEARCH_SPECS
 from lastcall_shared.buyer_keys import phone_key
 from lastcall_shared.config import get_settings
-from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.models import (
     Branch,
     BuyerType,
@@ -27,7 +27,7 @@ from lastcall_shared.models import (
 )
 from lastcall_shared.store import CallStore
 
-logger = setup_structured_logging(service_name="scout")
+logger = logging.getLogger("lastcall_api.scout")
 
 SCOUT_LIST_TTL = timedelta(hours=1)
 

@@ -1,6 +1,7 @@
 """Gemini fit screening for Scout candidates (D46, Step 6)."""
 
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Any
@@ -12,10 +13,9 @@ from pydantic import BaseModel
 from lastcall_api.gemini_call import call_structured
 from lastcall_api.scout.rank import FilteredCandidate
 from lastcall_shared.genai_client import get_genai_client
-from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.models import BuyerFit, ScoutStep, UsageRecord
 
-logger = setup_structured_logging(service_name="scout_fit")
+logger = logging.getLogger("lastcall_api.scout.fit")
 
 FIT_PROMPT_VERSION = "1"
 

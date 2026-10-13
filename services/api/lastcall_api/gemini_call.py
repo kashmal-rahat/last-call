@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import random
 import time
 from typing import Any, NamedTuple
@@ -13,9 +14,8 @@ from google.genai.errors import APIError
 from pydantic import BaseModel
 
 from lastcall_shared.config import get_settings
-from lastcall_shared.logging_utils import setup_structured_logging
 
-logger = setup_structured_logging(service_name="gemini_call")
+logger = logging.getLogger("lastcall_api.gemini_call")
 
 
 class GeminiCallError(Exception):

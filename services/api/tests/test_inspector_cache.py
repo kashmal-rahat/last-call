@@ -9,13 +9,14 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
+from lastcall_api.deps import _IP_REQUEST_HISTORY
 from lastcall_api.inspector.inspector import (
     inspect_photo,
     reading_key,
 )
 from lastcall_api.inspector.prompt import PROMPT_VERSION
 from lastcall_api.inspector.schema import DetectedItem, InspectorOutput, ObservedOut
-from lastcall_api.main import _IP_REQUEST_HISTORY, app
+from lastcall_api.main import app
 from lastcall_shared.models import FreshnessResult
 from lastcall_shared.store import InMemoryStore
 

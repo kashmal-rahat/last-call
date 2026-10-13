@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -17,14 +18,13 @@ from lastcall_api.gemini_call import (
 from lastcall_api.ladder.keys import produce_key
 from lastcall_shared.config import get_settings
 from lastcall_shared.genai_client import get_genai_client
-from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.models import (
     ProduceProfile,
     ShelfLifeBand,
     StageProfile,
 )
 
-logger = setup_structured_logging(service_name="ladder_profiles")
+logger = logging.getLogger("lastcall_api.ladder.profiles")
 
 PROFILE_PROMPT_VERSION = "1"
 PROFILE_VOTES = 5

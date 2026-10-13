@@ -9,8 +9,9 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
+from lastcall_api.deps import _IP_REQUEST_HISTORY
 from lastcall_api.item_photos import InMemoryPhotoStore
-from lastcall_api.main import _IP_REQUEST_HISTORY, app
+from lastcall_api.main import app
 from lastcall_shared.item_photos import sign_item_photo_url
 from lastcall_shared.models import BoundingBox, FreshnessResult, ItemAssessment, ObservedQuantity, QuantityEstimate
 from lastcall_shared.store import InMemoryStore

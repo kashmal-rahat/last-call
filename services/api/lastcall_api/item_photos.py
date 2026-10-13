@@ -12,6 +12,7 @@ side <= 1600 px) for one day, and crops the item on request using the Inspector'
 
 import asyncio
 import logging
+from functools import lru_cache
 from typing import Callable, Protocol
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
@@ -68,7 +69,9 @@ class InMemoryPhotoStore:
         return self.photos.get(inspection_id)
 
 
+@lru_cache
 def default_photo_store() -> PhotoStore | None:
+    """One storage client per process; None when no bucket is configured (no photos)."""
     bucket = get_settings().SHELF_PHOTO_BUCKET
     return GcsPhotoStore(bucket) if bucket else None
 

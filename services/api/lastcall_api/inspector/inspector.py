@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+import logging
 import time
 from collections import Counter
 from datetime import datetime, timezone
@@ -24,10 +25,9 @@ from lastcall_api.inspector.zoom import merge_zoom, select_for_zoom
 from lastcall_shared import ids
 from lastcall_shared.config import get_settings
 from lastcall_shared.genai_client import get_genai_client
-from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.models import FreshnessResult, InspectorMeta
 
-logger = setup_structured_logging(service_name="inspector")
+logger = logging.getLogger("lastcall_api.inspector")
 
 THINKING_LEVEL = "low"
 ZOOM_ENABLED = True

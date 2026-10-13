@@ -342,7 +342,7 @@ def test_demo_scout_no_branches_configured_409(client, mock_store, monkeypatch):
 
     real_rules = load_mart_rules("demo_mart")
     empty_branch_rules = real_rules.model_copy(update={"branches": [], "default_branch_id": None})
-    monkeypatch.setattr("lastcall_api.main.load_mart_rules", lambda mart_id: empty_branch_rules)
+    monkeypatch.setattr("lastcall_api.deps.load_mart_rules", lambda mart_id: empty_branch_rules)
 
     headers = {"X-Demo-Access-Code": ACCESS_CODE}
     payload = {"inspection_id": "insp_g3", "item_key": "banana_grp1"}

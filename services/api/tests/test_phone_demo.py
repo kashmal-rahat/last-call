@@ -9,7 +9,8 @@ from zoneinfo import ZoneInfo
 import pytest
 from fastapi.testclient import TestClient
 
-from lastcall_api.main import _IP_REQUEST_HISTORY, app
+from lastcall_api.deps import _IP_REQUEST_HISTORY
+from lastcall_api.main import app
 from lastcall_api.phone_demo import PhoneDemoConfig
 from lastcall_shared.scenarios.loader import build_call
 from lastcall_shared.session_tokens import mint
