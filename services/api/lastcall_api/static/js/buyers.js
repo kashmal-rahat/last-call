@@ -2,6 +2,7 @@
 
 import { state } from './state.js';
 import * as dom from './dom.js';
+import { apiFetch, errorMessage, requireAccessCode } from './api.js';
 import { getFindBuyersLabel, getNextStepTargetLabel } from './format.js';
 import { icon, showToast, initials } from './ui.js';
 import { batchIdFor, loadBatchesForBranch } from './lock.js';
@@ -10,12 +11,7 @@ import { startCallForItem } from './call.js';
 
 export async function fetchScoutBuyers(itemKey, refresh = false) {
   if (!state.currentInspection || !state.currentInspection.inspection_id) return;
-  const code = dom.inspectAccessCodeEl.value.trim();
-  if (!code) {
-    showToast('Please enter your Demo Access Code first.', 'error');
-    dom.inspectAccessCodeEl.focus();
-    return;
-  }
+  if (!requireAccessCode()) return;
   const branchId = dom.branchSelect.value;
   if (!branchId) return;
 
@@ -33,14 +29,7 @@ export async function fetchScoutBuyers(itemKey, refresh = false) {
   };
 
   try {
-    const res = await fetch('/demo/scout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Demo-Access-Code': code
-      },
-      body: JSON.stringify(payload)
-    });
+    const res = await apiFetch('/demo/scout', { method: 'POST', json: payload });
 
     if (state.scoutRequestCounters[itemKey] !== currentCounter) return;
 
@@ -51,9 +40,7 @@ export async function fetchScoutBuyers(itemKey, refresh = false) {
       const batchId = batchIdFor(itemKey);
       if (batchId && state.currentBatchesMap[itemKey]) {
         try {
-          const bRes = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
-            headers: { 'X-Demo-Access-Code': code }
-          });
+          const bRes = await apiFetch(`/demo/batches/${encodeURIComponent(batchId)}`);
           if (bRes.ok) {
             state.currentBatchesMap[itemKey] = await bRes.json();
           }
@@ -63,12 +50,7 @@ export async function fetchScoutBuyers(itemKey, refresh = false) {
       }
     } else {
       state.scoutResultsMap[itemKey] = null;
-      const errData = await res.json().catch(() => ({}));
-      const rawDetail = errData.detail;
-      const detail = (typeof rawDetail === 'string' && rawDetail.trim())
-        ? rawDetail.trim()
-        : 'Buyer search failed, please try again.';
-      state.scoutErrorsMap[itemKey] = detail;
+      state.scoutErrorsMap[itemKey] = await errorMessage(res, 'Buyer search failed, please try again.');
     }
   } catch (err) {
     if (state.scoutRequestCounters[itemKey] !== currentCounter) return;
@@ -170,26 +152,15 @@ export function renderNextActionRow(container, batch, itemKey, buyers = [], show
 }
 
 export async function advanceBatchStep(batchId, itemKey) {
-  const code = dom.inspectAccessCodeEl.value.trim();
-  if (!code) {
-    showToast('Please enter your Demo Access Code first.', 'error');
-    dom.inspectAccessCodeEl.focus();
-    return;
-  }
+  if (!requireAccessCode()) return;
   try {
-    const res = await fetch(`/demo/batches/${encodeURIComponent(batchId)}/next-step`, {
-      method: 'POST',
-      headers: {
-        'X-Demo-Access-Code': code
-      }
-    });
+    const res = await apiFetch(`/demo/batches/${encodeURIComponent(batchId)}/next-step`, { method: 'POST' });
     if (res.ok) {
       const updated = await res.json();
       state.currentBatchesMap[itemKey] = updated;
       await fetchScoutBuyers(itemKey, false);
     } else {
-      const errData = await res.json().catch(() => ({}));
-      showToast(errData.detail || 'Failed to advance step', 'error');
+      showToast(await errorMessage(res, 'Failed to advance step'), 'error');
     }
   } catch (e) {
     showToast(e.message || 'Failed to advance step', 'error');

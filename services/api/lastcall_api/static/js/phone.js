@@ -6,6 +6,7 @@
 
 import { state } from './state.js';
 import * as dom from './dom.js';
+import { apiFetch, errorMessage } from './api.js';
 import { updateShelfLock } from './lock.js';
 import { renderResults } from './reading.js';
 import {
@@ -50,26 +51,19 @@ export async function initPhoneDemo() {
 }
 
 // Called by startCallForItem after /demo/calls; a throw here is handled by its catch.
-export async function startPhoneCall(data, code) {
+export async function startPhoneCall(data) {
   dom.btnHangup.disabled = true; // the call is ended on the phone
   if (dom.callerSub) dom.callerSub.textContent = 'Ringing your phone through Twilio · the AI speaks Urdu';
   setStatus('Ringing your phone…', 'busy');
 
-  const res = await fetch('/demo/phone/dial', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Demo-Access-Code': code },
-    body: JSON.stringify({ call_id: data.call_id, token: data.token })
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Could not ring the phone (${res.status})`);
-  }
+  const res = await apiFetch('/demo/phone/dial', { method: 'POST', json: { call_id: data.call_id, token: data.token } });
+  if (!res.ok) throw new Error(await errorMessage(res, `Could not ring the phone (${res.status})`));
 
   appendNotice('Ringing your phone…');
-  followPhoneCall(data.call_id, data.batch_id, code);
+  followPhoneCall(data.call_id, data.batch_id);
 }
 
-async function followPhoneCall(callId, batchId, code) {
+async function followPhoneCall(callId, batchId) {
   const shown = new Set();
   const started = Date.now();
   let answered = false;
@@ -78,9 +72,7 @@ async function followPhoneCall(callId, batchId, code) {
     await new Promise(r => setTimeout(r, POLL_MS));
     let d = null;
     try {
-      const res = await fetch(`/demo/phone/calls/${encodeURIComponent(callId)}`, {
-        headers: { 'X-Demo-Access-Code': code }
-      });
+      const res = await apiFetch(`/demo/phone/calls/${encodeURIComponent(callId)}`);
       if (res.ok) d = await res.json();
     } catch (e) {
       console.warn('followPhoneCall', e);

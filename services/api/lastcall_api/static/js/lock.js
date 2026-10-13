@@ -2,6 +2,7 @@
 
 import { state } from './state.js';
 import * as dom from './dom.js';
+import { apiFetch } from './api.js';
 import { renderResults } from './reading.js';
 
 export function batchIdFor(itemKey) {
@@ -14,15 +15,12 @@ export function batchIdFor(itemKey) {
 export async function loadBatchesForBranch() {
   state.currentBatchesMap = {};
   if (!state.currentInspection || !state.currentInspection.inspection_id) return;
-  const code = dom.inspectAccessCodeEl.value.trim();
   const items = state.currentInspection.items || [];
   await Promise.all(items.map(async (item) => {
     const batchId = batchIdFor(item.item_key);
     if (!batchId) return;
     try {
-      const res = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
-        headers: code ? { 'X-Demo-Access-Code': code } : {}
-      });
+      const res = await apiFetch(`/demo/batches/${encodeURIComponent(batchId)}`);
       if (res.ok) {
         state.currentBatchesMap[item.item_key] = await res.json();
       }

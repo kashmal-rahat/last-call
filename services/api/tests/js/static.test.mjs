@@ -141,7 +141,8 @@ test('static/js/: every exported symbol in the Step 9 table exists', async () =>
       'cleanupAudio'
     ],
     'impact.js': ['renderImpact'],
-    'phone.js': ['isPhoneMode', 'initPhoneDemo', 'startPhoneCall']
+    'phone.js': ['isPhoneMode', 'initPhoneDemo', 'startPhoneCall'],
+    'api.js': ['accessCode', 'requireAccessCode', 'apiFetch', 'errorMessage']
   };
 
   for (const [modName, syms] of Object.entries(expectedExports)) {

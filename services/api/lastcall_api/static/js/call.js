@@ -3,6 +3,7 @@
 import { state } from './state.js';
 import * as dom from './dom.js';
 import { setStoredItem } from './storage.js';
+import { apiFetch, errorMessage, requireAccessCode } from './api.js';
 import { showToast, scriptClass, icon, initials } from './ui.js';
 import { updateShelfLock } from './lock.js';
 import { renderResults } from './reading.js';
@@ -132,12 +133,8 @@ export function triggerWaveformAnimation() {
 
 export async function startCallForItem(itemKey, buyerId) {
   state.retryCount = 0;
-  const code = dom.inspectAccessCodeEl.value.trim();
-  if (!code) {
-    showToast('Please enter your Demo Access Code first.', 'error');
-    dom.inspectAccessCodeEl.focus();
-    return;
-  }
+  const code = requireAccessCode();
+  if (!code) return;
   setStoredItem('lc_code', code);
 
   if (!state.currentInspection || !state.currentInspection.inspection_id) {
@@ -182,20 +179,12 @@ export async function startCallForItem(itemKey, buyerId) {
       buyer_id: buyerId || null
     };
 
-    const res = await fetch('/demo/calls', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Demo-Access-Code': code
-      },
-      body: JSON.stringify(payload)
-    });
+    const res = await apiFetch('/demo/calls', { method: 'POST', json: payload });
 
     if (res.status === 401) {
       throw new Error('Invalid access code.');
     } else if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.detail || errData.error || `Failed to create call (${res.status})`);
+      throw new Error(await errorMessage(res, `Failed to create call (${res.status})`));
     }
 
     const data = await res.json();
@@ -232,7 +221,7 @@ export async function startCallForItem(itemKey, buyerId) {
 
     // Phone demo (Module 9): Twilio rings the presenter's SIM instead of using the microphone
     if (isPhoneMode()) {
-      await startPhoneCall(data, code);
+      await startPhoneCall(data);
       return;
     }
 
@@ -374,7 +363,6 @@ export function connectWebSocket(wsUrl, token) {
 }
 
 export async function pollBatchUntilCompleted(batchId, callId) {
-  const code = dom.inspectAccessCodeEl.value.trim();
   setStatus('Saving call result...', 'busy');
   let attemptFound = false;
   let batchData = null;
@@ -382,9 +370,7 @@ export async function pollBatchUntilCompleted(batchId, callId) {
   for (let i = 0; i < 8; i++) {
     await new Promise(r => setTimeout(r, 1000));
     try {
-      const res = await fetch(`/demo/batches/${encodeURIComponent(batchId)}`, {
-        headers: code ? { 'X-Demo-Access-Code': code } : {}
-      });
+      const res = await apiFetch(`/demo/batches/${encodeURIComponent(batchId)}`);
       if (res.ok) {
         batchData = await res.json();
         const att = (batchData.attempts || []).find(a => a.call_id === callId);

@@ -2,6 +2,7 @@
 
 import { state } from './state.js';
 import * as dom from './dom.js';
+import { accessCode, apiFetch, errorMessage } from './api.js';
 import { formatDecisionLine, formatProfileLine, STAFF_ACTION_LABELS } from './format.js';
 import { icon } from './ui.js';
 import { renderResults } from './reading.js';
@@ -37,8 +38,7 @@ export function createPriceCard(label, valText, unitText, extraClass = '', iconN
 
 export async function triggerDecide() {
   if (!state.currentInspection || !state.currentInspection.inspection_id) return;
-  const code = dom.inspectAccessCodeEl.value.trim();
-  if (!code) return;
+  if (!accessCode()) return;
 
   const thisRequestId = ++state.decideRequestCounter;
   state.isDeciding = true;
@@ -57,14 +57,7 @@ export async function triggerDecide() {
   };
 
   try {
-    const res = await fetch('/demo/decide', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Demo-Access-Code': code
-      },
-      body: JSON.stringify(payload)
-    });
+    const res = await apiFetch('/demo/decide', { method: 'POST', json: payload });
 
     if (thisRequestId !== state.decideRequestCounter) return;
 
@@ -74,12 +67,10 @@ export async function triggerDecide() {
       dom.decideError.textContent = '';
     } else {
       state.currentLadderResult = null;
-      const errData = await res.json().catch(() => ({}));
-      const rawDetail = errData.detail;
-      const detail = (typeof rawDetail === 'string' && rawDetail.trim())
-        ? rawDetail.trim()
-        : (res.status === 429 ? 'Hourly limit reached. Please try again later.' : 'Decision failed, please try again.');
-      dom.decideError.textContent = detail;
+      dom.decideError.textContent = await errorMessage(
+        res,
+        res.status === 429 ? 'Hourly limit reached. Please try again later.' : 'Decision failed, please try again.'
+      );
       dom.decideError.style.display = 'block';
     }
   } catch (err) {

@@ -2,6 +2,7 @@
 
 import { state } from './state.js';
 import * as dom from './dom.js';
+import { accessCode, apiFetch, errorMessage } from './api.js';
 import { setStoredItem, getOrCreateShelfId } from './storage.js';
 import { rankItems, formatObserved, formatQuantity, STAFF_REASON_LABELS } from './format.js';
 import { icon, showToast } from './ui.js';
@@ -11,7 +12,7 @@ import { renderActiveBuyers } from './buyers.js';
 import { renderImpact } from './impact.js';
 
 export async function handleInspect() {
-  const code = dom.inspectAccessCodeEl.value.trim();
+  const code = accessCode();
   if (!code) {
     dom.inspectError.textContent = 'Please enter the Demo Access Code.';
     dom.inspectError.style.display = 'block';
@@ -84,13 +85,7 @@ export async function handleInspect() {
   }
 
   try {
-    const res = await fetch('/demo/inspect', {
-      method: 'POST',
-      headers: {
-        'X-Demo-Access-Code': code
-      },
-      body: formData
-    });
+    const res = await apiFetch('/demo/inspect', { method: 'POST', form: formData });
 
     if (res.status === 401) {
       throw new Error('Invalid access code.');
@@ -99,13 +94,11 @@ export async function handleInspect() {
     } else if (res.status === 413) {
       throw new Error('Image exceeds maximum upload size (8 MB).');
     } else if (res.status === 429) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.detail || 'Rate limit reached. Please try again later.');
+      throw new Error(await errorMessage(res, 'Rate limit reached. Please try again later.'));
     } else if (res.status === 502) {
       throw new Error('Inspection failed, please try again.');
     } else if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.detail || `Inspection request failed (${res.status})`);
+      throw new Error(await errorMessage(res, `Inspection request failed (${res.status})`));
     }
 
     const data = await res.json();
