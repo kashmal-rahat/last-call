@@ -5,10 +5,10 @@ import uuid
 from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from pydantic import AwareDatetime
 
+from lastcall_shared.clock import PKT
 from lastcall_shared.models import (
     BatchRecord,
     BuyerInfo,
@@ -21,7 +21,6 @@ from lastcall_shared.models import (
 )
 
 SCENARIOS_DIR = Path(__file__).parent
-PKT = ZoneInfo("Asia/Karachi")
 
 
 def parse_relative_offset(offset_str: str) -> timedelta:

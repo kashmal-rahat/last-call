@@ -11,10 +11,11 @@ import httpx
 from pydantic import BaseModel, ConfigDict, SecretStr, StringConstraints, ValidationError
 
 from lastcall_shared.config import Settings
+from lastcall_shared.ids import E164_PATTERN
 
 TWILIO_API = "https://api.twilio.com/2010-04-01/Accounts/{account_sid}"
 
-E164 = Annotated[str, StringConstraints(strip_whitespace=True, pattern=r"^\+[1-9]\d{6,14}$")]
+E164 = Annotated[str, StringConstraints(strip_whitespace=True, pattern=E164_PATTERN)]
 
 
 class TwilioError(Exception):

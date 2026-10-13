@@ -3,12 +3,12 @@
 import logging
 from datetime import datetime, time, timedelta
 from typing import Any, Literal
-from zoneinfo import ZoneInfo
 
 from google.adk.tools import FunctionTool
 from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 
+from lastcall_shared.clock import PKT, time_words
 from lastcall_shared.models import DealRecord, OutboxMessage, StaffTask
 from lastcall_voice.call_context import CallContext, get_context
 from lastcall_voice.negotiator.buyer_messages import (
@@ -19,9 +19,7 @@ from lastcall_voice.negotiator.buyer_messages import (
 )
 from lastcall_voice.negotiator.deals import validate_deal_terms
 from lastcall_voice.negotiator.pricing import verify_offer as verify_offer_logic
-from lastcall_voice.negotiator.prompt import time_words
 
-PKT = ZoneInfo("Asia/Karachi")
 logger = logging.getLogger("lastcall_voice.tools")
 
 

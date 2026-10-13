@@ -17,9 +17,9 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from lastcall_api.gemini_call import get_genai_client
 from lastcall_api.ladder.engine import decide_item, find_price
 from lastcall_api.scout.scout import ScoutTarget, run_scout
+from lastcall_shared.genai_client import get_genai_client
 from lastcall_shared.models import (
     BoundingBox,
     ItemAssessment,

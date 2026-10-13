@@ -4,13 +4,13 @@ D50, D52, Step 5.
 """
 
 import math
-import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from lastcall_api.scout.places import PlaceRaw
+from lastcall_shared import ids
 from lastcall_shared.buyer_keys import phone_key
 from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.models import (
@@ -28,7 +28,6 @@ logger = setup_structured_logging(service_name="scout_rank")
 
 MAX_FIT_CANDIDATES = 40
 
-_PHONE_RE = re.compile(r"^\+[1-9]\d{7,14}$")
 
 TYPE_NAMES: dict[BuyerType, str] = {
     "juice_shop": "Juice shop",
@@ -49,7 +48,7 @@ def normalise_phone(international: str | None) -> str | None:
     if not international or not isinstance(international, str):
         return None
     cleaned = "".join(ch for ch in international if ch == "+" or ch.isdigit())
-    if _PHONE_RE.match(cleaned):
+    if ids.E164.match(cleaned):
         return cleaned
     return None
 

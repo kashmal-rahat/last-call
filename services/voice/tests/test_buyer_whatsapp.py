@@ -140,10 +140,10 @@ def test_confirmation_text_uses_mart_time_and_totals():
     assert (
         lines[1] == f"1.5 {call.brief.quantity_unit} {call.brief.item} at Rs 105 / {call.brief.quantity_unit} (Rs 158)"
     )
-    assert lines[2] == "Pickup: today, by 6:00 PM"
+    assert lines[2] == "Pickup: today, by 6 PM"
     assert lines[3] == f"Payment: {call.brief.payment_terms}"
     tomorrow = deal_confirmation_text(call, quantity=1, price_per_unit=105, pickup=NOW + timedelta(days=1), now=NOW)
-    assert "Pickup: Thu 15 Oct, by 2:00 PM" in tomorrow
+    assert "Pickup: Thu 15 Oct, by 2 PM" in tomorrow
 
 
 def test_donation_confirmation_has_no_price():

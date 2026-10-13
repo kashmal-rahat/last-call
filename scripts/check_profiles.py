@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from lastcall_api.gemini_call import CallUsage, call_structured, get_genai_client
+from lastcall_api.gemini_call import CallUsage, call_structured
 from lastcall_api.ladder.engine import decide_item
 from lastcall_api.ladder.profiles import (
     PROFILE_PROMPT_VERSION,
@@ -24,6 +24,7 @@ from lastcall_api.ladder.profiles import (
     produce_key,
 )
 from lastcall_shared.config import get_settings
+from lastcall_shared.genai_client import get_genai_client
 from lastcall_shared.marts.loader import load_mart_rules
 from lastcall_shared.models import (
     BoundingBox,

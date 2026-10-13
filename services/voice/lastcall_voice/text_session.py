@@ -3,7 +3,6 @@
 import re
 from datetime import datetime, timedelta
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -11,6 +10,7 @@ from google.adk.workflow._retry_config import RetryConfig
 from google.genai import types
 from pydantic import AwareDatetime
 
+from lastcall_shared.clock import PKT
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import (
     CallResult,
@@ -32,7 +32,6 @@ from lastcall_voice.negotiator.price_guard import (
     find_prices,
 )
 
-PKT = ZoneInfo("Asia/Karachi")
 GEMINI_FLASH_MODEL = get_settings().GEMINI_FLASH_MODEL
 APP_NAME = "lastcall_voice"
 

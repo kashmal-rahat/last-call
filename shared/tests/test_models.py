@@ -435,10 +435,12 @@ def test_donation_deal_brief_and_call_result():
 
 def test_phone_masking():
     # Pakistani mobile formats
-    assert mask_phone("+923001234567") == "+9230******67"
-    assert mask_phone("03001234567") == "03001****67"
-    assert mask_phone("923001234567") == "92300*****67"
-    assert mask_phone("123") == "***"
+    # One rule for logs and the page: country code and the last 3 digits only
+    assert mask_phone("+923001234567") == "+92 ••••••• 567"
+    assert mask_phone("03001234567") == "••••••••567"
+    assert mask_phone("923001234567") == "•••••••••567"
+    assert mask_phone("123") == "•••"
+    assert "1234" not in mask_pii_in_text("Called +923001234567")
 
     # Pakistani landlines (Karachi 021, Lahore 042)
     assert "021-34567890" not in mask_pii_in_text("Karachi shop: 021-34567890")
@@ -469,7 +471,7 @@ def test_cloud_logging_formatter():
     assert parsed["severity"] == "INFO"
     assert parsed["serviceContext"]["service"] == "api-test"
     assert "+923001234567" not in parsed["message"]
-    assert "+9230******67" in parsed["message"]
+    assert "+92 ••••••• 567" in parsed["message"]
 
 
 def test_calling_hours_validation():
@@ -519,7 +521,7 @@ def test_uvicorn_error_masking(capsys):
     captured = capsys.readouterr()
     assert captured.out.strip() != "", "Expected output on stdout"
     assert "+923001234567" not in captured.out
-    assert "+9230******67" in captured.out
+    assert "+92 ••••••• 567" in captured.out
 
     # Verify JSON structure
     log_line = [line for line in captured.out.strip().split("\n") if line.strip()][-1]
@@ -527,7 +529,7 @@ def test_uvicorn_error_masking(capsys):
     assert parsed["severity"] == "ERROR"
     assert parsed["serviceContext"]["service"] == "voice-test"
     assert "+923001234567" not in parsed["exception"]
-    assert "+9230******67" in parsed["exception"]
+    assert "+92 ••••••• 567" in parsed["exception"]
 
 
 def test_ladder_models_valid():

@@ -1,9 +1,9 @@
 """Shared module for Last Call domain types and utilities."""
 
+from lastcall_shared.buyer_keys import mask_phone
 from lastcall_shared.config import Settings, get_settings
 from lastcall_shared.logging_utils import (
     CloudLoggingJsonFormatter,
-    mask_phone,
     mask_pii_in_text,
     setup_structured_logging,
 )

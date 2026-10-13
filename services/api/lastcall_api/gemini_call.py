@@ -4,7 +4,6 @@ import asyncio
 import json
 import random
 import time
-from functools import lru_cache
 from typing import Any, NamedTuple
 
 import pydantic
@@ -57,17 +56,6 @@ def _is_retryable_error(exc: Exception) -> bool:
         return False
 
     return False
-
-
-@lru_cache
-def get_genai_client() -> genai.Client:
-    """Returns a cached genai Client configured for Vertex AI in the configured region."""
-    settings = get_settings()
-    return genai.Client(
-        vertexai=settings.GOOGLE_GENAI_USE_VERTEXAI,
-        project=settings.GOOGLE_CLOUD_PROJECT,
-        location=settings.GOOGLE_CLOUD_LOCATION,
-    )
 
 
 async def call_structured(

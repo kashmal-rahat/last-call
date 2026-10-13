@@ -6,11 +6,11 @@ HMAC signature (APP_SIGNING_KEY), so it can be handed to the buyer's browser vie
 Twilio for WhatsApp without exposing the bucket or an access code.
 """
 
-import base64
-import hashlib
 import hmac
 import time
 from urllib.parse import urlencode
+
+from lastcall_shared.signing import hmac_b64url
 
 LINK_TTL_S = 3600
 
@@ -20,9 +20,7 @@ def item_photo_path(inspection_id: str, item_key: str) -> str:
 
 
 def _signature(inspection_id: str, item_key: str, expires: int, key: str) -> str:
-    message = f"item-photo:{inspection_id}:{item_key}:{expires}".encode("utf-8")
-    digest = hmac.new(key.encode("utf-8"), message, hashlib.sha256).digest()
-    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+    return hmac_b64url(key, f"item-photo:{inspection_id}:{item_key}:{expires}")
 
 
 def sign_item_photo_url(

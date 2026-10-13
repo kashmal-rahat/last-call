@@ -21,10 +21,10 @@ from lastcall_api.inspector.images import prepare_image
 from lastcall_api.inspector.inspector import (
     _call,
     build_config,
-    get_genai_client,
 )
 from lastcall_api.inspector.prompt import user_text
 from lastcall_shared.config import get_settings
+from lastcall_shared.genai_client import get_genai_client
 
 
 def percentile(data: list[float], p: float) -> float:

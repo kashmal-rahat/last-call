@@ -7,6 +7,8 @@ import sys
 from datetime import datetime, timezone
 from typing import Any
 
+from lastcall_shared.buyer_keys import mask_phone  # one masking rule for logs and the page
+
 # Pattern matching Pakistani mobiles, Pakistani landlines (Karachi 021, Lahore 042, etc.),
 # un-prefixed 92 numbers, and international E.164 formats (+...).
 # Plain IDs (mart_khi_001) and ISO timestamps (2026-10-06T18:00:00Z) are not matched.
@@ -15,17 +17,6 @@ PHONE_PATTERN = re.compile(
     r"(?:\+?92[\s\-]?|0)(?:21|42|51|41|52|61|71|81|91|[2-9]\d{2})[\s\-]?\d{3,4}[\s\-]?\d{4}|"
     r"\+[1-9]\d{6,14}"
 )
-
-
-def mask_phone(phone: str) -> str:
-    """Masks a phone number, preserving the first 4-5 chars and last 2 digits."""
-    cleaned = phone.strip()
-    if len(cleaned) < 7:
-        return "***"
-    prefix = cleaned[:5]
-    suffix = cleaned[-2:]
-    masked_middle = "*" * (len(cleaned) - 7)
-    return f"{prefix}{masked_middle}{suffix}"
 
 
 def mask_pii_in_text(text: str) -> str:

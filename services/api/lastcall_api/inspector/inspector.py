@@ -2,7 +2,6 @@
 
 import asyncio
 import hashlib
-import secrets
 import time
 from collections import Counter
 from datetime import datetime, timezone
@@ -15,7 +14,6 @@ from lastcall_api.gemini_call import (
     CallUsage,
     GeminiCallError,
     call_structured,
-    get_genai_client,
 )
 from lastcall_api.inspector.guardrails import apply_guardrails, clean_item, merge_neighbours
 from lastcall_api.inspector.images import crop_group, prepare_image
@@ -23,7 +21,9 @@ from lastcall_api.inspector.matching import assign_keys
 from lastcall_api.inspector.prompt import PROMPT_VERSION, SYSTEM_PROMPT, user_text, zoom_text
 from lastcall_api.inspector.schema import InspectorOutput
 from lastcall_api.inspector.zoom import merge_zoom, select_for_zoom
+from lastcall_shared import ids
 from lastcall_shared.config import get_settings
+from lastcall_shared.genai_client import get_genai_client
 from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.models import FreshnessResult, InspectorMeta
 
@@ -334,7 +334,7 @@ async def inspect_photo(
         from_cache=from_cache,
     )
 
-    inspection_id = f"insp_{now:%Y%m%d_%H%M%S}_{secrets.token_hex(3)}"
+    inspection_id = ids.new_inspection_id(now)
     prev_id = previous.inspection_id if previous else None
 
     result = FreshnessResult(

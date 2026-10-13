@@ -3,19 +3,18 @@
 import logging
 from datetime import datetime
 from typing import Any, Callable, Literal
-from zoneinfo import ZoneInfo
 
 from google.adk.agents import LlmAgent
 from google.adk.tools import BaseTool
 from google.adk.tools.tool_context import ToolContext
 from pydantic import AwareDatetime
 
+from lastcall_shared.clock import PKT
 from lastcall_shared.logging_utils import mask_pii_data
 from lastcall_shared.models import AgentDealBrief
 from lastcall_voice.negotiator.prompt import render_instruction
 from lastcall_voice.negotiator.tools import get_negotiator_tools
 
-PKT = ZoneInfo("Asia/Karachi")
 logger = logging.getLogger("lastcall_voice.negotiator")
 
 

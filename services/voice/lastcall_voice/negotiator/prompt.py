@@ -6,6 +6,7 @@ from typing import Literal
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from pydantic import AwareDatetime
 
+from lastcall_shared.clock import time_words
 from lastcall_shared.models import AgentDealBrief
 
 PROMPT_VERSION = "1.6"
@@ -98,14 +99,6 @@ def quantity_words(quantity: float, unit: str, confirmed: bool = True) -> str:
     if confirmed:
         return f"{q_str} {u}"
     return f"taqreeban {q_str} {u}"
-
-
-def time_words(dt: AwareDatetime) -> str:
-    hour = dt.strftime("%I").lstrip("0")
-    minute = dt.strftime("%M")
-    ampm = dt.strftime("%p")
-    time_str = f"{hour}:{minute} {ampm}" if minute != "00" else f"{hour} {ampm}"
-    return f"{dt.strftime('%d %B')}, {time_str}"
 
 
 def buyer_type_words(buyer_type: str) -> str:

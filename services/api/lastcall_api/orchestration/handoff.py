@@ -8,12 +8,12 @@ import uuid
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from pydantic import AwareDatetime
-
 from lastcall_api.ladder.engine import step_prices
 from lastcall_api.scout.rank import sanitise_name
 from lastcall_api.scout.scout import ScoutNotApplicable
+from lastcall_shared import ids
 from lastcall_shared.buyer_keys import mask_phone
+from lastcall_shared.clock import time_words
 from lastcall_shared.models import (
     BatchRecord,
     Branch,
@@ -141,15 +141,6 @@ def pickup_window(rules: MartRules, now: datetime) -> tuple[datetime, datetime]:
         return next_open, deadline
 
 
-def time_words(dt: AwareDatetime) -> str:
-    """Formats aware datetime in natural language including date and hour."""
-    hour = dt.strftime("%I").lstrip("0")
-    minute = dt.strftime("%M")
-    ampm = dt.strftime("%p")
-    time_str = f"{hour}:{minute} {ampm}" if minute != "00" else f"{hour} {ampm}"
-    return f"{dt.strftime('%d %B')}, {time_str}"
-
-
 def build_call_record(
     *,
     batch: BatchRecord,
@@ -161,7 +152,7 @@ def build_call_record(
     now: datetime,
 ) -> CallRecord:
     """Constructs a CallRecord for a browser role-play call."""
-    call_id = f"call_{uuid.uuid4().hex}"
+    call_id = ids.new_call_id()
     nonce = uuid.uuid4().hex
 
     start, deadline = pickup_window(rules, now)

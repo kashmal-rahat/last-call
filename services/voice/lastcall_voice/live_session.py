@@ -19,7 +19,6 @@ import os
 import time
 from datetime import datetime, timedelta
 from typing import Any, Callable
-from zoneinfo import ZoneInfo
 
 from google.adk import Runner
 from google.adk.agents.run_config import RunConfig
@@ -29,8 +28,10 @@ from google.genai import types
 from pydantic import AwareDatetime
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
 
+from lastcall_shared.clock import PKT
 from lastcall_shared.config import get_settings
 from lastcall_shared.firestore_store import FirestoreStore
+from lastcall_shared.genai_client import get_genai_client
 from lastcall_shared.models import CallResult, TranscriptEntry
 from lastcall_shared.session_tokens import verify as verify_session_token
 from lastcall_shared.store import CallStore
@@ -40,7 +41,6 @@ from lastcall_voice.negotiator import price_guard
 from lastcall_voice.negotiator.agent import build_negotiator
 from lastcall_voice.negotiator.prompt import price_words
 
-PKT = ZoneInfo("Asia/Karachi")
 logger = logging.getLogger("lastcall_voice.live_session")
 
 BASE_MARKET_VOCABULARY: list[str] = [
@@ -128,17 +128,6 @@ async def run_call_summary(call_id: str, store: CallStore) -> None:
             logger.info("call_summary_saved", extra={"call_id": call_id})
     except Exception as exc:
         logger.warning("call_summary_failed", extra={"call_id": call_id, "error": str(exc)})
-
-
-def _get_genai_client() -> Any:
-    from google import genai
-
-    settings = get_settings()
-    return genai.Client(
-        vertexai=settings.GOOGLE_GENAI_USE_VERTEXAI,
-        project=settings.GOOGLE_CLOUD_PROJECT,
-        location=settings.GOOGLE_CLOUD_LOCATION,
-    )
 
 
 async def handle_live_call_websocket(
@@ -446,7 +435,7 @@ async def handle_live_call_websocket(
 
                             async def _check_spoken_price_fallback(text: str) -> None:
                                 try:
-                                    client_to_use = flash_client or _get_genai_client()
+                                    client_to_use = flash_client or get_genai_client()
                                     ext_prices, unchecked = await price_guard.fallback_extract_prices(
                                         text=text,
                                         client=client_to_use,

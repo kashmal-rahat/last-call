@@ -1,5 +1,4 @@
 import math
-import re
 from datetime import time, timedelta
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
@@ -13,6 +12,7 @@ from pydantic import (
     model_validator,
 )
 
+from lastcall_shared import ids
 from lastcall_shared.buyer_keys import mask_phone
 
 # All timestamps are timezone-aware (e.g. "2026-10-06T18:00:00+05:00") so that
@@ -663,7 +663,7 @@ class Branch(BaseModel):
     @field_validator("branch_id")
     @classmethod
     def validate_branch_id(cls, v: str) -> str:
-        if not re.match(r"^[a-z0-9_]{1,30}$", v):
+        if not ids.BRANCH_ID.match(v):
             raise ValueError(f"branch_id must match '^[a-z0-9_]{{1,30}}$', got '{v}'")
         return v
 

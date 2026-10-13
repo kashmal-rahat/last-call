@@ -13,10 +13,10 @@ from pydantic import BaseModel
 from lastcall_api.gemini_call import (
     CallUsage,
     call_structured,
-    get_genai_client,
 )
 from lastcall_api.ladder.keys import produce_key
 from lastcall_shared.config import get_settings
+from lastcall_shared.genai_client import get_genai_client
 from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.models import (
     ProduceProfile,

@@ -5,7 +5,6 @@ import hmac
 import inspect
 import json
 import os
-import re
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -42,6 +41,8 @@ from lastcall_api.scout.scout import (
     ScoutTarget,
     run_scout,
 )
+from lastcall_shared import ids
+from lastcall_shared.clock import PKT
 from lastcall_shared.firestore_store import FirestoreStore
 from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.marts.loader import load_mart_rules
@@ -52,7 +53,6 @@ from lastcall_shared.store import CallStore
 SERVICE_NAME = "api"
 VERSION = "0.1.0"
 COMMIT = os.getenv("GIT_COMMIT", "dev")
-PKT = ZoneInfo("Asia/Karachi")
 
 logger = setup_structured_logging(service_name=SERVICE_NAME)
 
@@ -182,9 +182,6 @@ async def get_demo_page():
     return FileResponse(html_path)
 
 
-BATCH_ID_REGEX = re.compile(r"^[a-z0-9_-]{1,60}__[a-z0-9_]{1,60}__[a-z0-9_]{1,30}$")
-
-
 class CreateCallRequest(BaseModel):
     inspection_id: str
     item_key: str
@@ -270,13 +267,13 @@ async def demo_create_call(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access code")
 
     # 2. Validation
-    if not body.inspection_id or not re.match(r"^[a-z0-9_-]{1,60}$", body.inspection_id.strip()):
+    if not body.inspection_id or not ids.INSPECTION_ID.match(body.inspection_id.strip()):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid inspection_id")
-    if not body.item_key or not re.match(r"^[a-z0-9_]{1,60}$", body.item_key.strip()):
+    if not body.item_key or not ids.ITEM_KEY.match(body.item_key.strip()):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid item_key")
-    if body.branch_id is not None and not re.match(r"^[a-z0-9_]{1,30}$", body.branch_id.strip()):
+    if body.branch_id is not None and not ids.BRANCH_ID.match(body.branch_id.strip()):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid branch_id")
-    if body.buyer_id is not None and not re.match(r"^places:[A-Za-z0-9_-]{1,300}$", body.buyer_id.strip()):
+    if body.buyer_id is not None and not ids.PLACES_BUYER_ID.match(body.buyer_id.strip()):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid buyer_id")
     if body.quantity is not None and not (0 < body.quantity <= 1000):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="quantity must be > 0 and <= 1000")
@@ -316,7 +313,7 @@ async def demo_create_call(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown branch_id '{body.branch_id}'"
         ) from None
 
-    batch_id = f"{body.inspection_id.strip()}__{body.item_key.strip()}__{branch.branch_id}"
+    batch_id = ids.make_batch_id(body.inspection_id.strip(), body.item_key.strip(), branch.branch_id)
 
     # 6. Batch handling
     now_pkt = datetime.now(PKT)
@@ -483,7 +480,7 @@ async def get_demo_batch(
     if not _verify_access_code(x_demo_access_code):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access code")
 
-    if not BATCH_ID_REGEX.match(batch_id.strip()):
+    if not ids.BATCH_ID.match(batch_id.strip()):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid batch_id format")
 
     store = _get_store()
@@ -504,7 +501,7 @@ async def demo_batch_next_step(
     if not _verify_access_code(x_demo_access_code):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access code")
 
-    if not BATCH_ID_REGEX.match(batch_id.strip()):
+    if not ids.BATCH_ID.match(batch_id.strip()):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid batch_id format")
 
     store = _get_store()
@@ -569,7 +566,7 @@ async def demo_inspect(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access code")
 
     # 2. Parameter validation
-    if not re.match(r"^[a-z0-9_-]{1,40}$", shelf_id):
+    if not ids.SHELF_ID.match(shelf_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid shelf_id: must match ^[a-z0-9_-]{1,40}$",
@@ -682,7 +679,7 @@ async def demo_decide(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="inspection_id is required",
         )
-    if not re.match(r"^insp_[a-z0-9_]{1,80}$", body.inspection_id.strip()):
+    if not ids.INSPECTION_ID.match(body.inspection_id.strip()):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid inspection_id format '{body.inspection_id}', must match ^insp_[a-z0-9_]{{1,80}}$",
@@ -700,7 +697,7 @@ async def demo_decide(
                 detail="At most 12 price overrides allowed",
             )
         for key, price in body.price_overrides.items():
-            if not re.match(r"^[a-z0-9_]{1,60}$", key):
+            if not ids.ITEM_KEY.match(key):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Invalid key in price_overrides: '{key}', must match ^[a-z0-9_]{{1,60}}$",
@@ -806,7 +803,7 @@ async def demo_scout(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="inspection_id is required",
         )
-    if not re.match(r"^insp_[a-z0-9_]{1,80}$", body.inspection_id.strip()):
+    if not ids.INSPECTION_ID.match(body.inspection_id.strip()):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid inspection_id format '{body.inspection_id}', must match ^insp_[a-z0-9_]{{1,80}}$",
@@ -816,14 +813,14 @@ async def demo_scout(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="item_key is required",
         )
-    if not re.match(r"^[a-z0-9_]{1,60}$", body.item_key.strip()):
+    if not ids.ITEM_KEY.match(body.item_key.strip()):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid item_key format '{body.item_key}', must match ^[a-z0-9_]{{1,60}}$",
         )
     rules = load_mart_rules("demo_mart")
     if body.branch_id is not None:
-        if not re.match(r"^[a-z0-9_]{1,30}$", body.branch_id.strip()):
+        if not ids.BRANCH_ID.match(body.branch_id.strip()):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid branch_id format '{body.branch_id}', must match ^[a-z0-9_]{{1,30}}$",
@@ -870,7 +867,7 @@ async def demo_scout(
             detail="Buyer search isn't set up for this mart",
         ) from None
 
-    batch_id = f"{body.inspection_id}__{body.item_key}__{branch.branch_id}"
+    batch_id = ids.make_batch_id(body.inspection_id, body.item_key, branch.branch_id)
     batch = await store.get_batch(batch_id)
     if batch is not None and batch.step_index < len(batch.plans):
         current_plan = batch.plans[batch.step_index]

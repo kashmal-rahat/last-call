@@ -12,21 +12,18 @@ side <= 1600 px) for one day, and crops the item on request using the Inspector'
 
 import asyncio
 import logging
-import re
 from typing import Callable, Protocol
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from lastcall_api.inspector.images import ImageError, crop_group, prepare_image
+from lastcall_shared import ids
 from lastcall_shared.config import get_settings
 from lastcall_shared.item_photos import verify_item_photo_signature
 from lastcall_shared.models import BoundingBox
 from lastcall_shared.store import CallStore
 
 logger = logging.getLogger("lastcall_api.item_photos")
-
-_INSPECTION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
-_ITEM_KEY_RE = re.compile(r"^[a-z0-9_]{1,60}$")
 
 
 class PhotoStore(Protocol):
@@ -113,7 +110,7 @@ def build_router(
         sig: str = Query(..., max_length=64),
     ) -> Response:
         """A signed, time-limited crop of one item. Fetched by the page and by Twilio (WhatsApp)."""
-        if not (_INSPECTION_ID_RE.match(inspection_id) and _ITEM_KEY_RE.match(item_key)):
+        if not (ids.INSPECTION_ID.match(inspection_id) and ids.ITEM_KEY.match(item_key)):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
         key = get_settings().APP_SIGNING_KEY.get_secret_value()
         if not verify_item_photo_signature(inspection_id, item_key, exp, sig, key=key):

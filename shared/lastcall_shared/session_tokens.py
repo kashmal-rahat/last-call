@@ -6,7 +6,6 @@ Used to authenticate the browser's WebSocket connection to the Voice service:
 2. Voice service verifies signature with APP_SIGNING_KEY and checks expiration.
 """
 
-import base64
 import hashlib
 import hmac
 import json
@@ -15,16 +14,7 @@ from datetime import datetime
 
 from pydantic import AwareDatetime
 
-
-def _b64url_encode(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("utf-8")
-
-
-def _b64url_decode(s: str) -> bytes:
-    pad = len(s) % 4
-    if pad:
-        s += "=" * (4 - pad)
-    return base64.urlsafe_b64decode(s.encode("utf-8"))
+from lastcall_shared.signing import b64url_decode, b64url_encode
 
 
 def mint(
@@ -53,9 +43,9 @@ def mint(
         "exp": int(now_ts + ttl),
     }
     p_bytes = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    p_b64 = _b64url_encode(p_bytes)
+    p_b64 = b64url_encode(p_bytes)
     sig = hmac.new(key.encode("utf-8"), p_b64.encode("utf-8"), hashlib.sha256).digest()
-    sig_b64 = _b64url_encode(sig)
+    sig_b64 = b64url_encode(sig)
     return f"{p_b64}.{sig_b64}"
 
 
@@ -81,7 +71,7 @@ def verify(
     expected_sig = hmac.new(key.encode("utf-8"), p_b64.encode("utf-8"), hashlib.sha256).digest()
 
     try:
-        actual_sig = _b64url_decode(sig_b64)
+        actual_sig = b64url_decode(sig_b64)
     except Exception:
         return False, None, "Invalid signature encoding"
 
@@ -89,7 +79,7 @@ def verify(
         return False, None, "Invalid signature"
 
     try:
-        payload = json.loads(_b64url_decode(p_b64).decode("utf-8"))
+        payload = json.loads(b64url_decode(p_b64).decode("utf-8"))
     except Exception:
         return False, None, "Invalid payload JSON"
 

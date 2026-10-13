@@ -2,14 +2,12 @@
 
 import re
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
 
 from pydantic import AwareDatetime
 
 from lastcall_api.inspector.guardrails import STAGE_ORDER, ItemDraft, names_match
+from lastcall_shared.clock import PKT
 from lastcall_shared.models import FreshnessResult, ItemAssessment
-
-PKT = ZoneInfo("Asia/Karachi")
 
 
 def slug(text: str) -> str:

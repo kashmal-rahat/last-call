@@ -9,8 +9,9 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from lastcall_api.gemini_call import call_structured, get_genai_client
+from lastcall_api.gemini_call import call_structured
 from lastcall_api.scout.rank import FilteredCandidate
+from lastcall_shared.genai_client import get_genai_client
 from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.models import BuyerFit, ScoutStep, UsageRecord
 

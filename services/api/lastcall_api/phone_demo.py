@@ -16,13 +16,13 @@ Privacy: phone numbers, Twilio credentials and Twilio responses are never logged
 """
 
 import logging
-import re
 from typing import Awaitable, Callable
 from xml.sax.saxutils import quoteattr
 
 from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel
 
+from lastcall_shared import ids
 from lastcall_shared.config import get_settings
 from lastcall_shared.session_tokens import verify as verify_session_token
 from lastcall_shared.store import CallStore
@@ -33,7 +33,6 @@ logger = logging.getLogger("lastcall_api.phone_demo")
 RING_SECONDS = 30
 DIAL_IP_LIMIT_PER_HOUR = 10
 
-_CALL_ID_RE = re.compile(r"^call_[a-f0-9]{32}$")
 
 Dialer = Callable[[PhoneDemoConfig, str], Awaitable[None]]
 
@@ -97,7 +96,7 @@ def build_router(
     def require_access(code: str | None, call_id: str | None = None) -> None:
         if not verify_access_code(code):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access code")
-        if call_id is not None and not _CALL_ID_RE.match(call_id):
+        if call_id is not None and not ids.CALL_ID.match(call_id):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid call_id")
 
     @router.get("/config")
