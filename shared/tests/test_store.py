@@ -329,7 +329,8 @@ async def test_firestore_store_get_profiles_async_generator():
         created_at=NOW,
     )
 
-    fs = FirestoreStore(collection_prefix="mock_")
+    client = MagicMock()  # no real Firestore client, so no Google credentials needed
+    fs = FirestoreStore(client=client, collection_prefix="mock_")
 
     snap_found = MagicMock()
     snap_found.id = "banana__v1"
