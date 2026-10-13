@@ -35,6 +35,7 @@ from lastcall_shared.models import CallResult, TranscriptEntry
 from lastcall_shared.session_tokens import verify as verify_session_token
 from lastcall_shared.store import CallStore
 from lastcall_voice.call_context import CallContext, register_context, unregister_context
+from lastcall_voice.call_socket import CallSocket
 from lastcall_voice.negotiator.agent import build_negotiator
 from lastcall_voice.negotiator import price_guard
 from lastcall_voice.negotiator.prompt import price_words
@@ -140,15 +141,20 @@ def _get_genai_client() -> Any:
 
 
 async def handle_live_call_websocket(
-    websocket: WebSocket,
+    websocket: WebSocket | CallSocket,
     store: CallStore | None = None,
     signing_key: str | None = None,
     semaphore: asyncio.Semaphore | None = None,
     clock: Callable[[], AwareDatetime] | None = None,
     runner_factory: Callable[..., Any] | None = None,
     flash_client: Any = None,
+    check_origin: bool = True,
 ) -> None:
-    """Handles the WebSocket connection for a live call."""
+    """Handles the WebSocket connection for a live call.
+
+    `check_origin=False` is only for server-to-server transports (the phone demo's Twilio
+    stream), which send no Origin header; the single-use call token still authenticates them.
+    """
     settings = get_settings()
     actual_store: CallStore = store or getattr(websocket.app.state, "store", None) or FirestoreStore()
     app_key = signing_key or (settings.APP_SIGNING_KEY.get_secret_value() if settings.APP_SIGNING_KEY else "")
@@ -170,7 +176,7 @@ async def handle_live_call_websocket(
     # 1. Origin verification
     origin = websocket.headers.get("origin")
     allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "")
-    if allowed_origins_raw:
+    if check_origin and allowed_origins_raw:
         allowed = [o.strip() for o in allowed_origins_raw.split(",") if o.strip()]
         if origin not in allowed:
             logger.warning("ws_rejected_origin", extra={"origin": origin})

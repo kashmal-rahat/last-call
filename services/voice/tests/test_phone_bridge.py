@@ -58,6 +58,7 @@ class FakeTwilioSocket:
         self.sent: list[dict] = []
         self.client_state = WebSocketState.CONNECTED
         self.app = None
+        self.headers: dict[str, str] = {}
 
     async def receive_text(self) -> str:
         if not self.incoming:
@@ -126,11 +127,13 @@ def voice_app(monkeypatch):
     store = InMemoryStore()
     app.state.store = store
     app.state.semaphore = asyncio.Semaphore(4)
-    return store
+    yield store
+    get_settings.cache_clear()
 
 
 def test_stream_is_closed_when_switched_off(voice_app, monkeypatch):
     monkeypatch.delenv("PHONE_DEMO_ENABLED", raising=False)
+    get_settings.cache_clear()
     with pytest.raises(WebSocketDisconnect) as exc:
         with TestClient(app).websocket_connect("/phone/stream"):
             pass
@@ -139,6 +142,7 @@ def test_stream_is_closed_when_switched_off(voice_app, monkeypatch):
 
 def test_phone_call_runs_through_the_unchanged_handler(voice_app, monkeypatch):
     monkeypatch.setenv("PHONE_DEMO_ENABLED", "true")
+    get_settings.cache_clear()
     store = voice_app
     call, batch = build_call("easy_yes", now=NOW)
     asyncio.run(store.create_call(call, batch))
@@ -188,3 +192,13 @@ def test_phone_call_runs_through_the_unchanged_handler(voice_app, monkeypatch):
     assert asyncio.run(store.get_live_lines(call.call_id)) == [
         {"i": 0, "speaker": "agent", "text": "Assalam o alaikum"}
     ]
+
+
+def test_browser_route_still_checks_origin(voice_app, monkeypatch):
+    """The phone demo turns the origin check off only for /phone/stream."""
+    monkeypatch.setenv("PHONE_DEMO_ENABLED", "true")
+    get_settings.cache_clear()
+    with pytest.raises(WebSocketDisconnect) as exc:
+        with TestClient(app).websocket_connect("/ws/call", headers={"origin": "https://attacker.example.com"}):
+            pass
+    assert exc.value.code == 4403

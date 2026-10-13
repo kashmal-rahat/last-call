@@ -12,68 +12,61 @@ Built directly by Claude at the user's request on 2026-10-13 (the user said "imp
 
 | Part | New file | Change to existing files |
 |---|---|---|
-| `api` | `lastcall_api/phone_demo.py`: `GET /demo/phone/config`, `POST /demo/phone/dial`, `GET /demo/phone/calls/{id}` | `main.py`: one `include_router` block at the end. `/demo/calls` is unchanged |
-| `voice` | `lastcall_voice/phone/audio.py` (mu-law 8 kHz ↔ PCM 16/24 kHz), `phone/bridge.py` (Twilio socket adapter) | `main.py`: one `/phone/stream` route. **`live_session.py` is unchanged** |
-| store | — | `append_live_line` and `get_live_lines` added to the protocol and both stores. Lines live on the call doc, so they inherit its TTL |
-| page | `static/js/phone.js` | `index.html`: a hidden switch in the buyers section and an id on the caller caption. `dom.js`: 3 lookups. `call.js`: one import and one 4-line hook in `startCallForItem`. `main.js`: one import and one `initPhoneDemo()` call. `demo.css`: the switch's style |
+| `api` | `lastcall_api/phone_demo.py`: `PhoneDemoConfig` (validated secret), `GET /demo/phone/config`, `POST /demo/phone/dial`, `GET /demo/phone/calls/{id}` | `main.py`: one `include_router` block at the end. `/demo/calls` is unchanged |
+| `voice` | `phone/audio.py` (mu-law 8 kHz ↔ PCM 16/24 kHz), `phone/bridge.py` (`TwilioStreamAdapter`), `call_socket.py` (the `CallSocket` protocol the handler needs) | `main.py`: one `/phone/stream` route. `live_session.py`: the parameter is typed `WebSocket \| CallSocket`, and a keyword `check_origin: bool = True` is added. The browser route doesn't pass it, so browser behaviour is unchanged (test `test_browser_route_still_checks_origin`) |
+| shared | — | `Settings`: `PHONE_DEMO_ENABLED: bool = False` and `PHONE_DEMO_CONFIG: SecretStr \| None`. Store: `append_live_line` and `get_live_lines` (lines live on the call doc and inherit its TTL) |
+| page | `static/js/phone.js` | `index.html`: a hidden switch in the buyers section and an id on the caller caption. `dom.js`: 3 lookups. `call.js`: one 4-line hook in `startCallForItem`. `main.js`: `initPhoneDemo()`. `demo.css`: the switch's style |
+| Terraform | — | `variable "phone_demo_enabled"` (default false). Secret `phone-demo-config` (container only) plus read access for `api-sa`. `PHONE_DEMO_ENABLED` on both services. `PHONE_DEMO_CONFIG` attached to `api` only while enabled |
 
 ### Three locks keep judges on the browser call
-1. **`PHONE_DEMO_ENABLED`** (default off). When it's off, every `/demo/phone/*` endpoint answers 404 and `/phone/stream` closes at once.
-2. **`?phone=1` in the page address.** Without it the switch never shows and the page makes no phone request, even if the flag is left on.
-3. **A fixed number.** The number to ring lives only in the `phone-demo-config` secret, never in a request. If someone triggered it, only your own SIM could ring.
+1. **`phone_demo_enabled = false`** (the default). Every `/demo/phone/*` endpoint answers 404 and `/phone/stream` closes at once.
+2. **`?phone=1` in the page address.** Without it the switch never shows and the page makes no phone request.
+3. **A fixed number.** The number to ring lives only in the `phone-demo-config` secret, never in a request.
 
 ### How a phone call runs
 1. "Start call" creates the call through `/demo/calls`, exactly as today: same buyer, deal, price floor, daily cap and lock.
-2. `phone.js` sends the call ID and its 120 s token to `/demo/phone/dial`. The API checks the token belongs to that call and that the call hasn't started, then asks Twilio to ring your SIM. Twilio rings for 30 s, with recording off.
-3. When you answer, Twilio opens `wss://<voice>/phone/stream` and passes the token as a Stream `<Parameter>`.
-4. The bridge hands the token to the unchanged call handler as the browser's auth message. It converts the audio both ways and passes interruptions to Twilio as `clear`.
-5. Each transcript line is written to the call doc in order by one background writer. The page fetches new lines every second.
-6. **Ending the call:**
-   - If you hang up, Twilio sends `stop` and the handler finishes the call as on a browser hang-up.
-   - If the AI ends the call, the bridge sends a `mark` and waits up to 5 s for Twilio to finish playing the goodbye, then closes; Twilio then ends the call.
-7. The page shows the normal result card through the existing `pollBatchUntilCompleted`.
+2. `phone.js` sends the call ID and its 120 s token to `/demo/phone/dial`. The API checks the token belongs to that call and the call hasn't started, then asks Twilio to ring the SIM. Twilio rings for 30 s, with recording off.
+3. When you answer, Twilio opens `wss://<voice>/phone/stream` with the token as a Stream `<Parameter>`.
+4. `TwilioStreamAdapter` gives the token to the unchanged handler's auth step (`check_origin=False`, because Twilio sends no Origin header). It converts audio both ways and passes interruptions to Twilio as `clear`.
+5. Transcript lines are written in order by one background writer; the page fetches them every second.
+6. **Ending the call:** if you hang up, Twilio sends `stop`. If the AI ends it, the bridge waits up to 5 s for a `mark` so the goodbye plays, then closes, and Twilio ends the call.
+7. The page shows the normal result card.
 
-## Set up once (you, about 10 minutes)
-1. **Twilio console:** Account → API keys → create a **Standard** key. Note its SID (`SK…`) and secret. Pakistan voice permission is already on (your test call worked).
-2. **Create the secret from a file outside the repo**, so it never reaches git or your shell history. Write `~/phone-demo-config.json`:
-   ```json
-   {"account_sid": "AC…", "api_key_sid": "SK…", "api_key_secret": "…", "from_number": "+1…", "to_number": "+92…"}
-   ```
-   Both numbers must be in E.164 format. Then:
-   ```bash
-   gcloud secrets create phone-demo-config --data-file="$HOME/phone-demo-config.json" --project=kayrox-last-call
-   ```
-   ```bash
-   gcloud secrets add-iam-policy-binding phone-demo-config --member="serviceAccount:api-sa@kayrox-last-call.iam.gserviceaccount.com" --role="roles/secretmanager.secretAccessor" --project=kayrox-last-call
-   ```
-   ```bash
-   rm "$HOME/phone-demo-config.json"
-   ```
-3. **Commit, then deploy both services:** `./scripts/deploy.sh api` and `./scripts/deploy.sh voice`. The deploy doesn't touch environment variables, so the module is still off.
+### Deliberately not built
+- **Twilio status callbacks** (no-answer or failed): they would need a public webhook plus signature checking. The page treats "not answered within 75 s" as no answer.
+- **Twilio request-signature validation:** it needs the main Auth Token, which we don't store. The single-use, 120 s, per-call token authenticates the stream.
+- **Managing the Twilio API key in Terraform:** its secret would end up in Terraform state.
+- **A new service account:** `api-sa` reads the secret; `voice` needs no new permission.
+- **Scheduled calling, calling hours, calling real buyers:** production design, described in the deck.
 
-## Switch on (before recording)
+## Switching on and off: Terraform
+The secret value already exists (version 1+, created with `gcloud`). Once, bring the existing secret into Terraform state:
 ```bash
-gcloud run services update api --region=europe-west1 --project=kayrox-last-call --update-env-vars=PHONE_DEMO_ENABLED=true --update-secrets=PHONE_DEMO_CONFIG=phone-demo-config:latest
+cd infra/terraform && terraform import google_secret_manager_secret.phone_demo_config projects/kayrox-last-call/secrets/phone-demo-config
 ```
+**On (recording):**
 ```bash
-gcloud run services update voice --region=europe-west1 --project=kayrox-last-call --update-env-vars=PHONE_DEMO_ENABLED=true
+terraform plan -var="phone_demo_enabled=true" -out=phone-on.tfplan
 ```
-Open `<api-url>/demo?phone=1`, tick **Ring my phone**, then **Start call**.
+Review the plan, then:
+```bash
+terraform apply phone-on.tfplan
+```
+**Off (judging):**
+```bash
+terraform plan -out=phone-off.tfplan
+```
+Review the plan, then:
+```bash
+terraform apply phone-off.tfplan
+```
+**Check:** `curl -s -o /dev/null -w "%{http_code}" <api-url>/demo/phone/config` must print `404` when off.
 
-## Switch off (after recording)
-```bash
-gcloud run services update api --region=europe-west1 --project=kayrox-last-call --update-env-vars=PHONE_DEMO_ENABLED=false
-```
-```bash
-gcloud run services update voice --region=europe-west1 --project=kayrox-last-call --update-env-vars=PHONE_DEMO_ENABLED=false
-```
-**Check:** `curl -s -o /dev/null -w "%{http_code}" <api-url>/demo/phone/config` must print `404`.
-
-A later `terraform apply` drops these `gcloud`-set variables, which also leaves the module off (the safe direction).
+**Changing the number:** `gcloud secrets versions add phone-demo-config --data-file=<file>`, then apply with the feature on. Each apply that changes the service creates a new revision, which reads `latest`. If nothing else changed, run `terraform apply -replace=google_cloud_run_v2_service.api` with the same `-var`.
 
 ## Checks
 - **Local:**
-  - `pytest` 386 passed, 20 skipped (new: `test_phone_demo.py` 9, `test_phone_bridge.py` 7, store contract `test_live_lines_for_phone_demo`); `node --test` 21 passed.
+  - (round 1) `pytest` 386 passed, 20 skipped (new: `test_phone_demo.py` 9, `test_phone_bridge.py` 7, store contract `test_live_lines_for_phone_demo`); `node --test` 21 passed.
   - **The full call through the unchanged handler:** `test_phone_call_runs_through_the_unchanged_handler`. Twilio handshake, agent audio converted to mu-law, buyer hang-up, goodbye mark, call `completed`, transcript line saved.
   - **The page flow in the local preview with a fake Twilio:** the switch is hidden without `?phone=1`, then "Ringing your phone…", "Call answered", five live Urdu lines, "Call ended", then the normal "Deal agreed" card and "All stock placed".
   - **The judges' page:** the switch stays hidden, phone mode is off and no `/demo/phone/*` request is made.
@@ -83,6 +76,12 @@ A later `terraform apply` drops these `gcloud`-set variables, which also leaves 
   - Real Twilio audio quality and delay over the Pakistan route.
   - How well Gemini hears Urdu over 8 kHz phone audio.
   - The live Firestore contract test (`RUN_FIRESTORE_TESTS=1`): it hung because the local Google login has expired. Run it after `gcloud auth application-default login`.
+
+### Round 2: refactor to production shape (2026-10-13)
+- **Settings:** the flag and config moved into `Settings`. The config is now a validated pydantic model (`PhoneDemoConfig`, `extra="forbid"`, E.164 and Twilio ID patterns, the key secret held as `SecretStr`). Validation errors name the fields only and never echo the numbers or secret (test `test_config_errors_never_echo_numbers_or_secrets`).
+- **Bridge:** the faked Origin header is gone, replaced by the explicit `check_origin=False` for `/phone/stream`. The duck typing with `# type: ignore` is replaced by the `CallSocket` protocol.
+- **Terraform:** the switch moved from `gcloud` to Terraform: the variable, the secret container, `api-sa` read access, and the env vars on both services.
+- **Checks:** `pytest` 388 passed, 20 skipped, on three runs; `node --test` 21 passed; `terraform fmt` and `validate` clean. `terraform plan` could not be run here (the local Google login has expired), so the user runs it and shows the output before any apply.
 
 ## Live check (you, while switched on)
 1. `/demo` without `?phone=1`: no switch shows; a browser call works as before.

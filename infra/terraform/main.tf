@@ -171,6 +171,25 @@ resource "google_secret_manager_secret_iam_member" "api_sa_demo_access_code" {
   member    = "serviceAccount:${google_service_account.api_sa.email}"
 }
 
+# Phone demo (Module 9, D61): Twilio account, API key and the two numbers as one JSON value.
+# Container only: the value is added with `gcloud secrets versions add`, so Twilio
+# credentials never enter Terraform state. Only api-sa reads it; voice never sees it.
+resource "google_secret_manager_secret" "phone_demo_config" {
+  project   = var.project_id
+  secret_id = "phone-demo-config"
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.services]
+}
+
+resource "google_secret_manager_secret_iam_member" "api_sa_phone_demo_config" {
+  project   = var.project_id
+  secret_id = google_secret_manager_secret.phone_demo_config.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.api_sa.email}"
+}
+
 # 6. Firestore Database & TTL
 resource "google_firestore_database" "default" {
   project                 = var.project_id
@@ -318,6 +337,23 @@ resource "google_cloud_run_v2_service" "api" {
         value = "20"
       }
       env {
+        name  = "PHONE_DEMO_ENABLED"
+        value = tostring(var.phone_demo_enabled)
+      }
+      # Attached only while the phone demo is on, so a project with it off needs no secret value.
+      dynamic "env" {
+        for_each = var.phone_demo_enabled ? [google_secret_manager_secret.phone_demo_config.secret_id] : []
+        content {
+          name = "PHONE_DEMO_CONFIG"
+          value_source {
+            secret_key_ref {
+              secret  = env.value
+              version = "latest"
+            }
+          }
+        }
+      }
+      env {
         name = "DEMO_ACCESS_CODE"
         value_source {
           secret_key_ref {
@@ -350,6 +386,7 @@ resource "google_cloud_run_v2_service" "api" {
     google_project_service.services,
     google_secret_manager_secret_iam_member.api_sa_secret_access,
     google_secret_manager_secret_iam_member.api_sa_demo_access_code,
+    google_secret_manager_secret_iam_member.api_sa_phone_demo_config,
   ]
 }
 
@@ -432,6 +469,10 @@ resource "google_cloud_run_v2_service" "voice" {
       env {
         name  = "AGENT_GENDER"
         value = "male"
+      }
+      env {
+        name  = "PHONE_DEMO_ENABLED"
+        value = tostring(var.phone_demo_enabled)
       }
       env {
         name = "APP_SIGNING_KEY"

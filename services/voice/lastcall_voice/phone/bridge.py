@@ -1,9 +1,14 @@
-"""Twilio Media Stream bridge for the phone demo (Module 9).
+"""Twilio Media Stream bridge for the phone demo (Module 9, D61).
 
-Twilio connects to /phone/stream once the presenter answers their SIM. This module
-presents that socket to the unchanged browser handler (`handle_live_call_websocket`)
-as if it were the browser: the call token arrives as a Stream <Parameter>, phone
-audio is converted both ways, and transcript lines are saved for the demo page.
+When the presenter answers, Twilio opens `/phone/stream` and sends `connected`, `start`
+(carrying the call token as a Stream <Parameter>), `media` frames and finally `stop`.
+`TwilioStreamAdapter` turns that into the `CallSocket` contract, so the unchanged browser
+handler runs the negotiation:
+
+    Twilio `start`  -> auth message with the call token
+    Twilio `media`  -> 16 kHz PCM in        agent audio (24 kHz PCM) -> Twilio `media`
+    Twilio `stop`   -> disconnect           `interrupted` -> Twilio `clear`
+                                            `transcript`  -> live line on the call doc
 
 Privacy: never logs audio, transcript text or phone numbers.
 """
@@ -12,8 +17,7 @@ import asyncio
 import base64
 import json
 import logging
-import os
-from typing import Any
+from typing import Any, Mapping
 
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
 
@@ -26,178 +30,173 @@ from lastcall_voice.phone.audio import InboundConverter, OutboundConverter
 
 logger = logging.getLogger("lastcall_voice.phone")
 
-_TAIL_WAIT_S = 5.0  # let Twilio finish playing the goodbye before hanging up
-_WRITER_DRAIN_S = 3.0
-
-
-def phone_demo_enabled() -> bool:
-    return os.getenv("PHONE_DEMO_ENABLED", "").strip().lower() == "true"
+GOODBYE_WAIT_S = 5.0  # Twilio drops queued audio on close; let the goodbye finish playing
+LINE_DRAIN_S = 3.0
+_END_MARK = "end"
 
 
 class TwilioStreamAdapter:
-    """Looks like the browser WebSocket to `handle_live_call_websocket`."""
+    """A Twilio Media Stream presented as a `CallSocket`."""
 
     def __init__(self, ws: WebSocket, *, store: CallStore, signing_key: str) -> None:
         self._ws = ws
         self._store = store
-        self._key = signing_key
+        self._signing_key = signing_key
         self._inbound = InboundConverter()
         self._outbound = OutboundConverter()
         self._stream_sid: str | None = None
-        self._call_id: str | None = None
+        self._call_id: str | None = None  # set only for a validly signed token
         self._audio_sent = False
         self._closed = False
-        self._line_index = 0
+        self._next_line = 0
         self._lines: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
-        self._writer: asyncio.Task | None = None
+        self._line_writer: asyncio.Task | None = None
 
-    # --- What the handler reads --------------------------------------------------
+    # --- CallSocket ----------------------------------------------------------------
 
     @property
     def app(self) -> Any:
         return self._ws.app
 
     @property
-    def client_state(self) -> WebSocketState:
-        return self._ws.client_state
+    def headers(self) -> Mapping[str, str]:
+        return self._ws.headers
 
     @property
-    def headers(self) -> dict[str, str]:
-        # Twilio sends no Origin header. The handler's origin check guards browsers;
-        # here the single-use call token is the check, so present the demo page origin.
-        allowed = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
-        return {"origin": allowed[0]} if allowed else {}
+    def client_state(self) -> WebSocketState:
+        return self._ws.client_state
 
     async def accept(self) -> None:
         await self._ws.accept()
 
     async def receive_text(self) -> str:
-        """Auth handshake: wait for Twilio's `start` and hand over the call token."""
+        """Waits for Twilio's `start` and hands its call token to the handler's auth step."""
         while True:
-            msg = json.loads(await self._ws.receive_text())
+            msg = await self._next_message()
             event = msg.get("event")
             if event == "start":
-                start = msg.get("start") or {}
-                self._stream_sid = start.get("streamSid") or msg.get("streamSid")
-                token = str((start.get("customParameters") or {}).get("token", ""))
-                valid, payload, _ = verify_session_token(token, key=self._key) if token else (False, None, None)
-                if valid and payload:
-                    self._call_id = payload["call_id"]
-                logger.info("phone_stream_started", extra={"call_id": self._call_id})
-                return json.dumps({"type": "auth", "token": token})
+                return self._on_start(msg)
             if event == "stop":
                 raise WebSocketDisconnect(code=1000)
 
-    async def receive(self) -> dict[str, Any]:
-        """Phone audio in, as 16 kHz PCM; Twilio's `stop` (hang-up) ends the call."""
+    async def receive(self) -> Mapping[str, Any]:
+        """Phone audio as 16 kHz PCM; Twilio's `stop` (the presenter hung up) ends the call."""
         while True:
             try:
-                raw = await self._ws.receive_text()
+                msg = await self._next_message()
             except (WebSocketDisconnect, RuntimeError):
                 return {"type": "websocket.disconnect"}
-            msg = json.loads(raw)
             event = msg.get("event")
             if event == "media":
                 payload = (msg.get("media") or {}).get("payload")
                 if payload:
-                    pcm = self._inbound.convert(base64.b64decode(payload))
-                    return {"type": "websocket.receive", "bytes": pcm}
+                    return {"type": "websocket.receive", "bytes": self._inbound.convert(base64.b64decode(payload))}
             elif event == "stop":
                 return {"type": "websocket.disconnect"}
 
-    # --- What the handler sends --------------------------------------------------
-
     async def send_bytes(self, data: bytes) -> None:
         mulaw = self._outbound.convert(data)
-        if not mulaw or not self._stream_sid:
-            return
-        await self._ws.send_text(
-            json.dumps(
-                {
-                    "event": "media",
-                    "streamSid": self._stream_sid,
-                    "media": {"payload": base64.b64encode(mulaw).decode("ascii")},
-                }
-            )
-        )
-        self._audio_sent = True
+        if mulaw and self._stream_sid:
+            await self._send({"event": "media", "media": {"payload": base64.b64encode(mulaw).decode("ascii")}})
+            self._audio_sent = True
 
-    async def send_json(self, data: dict[str, Any]) -> None:
-        kind = data.get("type")
+    async def send_json(self, data: Any) -> None:
+        kind = data.get("type") if isinstance(data, dict) else None
         if kind == "interrupted" and self._stream_sid:
-            # Buyer talked over the agent: drop the agent audio Twilio still has queued.
-            await self._ws.send_text(json.dumps({"event": "clear", "streamSid": self._stream_sid}))
+            await self._send({"event": "clear"})  # the presenter talked over the agent
         elif kind == "transcript" and self._call_id:
-            line = {"i": self._line_index, "speaker": data.get("speaker"), "text": data.get("text", "")}
-            self._line_index += 1
-            if self._writer is None:
-                self._writer = asyncio.create_task(self._write_lines())
-            self._lines.put_nowait(line)
-        # "busy" and anything else: nothing to tell a phone caller.
+            self._queue_line(str(data.get("speaker")), str(data.get("text", "")))
+        # "busy" and anything else: nothing a phone caller can be shown.
 
     async def close(self, code: int = 1000) -> None:
         if self._closed:
             return
         self._closed = True
-        await self._wait_for_audio_tail()
-        await self._stop_writer()
+        await self._wait_for_goodbye()
+        await self._drain_lines()
         try:
             if self._ws.client_state == WebSocketState.CONNECTED:
                 await self._ws.close(code=code)
         except Exception:
             pass
 
-    # --- Internals ---------------------------------------------------------------
+    # --- Twilio messages -----------------------------------------------------------
+
+    async def _next_message(self) -> dict[str, Any]:
+        return json.loads(await self._ws.receive_text())
+
+    async def _send(self, message: dict[str, Any]) -> None:
+        await self._ws.send_text(json.dumps({**message, "streamSid": self._stream_sid}))
+
+    def _on_start(self, msg: dict[str, Any]) -> str:
+        start = msg.get("start") or {}
+        self._stream_sid = start.get("streamSid") or msg.get("streamSid")
+        token = str((start.get("customParameters") or {}).get("token", ""))
+        # The handler verifies the token again and rejects a bad one; this only decides
+        # whether transcript lines may be written, and for which call.
+        if token:
+            valid, payload, _ = verify_session_token(token, key=self._signing_key)
+            if valid and payload:
+                self._call_id = payload["call_id"]
+        logger.info("phone_stream_started", extra={"call_id": self._call_id})
+        return json.dumps({"type": "auth", "token": token})
+
+    async def _wait_for_goodbye(self) -> None:
+        """Sends a mark after the last audio and waits until Twilio has played up to it."""
+        if not (self._audio_sent and self._ws.client_state == WebSocketState.CONNECTED):
+            return
+        try:
+            await self._send({"event": "mark", "mark": {"name": _END_MARK}})
+
+            async def mark_played() -> None:
+                while True:
+                    msg = await self._next_message()
+                    if msg.get("event") == "stop":
+                        return
+                    if msg.get("event") == "mark" and (msg.get("mark") or {}).get("name") == _END_MARK:
+                        return
+
+            await asyncio.wait_for(mark_played(), timeout=GOODBYE_WAIT_S)
+        except Exception:
+            pass  # hung up already, or Twilio never confirmed: close anyway
+
+    # --- Live transcript lines -----------------------------------------------------
+
+    def _queue_line(self, speaker: str, text: str) -> None:
+        """One background writer keeps lines in order without holding up the audio."""
+        self._lines.put_nowait({"i": self._next_line, "speaker": speaker, "text": text})
+        self._next_line += 1
+        if self._line_writer is None:
+            self._line_writer = asyncio.create_task(self._write_lines())
 
     async def _write_lines(self) -> None:
-        """One writer, so lines reach the store in order without delaying audio."""
-        while True:
-            line = await self._lines.get()
-            if line is None:
-                return
+        while (line := await self._lines.get()) is not None:
             try:
                 await self._store.append_live_line(self._call_id or "", line)
             except Exception as exc:
                 logger.warning("phone_live_line_write_failed", extra={"call_id": self._call_id, "error": str(exc)})
 
-    async def _stop_writer(self) -> None:
-        if self._writer is None:
+    async def _drain_lines(self) -> None:
+        if self._line_writer is None:
             return
         self._lines.put_nowait(None)
         try:
-            await asyncio.wait_for(self._writer, timeout=_WRITER_DRAIN_S)
+            await asyncio.wait_for(self._line_writer, timeout=LINE_DRAIN_S)
         except Exception:
-            self._writer.cancel()
-
-    async def _wait_for_audio_tail(self) -> None:
-        """Twilio drops queued audio when the socket closes; wait for a mark so the goodbye plays."""
-        if not (self._audio_sent and self._stream_sid and self._ws.client_state == WebSocketState.CONNECTED):
-            return
-        try:
-            await self._ws.send_text(
-                json.dumps({"event": "mark", "streamSid": self._stream_sid, "mark": {"name": "end"}})
-            )
-
-            async def _until_mark() -> None:
-                while True:
-                    msg = json.loads(await self._ws.receive_text())
-                    if msg.get("event") == "stop":
-                        return
-                    if msg.get("event") == "mark" and (msg.get("mark") or {}).get("name") == "end":
-                        return
-
-            await asyncio.wait_for(_until_mark(), timeout=_TAIL_WAIT_S)
-        except Exception:
-            pass
+            self._line_writer.cancel()
 
 
 async def handle_twilio_stream(websocket: WebSocket) -> None:
-    """Entry point for /phone/stream."""
-    if not phone_demo_enabled():
+    """`/phone/stream`: closes at once unless the phone demo is switched on."""
+    settings = get_settings()
+    if not settings.PHONE_DEMO_ENABLED:
         await websocket.close(code=4404)
         return
-    settings = get_settings()
     store: CallStore = getattr(websocket.app.state, "store", None) or FirestoreStore()
-    key = settings.APP_SIGNING_KEY.get_secret_value() if settings.APP_SIGNING_KEY else ""
-    adapter = TwilioStreamAdapter(websocket, store=store, signing_key=key)
-    await handle_live_call_websocket(adapter, store=store)  # type: ignore[arg-type]
+    adapter = TwilioStreamAdapter(
+        websocket,
+        store=store,
+        signing_key=settings.APP_SIGNING_KEY.get_secret_value(),
+    )
+    # Twilio sends no Origin header; the single-use call token is the check.
+    await handle_live_call_websocket(adapter, store=store, check_origin=False)

@@ -66,3 +66,9 @@ variable "dev_allowed_origins" {
 
 
 
+
+variable "phone_demo_enabled" {
+  description = "Phone demo (Module 9, D61): Twilio rings the presenter's own SIM for the demo video. Keep false for judging; the phone-demo-config secret needs a version before setting true."
+  type        = bool
+  default     = false
+}
