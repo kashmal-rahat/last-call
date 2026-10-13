@@ -288,9 +288,9 @@ button {
   background: #047857;
   color: #FFFFFF;
   border: 1px solid #047857;
-  padding: 0 16px;
+  padding: 0 18px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 999px;
   font-size: 14px;
   font-weight: 600;
   display: inline-flex;
@@ -313,9 +313,9 @@ button {
   background: #4F46E5;
   color: #FFFFFF;
   border: 1px solid #4F46E5;
-  padding: 0 16px;
+  padding: 0 18px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 999px;
   font-size: 14px;
   font-weight: 600;
   display: inline-flex;
@@ -334,9 +334,9 @@ button {
   background: #FFFFFF;
   color: var(--text-primary);
   border: 1px solid #E5E7EB;
-  padding: 0 14px;
+  padding: 0 16px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 999px;
   font-size: 14px;
   font-weight: 600;
   display: inline-flex;
@@ -362,7 +362,7 @@ button {
   color: #FFFFFF;
   border: 1px solid var(--rose);
   padding: 0.625rem 1.125rem;
-  border-radius: var(--radius-md);
+  border-radius: 999px;
   font-size: 0.8125rem;
   font-weight: 600;
   display: inline-flex;
@@ -1308,7 +1308,7 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
 .ai-tag svg { width: 12px; height: 12px; }
 
 .buyer-side { display: flex; align-items: center; justify-content: flex-end; min-width: 140px; }
-.buyer-side .btn-ai { height: 40px; padding: 0 18px; gap: 8px; border-radius: 10px; }
+.buyer-side .btn-ai { height: 40px; padding: 0 18px; gap: 8px; }
 .buyer-side .btn-ai svg { width: 15px; height: 15px; }
 
 /* Stock progress (replaces "Remaining x of y") */
@@ -1876,12 +1876,24 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
 /* ------------------------------------------------------------------ */
 .main-layout > section { scroll-margin-top: 80px; }
 
+/* First screen: the hero band and the steps panel fill the viewport below the 64 px header,
+   so the demo starts just past the fold at any screen size; extra height goes above the title. */
+.intro {
+  min-height: calc(100svh - 65px); /* header: 64 px plus its 1 px border */
+  padding-bottom: 32px;            /* the panel ends above the fold, not on it */
+  display: flex;
+  flex-direction: column;
+}
+.intro + .main-layout { padding-top: 16px; } /* 32 + 16 = the usual 48 px between sections */
+
 /* Hero: a full-width dusk band ("the last hour before closing"), built from the page's own colours:
    slate navy (the call panel) into deep indigo (AI and call), one muted apricot horizon. */
 .hero {
   position: relative;
   isolation: isolate;
   overflow: hidden;
+  flex: 1 0 auto;
+  display: flex;
   color: #F8FAFC;
   background:
     radial-gradient(95% 60% at 70% 112%, rgba(253, 186, 140, 0.7), rgba(232, 121, 112, 0.26) 40%, transparent 70%),
@@ -1901,8 +1913,8 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
 
 /* Content sits on the same 1040 px column as the sections below */
 .hero-inner {
+  width: 100%;
   max-width: 1040px;
-  min-height: 560px;
   margin: 0 auto;
   padding: 80px 1.5rem calc(64px + var(--how-overlap)); /* room for the steps panel */
   display: flex;
@@ -1911,15 +1923,7 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   align-items: flex-start;
 }
 
-.hero-kicker {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: #A5B4FC;
-}
-
 .hero-title {
-  margin-top: 16px;
   max-width: 10.5em;
   font-family: var(--font-heading);
   font-size: 56px;
@@ -1929,6 +1933,7 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   color: #FFFFFF;
 }
 .hero-title .nowrap { white-space: nowrap; }
+.hero-accent { color: #6EE7B7; } /* soft emerald: the button's green, so no new colour */
 
 .hero-lead {
   margin-top: 20px;
@@ -1959,7 +1964,10 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
 .how-section {
   position: relative;
   z-index: 1;
-  margin-top: calc(-2rem - var(--how-overlap)); /* -2rem cancels .main-layout's top padding */
+  width: 100%;
+  max-width: 1040px;
+  margin: calc(-1 * var(--how-overlap)) auto 0;
+  padding: 0 1.5rem;
 }
 
 .how-strip {
@@ -1997,18 +2005,18 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
 .how-step p { margin-top: 6px; font-size: 14px; line-height: 1.55; color: var(--text-secondary); }
 
 @media (max-width: 900px) {
-  .hero-inner { min-height: 480px; padding-top: 72px; }
+  .hero-inner { padding-top: 72px; }
   .hero-title { font-size: 46px; }
   .how-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
   :root { --how-overlap: 40px; }
-  .hero-inner { min-height: 0; padding: 56px 1rem calc(48px + var(--how-overlap)); }
+  .hero-inner { padding: 56px 1rem calc(48px + var(--how-overlap)); }
   .hero-title { font-size: 34px; }
   .hero-lead { font-size: 15px; }
   .hero-btn { width: 100%; justify-content: center; }
-  .how-section { margin-top: calc(-1.5rem - var(--how-overlap)); } /* phone .main-layout padding */
+  .how-section { padding: 0 1rem; }
   .how-strip { border-radius: 16px; }
 }
 

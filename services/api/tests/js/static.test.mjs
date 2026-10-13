@@ -46,6 +46,14 @@ test('index.html: has ZERO style="..." attributes', () => {
   assert.equal(styleMatches.length, 0, `Expected 0 style="..." attributes, found ${styleMatches.length}`);
 });
 
+test('index.html: every layout element it opens is closed (a stray </div> closes the demo column early)', () => {
+  for (const tag of ['main', 'section', 'div', 'ol', 'ul', 'li', 'label', 'button']) {
+    const opened = indexHtmlContent.match(new RegExp(`<${tag}\\b`, 'gi'))?.length ?? 0;
+    const closed = indexHtmlContent.match(new RegExp(`</${tag}>`, 'gi'))?.length ?? 0;
+    assert.equal(closed, opened, `<${tag}>: ${opened} opened, ${closed} closed`);
+  }
+});
+
 test('index.html: has required accessibility attributes', () => {
   // closing-time-btn buttons have aria-pressed
   const closingBtns = [...indexHtmlContent.matchAll(/<button[^>]*class=["'][^"']*closing-time-btn[^"']*["'][^>]*>/gi)];

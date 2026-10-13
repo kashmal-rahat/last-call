@@ -35,47 +35,50 @@
 
   <main>
 
-    <!-- Hero: the last hour before closing, when Last Call works (full width) -->
-    <section class="hero" aria-labelledby="heroTitle">
-      <div class="hero-inner">
-        <p class="hero-kicker">AI Builder Cup 2026 · Retail &amp; Commerce</p>
-        <h1 class="hero-title" id="heroTitle">An AI that sells your <span class="nowrap">near-expiry</span> produce, by phone, in Urdu</h1>
-        <p class="hero-lead">Last Call reads your shelf from a photo, decides whether to discount, sell in bulk or donate, finds nearby buyers on Google Maps, then calls and negotiates with them in the local language (Urdu) to close the deal before closing time.</p>
-        <a class="btn-primary hero-btn" href="#inspectorSection">
-          Try the live demo
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </a>
-      </div>
-    </section>
+    <!-- First screen: the hero band and the steps panel resting on its horizon -->
+    <div class="intro">
+
+      <!-- Hero: the last hour before closing, when Last Call works (full width) -->
+      <section class="hero" aria-labelledby="heroTitle">
+        <div class="hero-inner">
+          <h1 class="hero-title" id="heroTitle">An AI that sells your <span class="nowrap">near-expiry</span> produce, <span class="hero-accent">by phone, in Urdu</span></h1>
+          <p class="hero-lead">Last Call reads your shelf from a photo, finds nearby buyers, then calls and negotiates with them to close the deal.</p>
+          <a class="btn-primary hero-btn" href="#inspectorSection">
+            Try the live demo
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+      </section>
+
+      <!-- How it works: the four agents -->
+      <section class="how-section" id="howItWorks" aria-label="How it works">
+        <ol class="how-strip">
+        <li class="how-step">
+          <span class="how-num" aria-hidden="true">1</span>
+          <h3>Inspect</h3>
+          <p>Gemini reads ripeness, damage and quantity from a shelf photo.</p>
+        </li>
+        <li class="how-step">
+          <span class="how-num" aria-hidden="true">2</span>
+          <h3>Decide</h3>
+          <p>Gemini knows the produce, then rules choose discount, bulk sale, donation, feed or compost, with a price floor.</p>
+        </li>
+        <li class="how-step">
+          <span class="how-num" aria-hidden="true">3</span>
+          <h3>Find buyers</h3>
+          <p>Google Maps finds nearby juice shops, bakeries and charities, and Gemini checks each fit.</p>
+        </li>
+        <li class="how-step">
+          <span class="how-num" aria-hidden="true">4</span>
+          <h3>Call and negotiate</h3>
+          <p>Gemini Live calls in Urdu, bargains above your floor price and books the pickup.</p>
+        </li>
+        </ol>
+      </section>
+    </div>
 
     <!-- Single-column layout for the demo -->
     <div class="main-layout">
-
-    <!-- How it works: the four agents -->
-    <section class="how-section" id="howItWorks" aria-label="How it works">
-      <ol class="how-strip">
-      <li class="how-step">
-        <span class="how-num" aria-hidden="true">1</span>
-        <h3>Inspect</h3>
-        <p>Gemini reads ripeness, damage and quantity from a shelf photo.</p>
-      </li>
-      <li class="how-step">
-        <span class="how-num" aria-hidden="true">2</span>
-        <h3>Decide</h3>
-        <p>Gemini knows the produce, then rules choose discount, bulk sale, donation, feed or compost, with a price floor.</p>
-      </li>
-      <li class="how-step">
-        <span class="how-num" aria-hidden="true">3</span>
-        <h3>Find buyers</h3>
-        <p>Google Maps finds nearby juice shops, bakeries and charities, and Gemini checks each fit.</p>
-      </li>
-      <li class="how-step">
-        <span class="how-num" aria-hidden="true">4</span>
-        <h3>Call and negotiate</h3>
-        <p>Gemini Live calls in Urdu, bargains above your floor price and books the pickup.</p>
-      </li>
-      </ol>
-    </section>
 
     <!-- SECTION 1: Shelf Intake & Store Setup -->
     <section class="card" id="inspectorSection">
@@ -234,7 +237,6 @@
           <div class="stepper-item ladder-step" data-step="animal_feed">Animal feed</div>
           <span class="stepper-arrow" aria-hidden="true">›</span>
           <div class="stepper-item ladder-step" data-step="compost">Compost</div>
-        </div>
         </div>
 
         <!-- Price Cards Grid -->

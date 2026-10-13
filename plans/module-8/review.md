@@ -501,16 +501,20 @@ User feedback: the hero's dark chat card, and two replacements tried in this rou
   - one muted apricot horizon (the only new tone)
   - fine SVG grain so it reads as sky
   Its content sits on the same 1040 px column as the sections below:
-  - a plain-text kicker
   - the `h1` in Plus Jakarta Sans **500** (weight added to the existing Google Fonts link), white, no accent phrase, three lines ("near-expiry" never breaks)
   - the lead sentence from round 13
   - one emerald pill, "Try the live demo"
   The right side is left empty on purpose (the user's choice, after trying one frosted-glass call bubble there).
-- **Markup:** `<main>` now holds the hero band, then `<div class="main-layout">` with the sections (it was `<main class="main-layout">`), so the band can span the full width. No JS or test referred to the old element.
+- **Markup:** `<main>` now holds the first-screen wrapper (hero band and steps), then `<div class="main-layout">` with the sections (it was `<main class="main-layout">`), so the band can span the full width. No JS or test referred to the old element.
 - **"How it works" rests on the horizon:** the four separate cards became **one white panel** whose top overlaps the bottom of the band (`--how-overlap`: 96 px, 40 px on a phone; a more compact version was tried and reverted at the user's request; the hero's bottom padding leaves that room). Hairlines between the steps come from a 1 px grid gap over the border colour, so they are right in 4, 2 or 1 columns. On a phone each step puts its number beside the text. The markup is unchanged.
+- **Follow-up (after the first commit):** the kicker line is gone; "by phone, in Urdu" is mint `#6EE7B7`, the button's green family, so no new colour (apricot was tried and dropped: too many colours; a paler mint was tried and the user preferred this one); the lead is now one short sentence ("reads your shelf from a photo, finds nearby buyers, then calls and negotiates with them to close the deal"). It leaves out the language, which the headline already states, and claims nothing beyond what was built.
+- **The first screen is only the hero:** the band and the steps panel sit in one `.intro` wrapper with `min-height: calc(100svh - 65px)` (below the header), so Shelf setup always starts just past the fold at any screen size; extra height goes above the title, and the panel ends 32 px above the fold. `How it works` moved out of `.main-layout` into that wrapper (it carries its own 1040 px column). On a phone the content is taller than the screen anyway.
+- **Known and accepted:** the hero button's white label on `#059669` is about 3.8:1, under WCAG AA's 4.5:1 for 15 px text. The user kept it for its look on the dark band; the page's other buttons stay `#047857` (about 5.5:1).
 - **Removed:** the dark chat card with three bubbles and its deal banner, the "Bananas · overripe" flag (which covered the avatar), the radial glow behind the hero, the kicker pill, and the call bubble tried in this round. The photo and sketch candidates were reverted and never kept.
 - **Spec change:** the live-call panel is no longer the page's only dark surface. The hero is a second dark block, at the top, outside the working sections; it echoes the call screen further down.
-- **No JS change**; markup and CSS only.
+- **One button shape:** every button (`btn-primary`, `btn-ai`, `btn-ghost`/`btn-secondary`, `btn-danger`) is now a pill like the hero's and the call screen's "Hang up", with 2 px more side padding. Inputs, the closing-time segmented control and chips keep their shapes.
+- **Bug fixed (it shipped in `144bbd0`):** a stray `</div>` after the ladder stepper (there since Module 8A) closed `#decisionContent` early. The browser used to ignore the extra one, but once the sections sat inside `<div class="main-layout">` it closed that column after Decision, so Buyers, the call panel and Impact ran full width. Removed. JS only looks up `#decisionContent` and no CSS targets it, so nothing else changes. New test in `static.test.mjs`: every `main`, `section`, `div`, `ol`, `ul`, `li`, `label` and `button` opened in `index.html` is closed (it fails on `144bbd0`: 117 `div`s opened, 118 closed).
+- **No JS change**; markup, CSS and one page test.
 - **Verification:**
   - preview at 1280, 768 and 375 px; no sideways scroll
   - `ruff` clean; `pytest`: 418 passed, 20 skipped; `node --test`: 21 passed
