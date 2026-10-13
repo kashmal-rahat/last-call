@@ -175,6 +175,7 @@ Plan: [plans/module-8/plan.md](../plans/module-8/plan.md) (D59). Design: [design
 
 ## Module 9: Real phone calls (demo video)
 
+- **As built (D61):** a separate phone-demo add-on for the video only. Twilio rings the presenter's own SIM from the real demo page (`?phone=1`), switched on with `gcloud` only while recording; judges keep the browser call. Scheduled calling, calling hours and calls to real buyers remain design (see `plans/module-9/plan.md`)
 - Connects the same Negotiator to a real phone call to a SIM through Twilio
 - Same agent, same rules, just a different audio connection
 - **Demo number override:** calls go to your test numbers while showing real business names

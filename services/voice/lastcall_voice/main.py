@@ -51,6 +51,15 @@ async def ws_call_endpoint(websocket: WebSocket):
     await handle_live_call_websocket(websocket)
 
 
+from lastcall_voice.phone.bridge import handle_twilio_stream
+
+
+@app.websocket("/phone/stream")
+async def phone_stream_endpoint(websocket: WebSocket):
+    # Phone demo (Module 9): closes at once unless PHONE_DEMO_ENABLED=true.
+    await handle_twilio_stream(websocket)
+
+
 if __name__ == "__main__":
     import uvicorn
 

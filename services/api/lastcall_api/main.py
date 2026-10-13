@@ -920,6 +920,19 @@ async def demo_scout(
     return scout_result.public_view()
 
 
+# Phone demo (Module 9): separate router; every endpoint is 404 unless PHONE_DEMO_ENABLED=true.
+from lastcall_api.phone_demo import build_router as build_phone_router, dial_twilio
+
+app.include_router(
+    build_phone_router(
+        verify_access_code=_verify_access_code,
+        get_store=_get_store,
+        check_ip_limit=_check_ip_limit,
+        get_dialer=lambda: getattr(app.state, "phone_dialer", dial_twilio),
+    )
+)
+
+
 if __name__ == "__main__":
     import uvicorn
 

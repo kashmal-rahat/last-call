@@ -41,6 +41,8 @@ class CallStore(Protocol):
     async def save_negotiation(self, call_id: str, state: NegotiationState) -> None: ...
     async def append_transcript(self, call_id: str, entries: list[TranscriptEntry]) -> None: ...
     async def add_flag(self, call_id: str, flag: str) -> None: ...
+    async def append_live_line(self, call_id: str, line: dict[str, Any]) -> None: ...
+    async def get_live_lines(self, call_id: str) -> list[dict[str, Any]]: ...
     async def lock_batch(self, batch_id: str, call_id: str, until: AwareDatetime) -> bool: ...
     async def release_batch(self, batch_id: str, call_id: str) -> None: ...
     async def save_deal_tx(self, call_id: str, deal: DealRecord, quantity: float) -> tuple[bool, str | None]: ...
@@ -99,6 +101,7 @@ class InMemoryStore:
         self.inspector_readings: dict[str, dict[str, Any]] = {}
         self.scout_results: dict[str, ScoutResult] = {}
         self.buyers: dict[tuple[str, str], BuyerHistory] = {}  # (mart_id, buyer_id) -> BuyerHistory
+        self.live_lines: dict[str, list[dict[str, Any]]] = {}  # call_id -> phone-demo transcript lines
 
     def _now(self) -> datetime:
         if self.clock:
@@ -185,6 +188,15 @@ class InMemoryStore:
             call = self.calls.get(call_id)
             if call and flag not in call.flags:
                 call.flags.append(flag)
+
+    async def append_live_line(self, call_id: str, line: dict[str, Any]) -> None:
+        async with self._lock:
+            if call_id in self.calls:
+                self.live_lines.setdefault(call_id, []).append(dict(line))
+
+    async def get_live_lines(self, call_id: str) -> list[dict[str, Any]]:
+        async with self._lock:
+            return [dict(x) for x in self.live_lines.get(call_id, [])]
 
     async def lock_batch(self, batch_id: str, call_id: str, until: AwareDatetime) -> bool:
         async with self._lock:

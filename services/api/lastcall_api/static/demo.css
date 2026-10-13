@@ -2096,3 +2096,21 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   .hero-call { padding: 16px; }
   .hero-bubble { font-size: 14px; }
 }
+
+/* Phone demo switch (Module 9): hidden unless ?phone=1 and the server has it on */
+.phone-mode {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px dashed var(--indigo-border);
+  border-radius: 12px;
+  background: var(--indigo-light);
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.phone-mode[hidden] { display: none; }
+.phone-mode strong { color: var(--indigo-dark); font-weight: 600; }
+.phone-mode input { width: 16px; height: 16px; accent-color: var(--indigo); flex: none; }

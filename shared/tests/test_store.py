@@ -776,3 +776,23 @@ async def test_batch_attempts_and_get_calls(store):
 
 
 
+
+
+async def test_live_lines_for_phone_demo(store):
+    """Module 9: phone-demo transcript lines live on the call doc; get_call ignores them."""
+    call, batch = build_call("easy_yes", now=NOW)
+    await store.create_call(call, batch)
+    assert await store.get_live_lines(call.call_id) == []
+
+    await store.append_live_line(call.call_id, {"i": 0, "speaker": "agent", "text": "salaam"})
+    await store.append_live_line(call.call_id, {"i": 1, "speaker": "buyer", "text": "salaam"})
+    lines = sorted(await store.get_live_lines(call.call_id), key=lambda x: x["i"])
+    assert lines == [
+        {"i": 0, "speaker": "agent", "text": "salaam"},
+        {"i": 1, "speaker": "buyer", "text": "salaam"},
+    ]
+    assert (await store.get_call(call.call_id)).call_id == call.call_id
+
+    # Unknown call: no error, nothing stored
+    await store.append_live_line("call_missing", {"i": 0, "speaker": "agent", "text": "x"})
+    assert await store.get_live_lines("call_missing") == []

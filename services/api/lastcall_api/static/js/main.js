@@ -17,6 +17,7 @@ import { triggerDecide } from './decision.js';
 import { fetchScoutBuyers } from './buyers.js';
 import { hangup } from './call.js';
 import { renderImpact } from './impact.js';
+import { initPhoneDemo } from './phone.js';
 
 // Setup Event Listeners
 
@@ -176,6 +177,7 @@ async function init() {
   setInterval(updateClock, 60000);
 
   loadSamples();
+  initPhoneDemo();
   await loadBranches();
   const branchId = dom.branchSelect ? dom.branchSelect.value : null;
   if (branchId) {

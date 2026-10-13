@@ -63,6 +63,11 @@ export const callDuration = document.getElementById('callDuration');
 export const btnHangup = document.getElementById('btnHangup');
 export const callBuyerName = document.getElementById('callBuyerName');
 export const callerAvatar = document.getElementById('callerAvatar');
+export const callerSub = document.getElementById('callerSub');
+
+// Phone demo (Module 9)
+export const phoneModeBox = document.getElementById('phoneModeBox');
+export const phoneModeToggle = document.getElementById('phoneModeToggle');
 export const callItemQty = document.getElementById('callItemQty');
 export const callOpeningQuote = document.getElementById('callOpeningQuote');
 export const callFloorPrice = document.getElementById('callFloorPrice');

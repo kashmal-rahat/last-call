@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from pydantic import AwareDatetime
 from google.cloud import firestore
-from google.api_core.exceptions import AlreadyExists
+from google.api_core.exceptions import AlreadyExists, NotFound
 
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import (
@@ -172,6 +172,21 @@ class FirestoreStore:
     async def add_flag(self, call_id: str, flag: str) -> None:
         doc_ref = self._col("calls").document(call_id)
         await doc_ref.update({"flags": firestore.ArrayUnion([flag])})
+
+    async def append_live_line(self, call_id: str, line: dict[str, Any]) -> None:
+        # Phone demo (Module 9): lines live on the call doc, so they share its 24 h TTL.
+        # Each line carries its index "i", so ArrayUnion never merges two lines.
+        doc_ref = self._col("calls").document(call_id)
+        try:
+            await doc_ref.update({"live_lines": firestore.ArrayUnion([dict(line)])})
+        except NotFound:
+            pass
+
+    async def get_live_lines(self, call_id: str) -> list[dict[str, Any]]:
+        snap = await self._col("calls").document(call_id).get(field_paths=["live_lines"])
+        if not snap.exists:
+            return []
+        return list((snap.to_dict() or {}).get("live_lines", []))
 
     async def lock_batch(self, batch_id: str, call_id: str, until: AwareDatetime) -> bool:
         batch_ref = self._col("batches").document(batch_id)

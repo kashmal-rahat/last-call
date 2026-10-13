@@ -287,7 +287,7 @@ def test_build_call_record(demo_rules):
     # 3. agent_view() JSON contains neither floor price nor phone digits
     view = call_rec.brief.agent_view()
     view_json = view.model_dump_json()
-    assert "65" not in view_json  # floor price
+    assert ":65" not in view_json  # floor price as a value (the random call_id may contain "65")
     assert "1234567" not in view_json  # raw phone digits
     assert not hasattr(view, "floor_price_per_unit")
 

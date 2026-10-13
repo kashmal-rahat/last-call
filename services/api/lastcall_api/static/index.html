@@ -317,6 +317,12 @@
           In a real mart, the AI calls these in order on its own. Here, you play the buyer.
         </p>
 
+        <!-- Phone demo (Module 9): shown only with ?phone=1 while the server has it switched on -->
+        <label for="phoneModeToggle" class="phone-mode" id="phoneModeBox" hidden>
+          <input type="checkbox" id="phoneModeToggle">
+          <span class="phone-mode-text"><strong>Ring my phone</strong> instead of the browser call · Twilio, presenter only</span>
+        </label>
+
         <p id="buyerHoursBanner" class="buyer-note buyer-note-warn">
           Some buyers are closed or it's outside calling hours. A real mart would wait to call them; in this demo you can call now.
         </p>
@@ -347,7 +353,7 @@
           <div class="caller-text">
             <div class="caller-kicker">Live call · you play the buyer</div>
             <h2 class="caller-name" id="callBuyerName">—</h2>
-            <div class="caller-sub">Business from Google Maps · the AI speaks Urdu</div>
+            <div class="caller-sub" id="callerSub">Business from Google Maps · the AI speaks Urdu</div>
           </div>
         </div>
 

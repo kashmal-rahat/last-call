@@ -7,6 +7,7 @@ import { showToast, scriptClass, icon, initials } from './ui.js';
 import { updateShelfLock } from './lock.js';
 import { renderResults } from './reading.js';
 import { renderNextActionRow } from './buyers.js';
+import { isPhoneMode, startPhoneCall } from './phone.js';
 
 export function setStatus(text, type = '') {
   if (dom.statusText) dom.statusText.textContent = text;
@@ -194,6 +195,12 @@ export async function startCallForItem(itemKey, buyerId) {
     }
 
     dom.callPickupWindow.textContent = (data.deal && data.deal.pickup_window) ? data.deal.pickup_window : 'Today';
+
+    // Phone demo (Module 9): Twilio rings the presenter's SIM instead of using the microphone
+    if (isPhoneMode()) {
+      await startPhoneCall(data, code);
+      return;
+    }
 
     // Initialize AudioContext and microphone in order (24 kHz)
     state.audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
