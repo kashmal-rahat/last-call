@@ -489,3 +489,28 @@ User feedback: the hero felt cluttered.
   - `pytest`: 369 passed, 19 skipped; `node --test`: 21 passed; `node --check` on every module
 - **Follow-up (same round, after the user's local check):** the connector line looked busy, so it's gone. Each step is now one card with its number badge inside (`.how-step` is the card; `.how-card` was removed). 4 columns, 2 at ≤900 px, 1 at ≤560 px. No JS change; `node --test` passes 21.
 - **Second follow-up:** the number is now a 24 px outlined circle (1.5 px emerald border, 12 px digit) instead of a 32 px filled square. The cards are tighter: padding 18×20 (16×18 on a phone), radius 14, 12 px above the title.
+
+---
+
+# Round 14: "closing time" hero, by Claude (2026-10-14)
+
+User feedback: the hero's dark chat card, and two replacements tried in this round (a shelf photo with floating cards, a line-art sketch), all looked "like a uni project". All three tried to explain the pipeline inside the picture. We looked at the live heroes of Sierra, ElevenLabs Agents, Decagon and Bland. They share: one atmosphere instead of a diagram, at most one piece of product UI, light-weight headlines, one call to action.
+
+- **Hero:** a **full-width** dusk band directly under the header, "the last hour before closing", built from the page's own colours:
+  - slate navy `#0F172A` (the call panel) into deep indigo (the AI and call colour)
+  - one muted apricot horizon (the only new tone)
+  - fine SVG grain so it reads as sky
+  Its content sits on the same 1040 px column as the sections below:
+  - a plain-text kicker
+  - the `h1` in Plus Jakarta Sans **500** (weight added to the existing Google Fonts link), white, no accent phrase, three lines ("near-expiry" never breaks)
+  - the lead sentence from round 13
+  - one emerald pill, "Try the live demo"
+  The right side is left empty on purpose (the user's choice, after trying one frosted-glass call bubble there).
+- **Markup:** `<main>` now holds the hero band, then `<div class="main-layout">` with the sections (it was `<main class="main-layout">`), so the band can span the full width. No JS or test referred to the old element.
+- **"How it works" rests on the horizon:** the four separate cards became **one white panel** whose top overlaps the bottom of the band (`--how-overlap`: 96 px, 40 px on a phone; a more compact version was tried and reverted at the user's request; the hero's bottom padding leaves that room). Hairlines between the steps come from a 1 px grid gap over the border colour, so they are right in 4, 2 or 1 columns. On a phone each step puts its number beside the text. The markup is unchanged.
+- **Removed:** the dark chat card with three bubbles and its deal banner, the "Bananas · overripe" flag (which covered the avatar), the radial glow behind the hero, the kicker pill, and the call bubble tried in this round. The photo and sketch candidates were reverted and never kept.
+- **Spec change:** the live-call panel is no longer the page's only dark surface. The hero is a second dark block, at the top, outside the working sections; it echoes the call screen further down.
+- **No JS change**; markup and CSS only.
+- **Verification:**
+  - preview at 1280, 768 and 375 px; no sideways scroll
+  - `ruff` clean; `pytest`: 418 passed, 20 skipped; `node --test`: 21 passed

@@ -6,7 +6,7 @@
   <title>Last Call — Autonomous Produce Intelligence</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Noto+Nastaliq+Urdu:wght@400&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Noto+Nastaliq+Urdu:wght@400&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/demo.css">
 </head>
 <body>
@@ -33,46 +33,23 @@
     </div>
   </header>
 
-  <!-- Main Single-Column Layout -->
-  <main class="main-layout">
+  <main>
 
-    <!-- Hero: what this is and where to start -->
+    <!-- Hero: the last hour before closing, when Last Call works (full width) -->
     <section class="hero" aria-labelledby="heroTitle">
-      <div class="hero-copy">
-        <span class="hero-kicker"><span class="hero-kicker-dot" aria-hidden="true"></span>AI Builder Cup 2026 · Retail &amp; Commerce</span>
-        <h1 class="hero-title" id="heroTitle">An AI that sells your near-expiry produce, <span class="hero-accent">by phone, in Urdu</span></h1>
+      <div class="hero-inner">
+        <p class="hero-kicker">AI Builder Cup 2026 · Retail &amp; Commerce</p>
+        <h1 class="hero-title" id="heroTitle">An AI that sells your <span class="nowrap">near-expiry</span> produce, by phone, in Urdu</h1>
         <p class="hero-lead">Last Call reads your shelf from a photo, decides whether to discount, sell in bulk or donate, finds nearby buyers on Google Maps, then calls and negotiates with them in the local language (Urdu) to close the deal before closing time.</p>
-        <div class="hero-actions">
-          <a class="btn-primary hero-btn" href="#inspectorSection">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 4 20 12 6 20 6 4"/></svg>
-            Try the live demo
-          </a>
-        </div>
-      </div>
-
-      <div class="hero-visual" role="img" aria-label="Example: Gemini flags overripe bananas, then the AI agent agrees a sale with a nearby juice shop in Urdu">
-        <div class="hero-flag">
-          <span class="hero-flag-icon" aria-hidden="true">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 6.6L21 11l-6.8 2.4L12 20l-2.2-6.6L3 11l6.8-2.4z"/></svg>
-          </span>
-          <span class="hero-flag-text"><strong>Bananas · overripe</strong><span>Sell within 6 h · bulk sale to juice shops</span></span>
-        </div>
-        <div class="hero-call">
-          <div class="hero-call-top">
-            <span class="hero-call-avatar">JC</span>
-            <span class="hero-call-who"><span class="hero-call-kicker">Found on Google Maps · 0.6 km</span><span class="hero-call-name">Juice corner</span></span>
-            <span class="hero-call-live"><span class="hero-live-dot"></span>01:42</span>
-          </div>
-          <div class="hero-msg is-agent"><span class="hero-msg-who">AI agent</span><span class="hero-bubble urdu" lang="ur" dir="rtl">السلام علیکم! ڈیڑھ درجن پکے کیلے ہیں، شیک کے لیے بہترین۔ ایک سو دس روپے درجن۔</span></div>
-          <div class="hero-msg is-buyer"><span class="hero-msg-who">Buyer</span><span class="hero-bubble urdu" lang="ur" dir="rtl">سو روپے لگا دیں تو ابھی لے لیتا ہوں۔</span></div>
-          <div class="hero-msg is-agent"><span class="hero-msg-who">AI agent</span><span class="hero-bubble urdu" lang="ur" dir="rtl">چلیں، ایک سو پانچ پر پکا۔ شام چھ بجے تک اٹھا لیجیے گا۔</span></div>
-          <div class="hero-deal">
-            <span class="hero-deal-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-            <span class="hero-deal-text"><strong>Deal agreed</strong><span>1.5 dozen at Rs 105 / dozen · pickup by 6 pm</span></span>
-          </div>
-        </div>
+        <a class="btn-primary hero-btn" href="#inspectorSection">
+          Try the live demo
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
       </div>
     </section>
+
+    <!-- Single-column layout for the demo -->
+    <div class="main-layout">
 
     <!-- How it works: the four agents -->
     <section class="how-section" id="howItWorks" aria-label="How it works">
@@ -446,6 +423,7 @@
       </p>
     </section>
 
+    </div>
   </main>
 
   <script type="module" src="/static/js/main.js"></script>

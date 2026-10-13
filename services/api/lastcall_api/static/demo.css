@@ -1876,175 +1876,107 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
 /* ------------------------------------------------------------------ */
 .main-layout > section { scroll-margin-top: 80px; }
 
+/* Hero: a full-width dusk band ("the last hour before closing"), built from the page's own colours:
+   slate navy (the call panel) into deep indigo (AI and call), one muted apricot horizon. */
 .hero {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-  gap: 56px;
-  align-items: center;
-  padding: 32px 0 8px;
   isolation: isolate;
+  overflow: hidden;
+  color: #F8FAFC;
+  background:
+    radial-gradient(95% 60% at 70% 112%, rgba(253, 186, 140, 0.7), rgba(232, 121, 112, 0.26) 40%, transparent 70%),
+    linear-gradient(180deg, #0B1120 0%, #0F172A 28%, #1E1B4B 62%, #3A2C5C 86%, #5B4066 100%);
 }
-.hero::before {
+/* Fine grain so the gradient reads as sky, not as a flat fill */
+.hero::after {
   content: "";
   position: absolute;
-  inset: -40px 0 auto auto;
-  width: 460px;
-  height: 460px;
-  max-width: 70%;
-  background: radial-gradient(closest-side, rgba(99, 102, 241, 0.12), rgba(16, 185, 129, 0.06) 60%, transparent);
+  inset: 0;
   z-index: -1;
   pointer-events: none;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-.hero-copy { min-width: 0; }
+/* Content sits on the same 1040 px column as the sections below */
+.hero-inner {
+  max-width: 1040px;
+  min-height: 560px;
+  margin: 0 auto;
+  padding: 80px 1.5rem calc(64px + var(--how-overlap)); /* room for the steps panel */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
 
 .hero-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   letter-spacing: 0.02em;
+  color: #A5B4FC;
 }
-.hero-kicker-dot { width: 6px; height: 6px; border-radius: 999px; background: var(--emerald-vivid); }
 
 .hero-title {
-  margin-top: 20px;
+  margin-top: 16px;
+  max-width: 10.5em;
   font-family: var(--font-heading);
-  font-size: 46px;
-  line-height: 1.08;
-  font-weight: 700;
+  font-size: 56px;
+  line-height: 1.05;
+  font-weight: 500;
   letter-spacing: -0.035em;
-  color: var(--text-primary);
+  color: #FFFFFF;
 }
-.hero-accent { color: var(--emerald); }
+.hero-title .nowrap { white-space: nowrap; }
 
 .hero-lead {
   margin-top: 20px;
   max-width: 34em;
   font-size: 17px;
   line-height: 1.65;
-  color: var(--text-secondary);
+  color: #CBD5E1;
 }
 
-.hero-actions { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 12px; }
-.hero-btn { height: 48px; padding: 0 20px; font-size: 15px; text-decoration: none; }
-.btn-primary.hero-btn { box-shadow: 0 8px 20px -8px rgba(4, 120, 87, 0.55); }
-
-/* Visual: an example call, drawn in HTML */
-.hero-visual { position: relative; min-width: 0; padding: 38px 0 0 28px; }
-
-.hero-call {
-  background: #0B1220;
-  border: 1px solid #1E293B;
-  border-radius: 20px;
-  padding: 20px;
-  color: #E2E8F0;
-  box-shadow: 0 32px 64px -28px rgba(15, 23, 42, 0.55);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.hero-call-top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid #1E293B;
-}
-.hero-call-avatar {
-  width: 40px; height: 40px; flex: none;
+.hero-btn {
+  margin-top: 32px;
+  height: 48px;
+  padding: 0 22px;
   border-radius: 999px;
-  display: flex; align-items: center; justify-content: center;
-  background: #1E1B4B; color: #C7D2FE;
-  font-family: var(--font-heading); font-size: 14px; font-weight: 700;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
-}
-.hero-call-who { display: flex; flex-direction: column; min-width: 0; flex: 1; }
-.hero-call-kicker { font-size: 11px; color: #94A3B8; }
-.hero-call-name { font-family: var(--font-heading); font-size: 16px; font-weight: 700; color: #F8FAFC; }
-.hero-call-live {
-  display: inline-flex; align-items: center; gap: 6px; flex: none;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(16, 185, 129, 0.12);
-  color: #6EE7B7;
-  font-family: var(--font-mono); font-size: 12px;
-}
-.hero-live-dot { width: 6px; height: 6px; border-radius: 999px; background: #34D399; }
-
-.hero-msg { display: flex; flex-direction: column; gap: 4px; max-width: 88%; }
-.hero-msg.is-agent { align-self: flex-start; }
-.hero-msg.is-buyer { align-self: flex-end; align-items: flex-end; }
-.hero-msg-who { font-size: 11px; font-weight: 600; color: #64748B; }
-.hero-bubble {
-  display: block;
-  padding: 6px 14px;
-  border-radius: 14px;
   font-size: 15px;
-  line-height: 2;
+  text-decoration: none;
+  border-color: #10B981;
+  background: #059669;
+  box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.6);
 }
-.is-agent .hero-bubble { background: #1E293B; color: #E2E8F0; border-top-left-radius: 4px; }
-.is-buyer .hero-bubble { background: #4F46E5; color: #FFFFFF; border-top-right-radius: 4px; }
+.btn-primary.hero-btn:hover { background: #047857; }
 
-.hero-deal {
-  display: flex; align-items: center; gap: 12px;
-  margin-top: 4px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(52, 211, 153, 0.25);
-}
-.hero-deal-icon {
-  width: 28px; height: 28px; flex: none;
-  border-radius: 999px;
-  display: flex; align-items: center; justify-content: center;
-  background: #10B981; color: #062016;
-}
-.hero-deal-text { display: flex; flex-direction: column; font-size: 13px; color: #A7F3D0; }
-.hero-deal-text strong { font-size: 14px; color: #ECFDF5; font-weight: 600; }
+/* How it works: one white panel resting on the hero's horizon.
+   The panel's top overlaps the band by --how-overlap; the hero's bottom padding leaves that room.
+   Hairlines between steps come from the 1px grid gap over the border colour, in any column count. */
+:root { --how-overlap: 96px; }
 
-.hero-flag {
-  position: absolute;
-  top: 0;
-  left: 0;
+.how-section {
+  position: relative;
   z-index: 1;
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px 10px 10px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: var(--shadow-2);
+  margin-top: calc(-2rem - var(--how-overlap)); /* -2rem cancels .main-layout's top padding */
 }
-.hero-flag-icon {
-  width: 28px; height: 28px; flex: none;
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--indigo-light); color: var(--indigo);
-}
-.hero-flag-text { display: flex; flex-direction: column; font-size: 12px; color: var(--text-secondary); }
-.hero-flag-text strong { font-size: 13px; color: var(--text-primary); font-weight: 600; }
 
-/* How it works: four separate cards, number inside each */
 .how-strip {
   list-style: none;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 32px 64px -32px rgba(15, 23, 42, 0.45), 0 2px 6px rgba(15, 23, 42, 0.04);
 }
 .how-step {
   min-width: 0;
-  padding: 18px 20px;
+  padding: 28px 28px 30px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 .how-num {
   display: inline-flex; align-items: center; justify-content: center;
@@ -2055,37 +1987,36 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   font-size: 12px; font-weight: 600;
 }
 .how-step h3 {
-  margin-top: 12px;
+  margin-top: 14px;
   font-family: var(--font-heading);
   font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--text-primary);
 }
-.how-step p { margin-top: 4px; font-size: 14px; line-height: 1.55; color: var(--text-secondary); }
+.how-step p { margin-top: 6px; font-size: 14px; line-height: 1.55; color: var(--text-secondary); }
 
 @media (max-width: 900px) {
-  .hero { grid-template-columns: minmax(0, 1fr); gap: 40px; padding-top: 16px; }
-  .hero-visual { max-width: 520px; }
-}
-
-@media (max-width: 900px) {
+  .hero-inner { min-height: 480px; padding-top: 72px; }
+  .hero-title { font-size: 46px; }
   .how-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 560px) {
-  .how-strip { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .how-step { padding: 16px 18px; }
+@media (max-width: 640px) {
+  :root { --how-overlap: 40px; }
+  .hero-inner { min-height: 0; padding: 56px 1rem calc(48px + var(--how-overlap)); }
+  .hero-title { font-size: 34px; }
+  .hero-lead { font-size: 15px; }
+  .hero-btn { width: 100%; justify-content: center; }
+  .how-section { margin-top: calc(-1.5rem - var(--how-overlap)); } /* phone .main-layout padding */
+  .how-strip { border-radius: 16px; }
 }
 
-@media (max-width: 640px) {
-  .hero-title { font-size: 32px; }
-  .hero-lead { font-size: 16px; }
-  .hero-btn { flex: 1 1 100%; }
-  .hero-visual { padding: 0; }
-  .hero-flag { position: static; margin-bottom: 12px; width: fit-content; max-width: 100%; }
-  .hero-call { padding: 16px; }
-  .hero-bubble { font-size: 14px; }
+@media (max-width: 560px) {
+  .how-strip { grid-template-columns: minmax(0, 1fr); }
+  .how-step { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: 14px; padding: 18px 20px; }
+  .how-num { grid-row: span 2; }
+  .how-step h3 { margin-top: 1px; }
 }
 
 /* Phone demo switch (Module 9): hidden unless ?phone=1 and the server has it on */
