@@ -17,6 +17,7 @@ Privacy: never logs audio, transcript text or phone numbers.
 
 import asyncio
 import base64
+import binascii
 import json
 import logging
 from typing import Any, Awaitable, Callable, Mapping
@@ -65,7 +66,7 @@ class TwilioStreamAdapter:
         self._next_line = 0
         self._lines: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
         self._line_writer: asyncio.Task | None = None
-        self._whatsapp_tasks: set[asyncio.Task] = set()
+        self._last_whatsapp: asyncio.Task | None = None  # sends are chained, so they arrive in order
 
     # --- CallSocket ----------------------------------------------------------------
 
@@ -104,8 +105,12 @@ class TwilioStreamAdapter:
             event = msg.get("event")
             if event == "media":
                 payload = (msg.get("media") or {}).get("payload")
-                if payload:
-                    return {"type": "websocket.receive", "bytes": self._inbound.convert(base64.b64decode(payload))}
+                try:
+                    audio = base64.b64decode(payload, validate=True) if payload else b""
+                except (binascii.Error, ValueError):
+                    continue  # one damaged frame is dropped, not the call
+                if audio:
+                    return {"type": "websocket.receive", "bytes": self._inbound.convert(audio)}
             elif event == "stop":
                 return {"type": "websocket.disconnect"}
 
@@ -141,7 +146,14 @@ class TwilioStreamAdapter:
     # --- Twilio messages -----------------------------------------------------------
 
     async def _next_message(self) -> dict[str, Any]:
-        return json.loads(await self._ws.receive_text())
+        """The next Twilio message; anything that isn't a JSON object is skipped."""
+        while True:
+            try:
+                msg = json.loads(await self._ws.receive_text())
+            except ValueError:
+                continue
+            if isinstance(msg, dict):
+                return msg
 
     async def _send(self, message: dict[str, Any]) -> None:
         await self._ws.send_text(json.dumps({**message, "streamSid": self._stream_sid}))
@@ -201,20 +213,25 @@ class TwilioStreamAdapter:
         kind, text, media_url = event.get("whatsapp"), str(event.get("text", "")), event.get("media_url")
         self._queue_line({"kind": "whatsapp", "whatsapp": kind, "text": text, "media_url": media_url})
         if self._send_whatsapp is not None:
-            task = asyncio.create_task(self._deliver_whatsapp(kind, text, media_url))
-            self._whatsapp_tasks.add(task)
-            task.add_done_callback(self._whatsapp_tasks.discard)
+            previous = self._last_whatsapp
+            self._last_whatsapp = asyncio.create_task(self._deliver_whatsapp(previous, kind, text, media_url))
 
-    async def _deliver_whatsapp(self, kind: Any, text: str, media_url: str | None) -> None:
+    async def _deliver_whatsapp(
+        self, previous: asyncio.Task | None, kind: Any, text: str, media_url: str | None
+    ) -> None:
+        """Sends after the previous message, so the photo never lands after the confirmation."""
+        if previous is not None:
+            await asyncio.wait([previous])
         try:
             await self._send_whatsapp(text, media_url=media_url)
-            logger.info("phone_whatsapp_sent", extra={"call_id": self._call_id, "whatsapp": kind})
+            # Accepted by Twilio; delivery itself is asynchronous (failures show in Twilio's message log).
+            logger.info("phone_whatsapp_accepted", extra={"call_id": self._call_id, "whatsapp": kind})
         except Exception as exc:
             logger.warning("phone_whatsapp_failed", extra={"call_id": self._call_id, "whatsapp": kind, "error": str(exc)})
 
     async def _drain_whatsapp(self) -> None:
-        if self._whatsapp_tasks:
-            await asyncio.wait(set(self._whatsapp_tasks), timeout=WHATSAPP_DRAIN_S)
+        if self._last_whatsapp is not None:
+            await asyncio.wait([self._last_whatsapp], timeout=WHATSAPP_DRAIN_S)
 
     async def _drain_lines(self) -> None:
         if self._line_writer is None:

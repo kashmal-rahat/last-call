@@ -149,3 +149,14 @@ def test_donation_confirmation_has_no_price():
     text = deal_confirmation_text(call, quantity=3, price_per_unit=0, pickup=NOW + timedelta(hours=2), now=NOW)
     assert text.startswith("Donation confirmed") and "free of charge" in text
     assert "Rs" not in text and "Payment" not in text
+
+
+async def test_photo_is_sent_once_per_call():
+    store, call, _, events = await _call_with_context(photo_stored=True)
+    try:
+        first = await send_photo(tool_context=FakeToolContext(call.call_id))
+        second = await send_photo(tool_context=FakeToolContext(call.call_id))
+    finally:
+        unregister_context(call.call_id)
+    assert first["ok"] and second["ok"] and "already sent" in second["message"]
+    assert len(events) == 1 and len(await store.get_outbox(call.call_id)) == 1

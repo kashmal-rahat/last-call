@@ -275,6 +275,9 @@ async def send_photo(tool_context: ToolContext = None) -> dict[str, Any]:
     if not ctx:
         return {"ok": False, "message": "Call context not found"}
 
+    if "photo_sent" in ctx.flags:  # one photo per call; asking again shouldn't spam the buyer
+        return {"ok": True, "message": "The photo was already sent on WhatsApp in this call."}
+
     call = await ctx.store.get_call(call_id)
     media_url = await item_photo_url(ctx.store, call)
     if media_url is None:
@@ -294,6 +297,7 @@ async def send_photo(tool_context: ToolContext = None) -> dict[str, Any]:
             status="sent_in_call" if delivered else "stub_not_sent",
         )
     )
+    ctx.flags.append("photo_sent")
     return {"ok": True, "message": "Photo sent to the buyer on WhatsApp."}
 
 

@@ -63,7 +63,7 @@ Built directly by Claude at the user's request on 2026-10-13 (the user said "imp
    ```bash
    gcloud secrets versions add phone-demo-config --data-file="$HOME/phone-demo-config.json" --project=kayrox-last-call
    ```
-   Then delete the file. Without `whatsapp_from`, the page still shows the messages and only the real WhatsApp send is skipped.
+   Then delete the file and run `./scripts/deploy.sh voice`, so `voice` reads the new version. Without `whatsapp_from`, the page still shows the messages and only the real WhatsApp send is skipped.
 
 ## Switching on and off: Terraform
 The secret value already exists (version 1+, created with `gcloud`). Once, bring the existing secret into Terraform state:
@@ -88,7 +88,7 @@ terraform apply phone-off.tfplan
 ```
 **Check:** `curl -s -o /dev/null -w "%{http_code}" <api-url>/demo/phone/config` must print `404` when off.
 
-**Changing the number:** `gcloud secrets versions add phone-demo-config --data-file=<file>`, then apply with the feature on. Each apply that changes the service creates a new revision, which reads `latest`. If nothing else changed, run `terraform apply -replace=google_cloud_run_v2_service.api` with the same `-var`.
+**Changing the number, or adding `whatsapp_from`:** `gcloud secrets versions add phone-demo-config --data-file=<file>`, then redeploy so a new revision reads `latest`: `./scripts/deploy.sh api` for the number used to dial, `./scripts/deploy.sh voice` for WhatsApp. Never use `terraform apply -replace` on a Cloud Run service; it deletes and recreates the service.
 
 ## Checks
 - **Local:**
@@ -108,6 +108,13 @@ terraform apply phone-off.tfplan
 - **Bridge:** the faked Origin header is gone, replaced by the explicit `check_origin=False` for `/phone/stream`. The duck typing with `# type: ignore` is replaced by the `CallSocket` protocol.
 - **Terraform:** the switch moved from `gcloud` to Terraform: the variable, the secret container, `api-sa` read access, and the env vars on both services.
 - **Checks:** `pytest` 388 passed, 20 skipped, on three runs; `node --test` 21 passed; `terraform fmt` and `validate` clean. `terraform plan` could not be run here (the local Google login has expired), so the user runs it and shows the output before any apply.
+
+### Round 3: WhatsApp review (2026-10-13)
+- **Order:** WhatsApp sends are chained, so the photo always arrives before the confirmation (they used to be parallel tasks).
+- **Damaged frames:** a non-JSON message or bad audio from Twilio is skipped; it used to end the call.
+- **Log name:** `phone_whatsapp_sent` is now `phone_whatsapp_accepted`. Twilio's API only accepts the message; delivery happens afterwards, and failures such as 63015/63016 (sandbox window) appear only in Twilio's message log.
+- **One photo per call:** a second `send_photo` doesn't resend (flag `photo_sent` on the call).
+- **Checks:** `pytest` 416 passed.
 
 ## Live check (you, while switched on)
 1. `/demo` without `?phone=1`: no switch shows; a browser call works as before.

@@ -243,3 +243,32 @@ async def test_adapter_still_shows_whatsapp_when_sending_fails():
     await adapter.send_json({"type": "whatsapp", "whatsapp": "confirmation", "text": "Deal confirmed", "media_url": None})
     await adapter.close()
     assert (await store.get_live_lines(call.call_id))[0]["text"] == "Deal confirmed"
+
+
+async def test_whatsapp_messages_arrive_in_order_even_if_the_first_is_slow():
+    store = InMemoryStore()
+    call, batch = build_call("easy_yes", now=NOW)
+    await store.create_call(call, batch)
+    token = mint(call_id=call.call_id, nonce=call.session_nonce, key=KEY)
+    sent: list[str] = []
+
+    async def slow_first(body: str, *, media_url: str | None = None) -> None:
+        if body == "photo":
+            await asyncio.sleep(0.05)
+        sent.append(body)
+
+    adapter = TwilioStreamAdapter(FakeTwilioSocket([_start(token)]), store=store, signing_key=KEY, send_whatsapp=slow_first)
+    await adapter.receive_text()
+    await adapter.send_json({"type": "whatsapp", "whatsapp": "photo", "text": "photo", "media_url": None})
+    await adapter.send_json({"type": "whatsapp", "whatsapp": "confirmation", "text": "confirmation", "media_url": None})
+    await adapter.close()
+    assert sent == ["photo", "confirmation"]
+
+
+async def test_damaged_twilio_frames_are_skipped_not_fatal():
+    good = {"event": "media", "media": {"payload": base64.b64encode(bytes([0xFF] * 160)).decode()}}
+    ws = FakeTwilioSocket([])
+    ws.incoming = ["not json", json.dumps([1, 2]), json.dumps({"event": "media", "media": {"payload": "%%%"}}), json.dumps(good)]
+    adapter = TwilioStreamAdapter(ws, store=InMemoryStore(), signing_key=KEY)
+    msg = await adapter.receive()
+    assert msg["type"] == "websocket.receive" and len(msg["bytes"]) == 640
