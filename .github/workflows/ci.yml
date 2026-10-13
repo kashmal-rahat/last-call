@@ -1,0 +1,60 @@
+# Lint and tests for the Python services, the shared package and the judge page.
+# Checks only: deploys and Terraform changes stay manual (scripts/deploy.sh, terraform plan/apply).
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/**"
+      - "shared/**"
+      - "scripts/**"
+      - "conftest.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "services/**"
+      - "shared/**"
+      - "scripts/**"
+      - "conftest.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.23"
+          python-version: "3.12"
+          enable-cache: true
+
+      - uses: actions/setup-node@v4  # the page's JS tests run under node --test (via pytest)
+        with:
+          node-version: "22"
+
+      - name: Install
+        run: uv sync --frozen
+
+      - name: Lint
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Test (Python and page JS; live Google tests stay skipped)
+        run: uv run pytest -q
