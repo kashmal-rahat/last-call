@@ -227,7 +227,9 @@ class TwilioStreamAdapter:
             # Accepted by Twilio; delivery itself is asynchronous (failures show in Twilio's message log).
             logger.info("phone_whatsapp_accepted", extra={"call_id": self._call_id, "whatsapp": kind})
         except Exception as exc:
-            logger.warning("phone_whatsapp_failed", extra={"call_id": self._call_id, "whatsapp": kind, "error": str(exc)})
+            logger.warning(
+                "phone_whatsapp_failed", extra={"call_id": self._call_id, "whatsapp": kind, "error": str(exc)}
+            )
 
     async def _drain_whatsapp(self) -> None:
         if self._last_whatsapp is not None:

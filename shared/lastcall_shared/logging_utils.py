@@ -30,6 +30,7 @@ def mask_phone(phone: str) -> str:
 
 def mask_pii_in_text(text: str) -> str:
     """Finds phone numbers in a string and masks them."""
+
     def _repl(match: re.Match[str]) -> str:
         matched = match.group(0)
         return mask_phone(matched)
@@ -85,10 +86,29 @@ class CloudLoggingJsonFormatter(logging.Formatter):
 
         # Recursively mask custom extra attributes if present
         standard_attrs = {
-            "name", "msg", "args", "levelno", "levelname", "pathname", "filename",
-            "module", "exc_info", "exc_text", "stack_info", "lineno", "funcName",
-            "created", "msecs", "relativeCreated", "thread", "threadName",
-            "processName", "process", "message", "extra_fields", "taskName",
+            "name",
+            "msg",
+            "args",
+            "levelno",
+            "levelname",
+            "pathname",
+            "filename",
+            "module",
+            "exc_info",
+            "exc_text",
+            "stack_info",
+            "lineno",
+            "funcName",
+            "created",
+            "msecs",
+            "relativeCreated",
+            "thread",
+            "threadName",
+            "processName",
+            "process",
+            "message",
+            "extra_fields",
+            "taskName",
         }
         for k, v in record.__dict__.items():
             if k not in standard_attrs and not k.startswith("_"):

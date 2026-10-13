@@ -444,4 +444,3 @@ class InMemoryStore:
     async def get_do_not_call(self, mart_id: str, keys: list[str]) -> set[str]:
         async with self._lock:
             return {k for k in keys if (mart_id, k) in self.do_not_call}
-

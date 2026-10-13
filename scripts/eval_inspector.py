@@ -172,11 +172,13 @@ async def run_evaluation(
             if err:
                 errors_by_run[(fname, run_i)] = err
             if res:
-                run_outputs.append({
-                    "filename": fname,
-                    "run": run_i,
-                    "result": res.model_dump(mode="json"),
-                })
+                run_outputs.append(
+                    {
+                        "filename": fname,
+                        "run": run_i,
+                        "result": res.model_dump(mode="json"),
+                    }
+                )
 
         # Execute series photos in seq order
         for run_i in range(runs):
@@ -188,11 +190,13 @@ async def run_evaluation(
                     if err:
                         errors_by_run[(fname, run_i)] = err
                     if cur_res:
-                        run_outputs.append({
-                            "filename": fname,
-                            "run": run_i,
-                            "result": cur_res.model_dump(mode="json"),
-                        })
+                        run_outputs.append(
+                            {
+                                "filename": fname,
+                                "run": run_i,
+                                "result": cur_res.model_dump(mode="json"),
+                            }
+                        )
                     prev_res = cur_res
 
         # Write jsonl
@@ -201,9 +205,7 @@ async def run_evaluation(
                 f.write(json.dumps(item) + "\n")
 
         # Exclude errored photos in run 0 from accuracy/critical-miss metrics
-        errored_photos_run0 = {
-            fname: err for (fname, r_idx), err in errors_by_run.items() if r_idx == 0
-        }
+        errored_photos_run0 = {fname: err for (fname, r_idx), err in errors_by_run.items() if r_idx == 0}
 
         # Compute metrics for run 0
         run0_matches = []
@@ -268,7 +270,7 @@ async def run_evaluation(
                 c_min = pred.observed.min
                 c_max = pred.observed.max
                 width = c_max - c_min
-                in_rng = (c_min <= lbl.true_count <= c_max)
+                in_rng = c_min <= lbl.true_count <= c_max
 
                 count_total_all += 1
                 count_widths_all.append(width)
@@ -289,7 +291,7 @@ async def run_evaluation(
                 k_min = pred.quantity.low
                 k_max = pred.quantity.high
                 width = k_max - k_min
-                in_rng = (k_min <= lbl.true_kg <= k_max)
+                in_rng = k_min <= lbl.true_kg <= k_max
 
                 kg_total_all += 1
                 kg_widths_all.append(width)
@@ -386,24 +388,28 @@ async def run_evaluation(
         example_results = []
         for (fname, r_idx), res in results_by_run.items():
             if r_idx == 0 and res and res.items:
-                example_results.append({
-                    "filename": fname,
-                    "photo_status": res.photo_status,
-                    "items": [
-                        {
-                            "name": it.name,
-                            "stage": it.stage,
-                            "worst_stage": it.worst_stage,
-                            "confidence": it.confidence,
-                            "score": it.score,
-                            "quantity": f"{it.quantity.low}-{it.quantity.high} {it.quantity.unit}" if it.quantity else "-",
-                            "evidence": it.evidence,
-                            "needs_staff_check": it.needs_staff_check,
-                            "check_reason": it.check_reason,
-                        }
-                        for it in res.items
-                    ],
-                })
+                example_results.append(
+                    {
+                        "filename": fname,
+                        "photo_status": res.photo_status,
+                        "items": [
+                            {
+                                "name": it.name,
+                                "stage": it.stage,
+                                "worst_stage": it.worst_stage,
+                                "confidence": it.confidence,
+                                "score": it.score,
+                                "quantity": f"{it.quantity.low}-{it.quantity.high} {it.quantity.unit}"
+                                if it.quantity
+                                else "-",
+                                "evidence": it.evidence,
+                                "needs_staff_check": it.needs_staff_check,
+                                "check_reason": it.check_reason,
+                            }
+                            for it in res.items
+                        ],
+                    }
+                )
                 if len(example_results) == 3:
                     break
 
@@ -470,10 +476,14 @@ def write_eval_markdown(mode_results: dict, output_path: Path, compare_zoom: boo
         md.append("|---|---|---|---|\n")
         md.append(f"| Stage accuracy (strict) | ≥ 80% | {z_off['strict_acc']:.1%} | {z_on['strict_acc']:.1%} |\n")
         md.append(f"| Worst-stage accuracy | report | {z_off['worst_acc']:.1%} | {z_on['worst_acc']:.1%} |\n")
-        md.append(f"| **Critical misses** | **0** | **{len(z_off['critical_misses'])}** | **{len(z_on['critical_misses'])}** |\n")
+        md.append(
+            f"| **Critical misses** | **0** | **{len(z_off['critical_misses'])}** | **{len(z_on['critical_misses'])}** |\n"
+        )
         md.append(f"| False alarms | report | {len(z_off['false_alarms'])} | {len(z_on['false_alarms'])} |\n")
         md.append(f"| Groups whose stage changed | report | - | {z_on.get('zoom_stage_changes', 0)} |\n")
-        md.append(f"| Latency p50 / p90 | ≤ 10s / ≤ 20s | {z_off['p50_latency']:.2f}s / {z_off['p90_latency']:.2f}s | {z_on['p50_latency']:.2f}s / {z_on['p90_latency']:.2f}s |\n")
+        md.append(
+            f"| Latency p50 / p90 | ≤ 10s / ≤ 20s | {z_off['p50_latency']:.2f}s / {z_off['p90_latency']:.2f}s | {z_on['p50_latency']:.2f}s / {z_on['p90_latency']:.2f}s |\n"
+        )
         md.append(f"| Average cost per inspection | report | ${z_off['avg_cost']:.5f} | ${z_on['avg_cost']:.5f} |\n\n")
 
     main_key = "zoom_on" if "zoom_on" in mode_results else list(mode_results.keys())[0]
@@ -494,11 +504,21 @@ def write_eval_markdown(mode_results: dict, output_path: Path, compare_zoom: boo
     md.append(f"| Edge photo pass rate | 100% | {res['edge_pass_rate']:.1%} |\n")
     md.append(f"| Consistency across runs | ≥ 90% | {res['consistency']:.1%} |\n")
     qm = res["quantity_metrics"]
-    md.append(f"| Quantity (count in range: all / zoom / no-zoom) | report | {qm['count_acc_all']:.1%} / {qm['count_acc_zoom']:.1%} / {qm['count_acc_nozoom']:.1%} |\n")
-    md.append(f"| Quantity (count median width: all / zoom / no-zoom) | report | {qm['count_median_width_all']:.1f} / {qm['count_median_width_zoom']:.1f} / {qm['count_median_width_nozoom']:.1f} |\n")
-    md.append(f"| Quantity (kg in range: all / zoom / no-zoom) | report | {qm['kg_acc_all']:.1%} / {qm['kg_acc_zoom']:.1%} / {qm['kg_acc_nozoom']:.1%} |\n")
-    md.append(f"| Quantity (kg median width: all / zoom / no-zoom) | report | {qm['kg_median_width_all']:.1f}kg / {qm['kg_median_width_zoom']:.1f}kg / {qm['kg_median_width_nozoom']:.1f}kg |\n")
-    md.append(f"| Time-lapse (score never rises > 7 pts) | report | {res['series_violations']} violations (max rise: +{res['max_score_rise']:.1f} pts) |\n")
+    md.append(
+        f"| Quantity (count in range: all / zoom / no-zoom) | report | {qm['count_acc_all']:.1%} / {qm['count_acc_zoom']:.1%} / {qm['count_acc_nozoom']:.1%} |\n"
+    )
+    md.append(
+        f"| Quantity (count median width: all / zoom / no-zoom) | report | {qm['count_median_width_all']:.1f} / {qm['count_median_width_zoom']:.1f} / {qm['count_median_width_nozoom']:.1f} |\n"
+    )
+    md.append(
+        f"| Quantity (kg in range: all / zoom / no-zoom) | report | {qm['kg_acc_all']:.1%} / {qm['kg_acc_zoom']:.1%} / {qm['kg_acc_nozoom']:.1%} |\n"
+    )
+    md.append(
+        f"| Quantity (kg median width: all / zoom / no-zoom) | report | {qm['kg_median_width_all']:.1f}kg / {qm['kg_median_width_zoom']:.1f}kg / {qm['kg_median_width_nozoom']:.1f}kg |\n"
+    )
+    md.append(
+        f"| Time-lapse (score never rises > 7 pts) | report | {res['series_violations']} violations (max rise: +{res['max_score_rise']:.1f} pts) |\n"
+    )
     md.append(f"| Staff-check rate | report | {res['staff_check_rate']:.1%} |\n")
     md.append(f"| Latency p50 / p90 | ≤ 10s / ≤ 20s | {res['p50_latency']:.2f}s / {res['p90_latency']:.2f}s |\n")
     md.append(f"| Zoomed groups / Zoom failures | report | {res['zoomed_count']} / {res['zoom_failures']} |\n")
@@ -532,8 +552,10 @@ def write_eval_markdown(mode_results: dict, output_path: Path, compare_zoom: boo
             md.append(f"#### Example {i}: `{ex['filename']}` (status: {ex['photo_status']})\n")
             for it in ex["items"]:
                 sc = f" *(Staff check: {it['check_reason']})*" if it["needs_staff_check"] else ""
-                md.append(f"- **{it['name']}**: stage `{it['stage']}` (worst: `{it['worst_stage']}`, conf: `{it['confidence']}`, score: {it['score']}, qty: {it['quantity']}){sc}\n")
-                md.append(f"  - *Evidence:* \"{it['evidence']}\"\n")
+                md.append(
+                    f"- **{it['name']}**: stage `{it['stage']}` (worst: `{it['worst_stage']}`, conf: `{it['confidence']}`, score: {it['score']}, qty: {it['quantity']}){sc}\n"
+                )
+                md.append(f'  - *Evidence:* "{it["evidence"]}"\n')
             md.append("\n")
 
     output_path.write_text("".join(md), encoding="utf-8")

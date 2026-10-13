@@ -42,11 +42,15 @@ async def cmd_warm(names: list[str], store: FirestoreStore | None = None) -> Non
     dur_ms = int((time.monotonic() - t0) * 1000)
 
     print(f"\nDone in {dur_ms} ms!")
-    print(f"Stats: {stats.calls} Gemini vote calls sent | {stats.generated} profiles generated | {stats.fallbacks} fallbacks.")
+    print(
+        f"Stats: {stats.calls} Gemini vote calls sent | {stats.generated} profiles generated | {stats.fallbacks} fallbacks."
+    )
     print(f"Tokens: {usage.input_tokens} in, {usage.output_tokens} out.")
     for name, p in profiles.items():
         if produce_key(name) == p.name or name == p.name:
-            print(f"- {p.name}: key={p.key}, source={p.source}, votes={p.votes}, uncertain={p.uncertain_fields or 'none'}")
+            print(
+                f"- {p.name}: key={p.key}, source={p.source}, votes={p.votes}, uncertain={p.uncertain_fields or 'none'}"
+            )
 
 
 async def cmd_show(name: str, store: FirestoreStore | None = None) -> None:

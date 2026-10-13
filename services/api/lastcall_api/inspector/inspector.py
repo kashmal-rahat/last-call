@@ -54,6 +54,7 @@ def reading_key(
     raw = f"{image_sha256}|{model}|{prompt_version}|{thinking_level}|{int(zoom)}|{bin_capacity_kg or ''}|{READING_CACHE_VERSION}"
     return f"r_{hashlib.sha256(raw.encode('utf-8')).hexdigest()}"
 
+
 # Gemini 3.8 Flash pricing constants (per 1M tokens)
 FLASH_INPUT_PRICE_PER_M = 0.75
 FLASH_OUTPUT_PRICE_PER_M = 3.75
@@ -66,7 +67,15 @@ def estimate_cost(meta: InspectorMeta) -> float:
     ) * FLASH_OUTPUT_PRICE_PER_M
 
 
-FORBIDDEN_CONFIG_KEYS = {"temperature", "top_p", "top_k", "seed", "candidate_count", "presence_penalty", "frequency_penalty"}
+FORBIDDEN_CONFIG_KEYS = {
+    "temperature",
+    "top_p",
+    "top_k",
+    "seed",
+    "candidate_count",
+    "presence_penalty",
+    "frequency_penalty",
+}
 
 
 class InspectorError(Exception):
@@ -180,8 +189,7 @@ async def inspect_photo(
             final_output = InspectorOutput.model_validate(cached_data["output"])
             raw_zoom = cached_data.get("zoom", {})
             zoom_results: dict[int, tuple[list[Any], bool]] = {
-                int(idx): (entry["reasons"], entry["zoomed"])
-                for idx, entry in raw_zoom.items()
+                int(idx): (entry["reasons"], entry["zoomed"]) for idx, entry in raw_zoom.items()
             }
             zoomed_count = int(cached_data.get("zoomed_groups", 0))
             zoom_failures = 0
@@ -284,12 +292,7 @@ async def inspect_photo(
                     final_output = pass1_out.model_copy(update={"items": merged_items})
 
         # Store complete readings after a miss
-        if (
-            reading_cache is not None
-            and cache_key is not None
-            and zoom_failures == 0
-            and not zoom_skipped_for_time
-        ):
+        if reading_cache is not None and cache_key is not None and zoom_failures == 0 and not zoom_skipped_for_time:
             try:
                 await reading_cache.create_reading(
                     cache_key,

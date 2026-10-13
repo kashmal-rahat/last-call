@@ -93,15 +93,17 @@ async def run_nearby_search(
         b_status = p.business_status or "UNKNOWN"
         is_operational = b_status in ("OPERATIONAL", "UNKNOWN")
         is_usable = is_operational and phone_present and dist <= (radius_meters / 1000.0)
-        items.append({
-            "name": escape_table(p.name),
-            "primary_type": p.primary_type or "—",
-            "distance_km": dist,
-            "phone_present": phone_present,
-            "open_now": p.open_now,
-            "business_status": b_status,
-            "is_usable": is_usable,
-        })
+        items.append(
+            {
+                "name": escape_table(p.name),
+                "primary_type": p.primary_type or "—",
+                "distance_km": dist,
+                "phone_present": phone_present,
+                "open_now": p.open_now,
+                "business_status": b_status,
+                "is_usable": is_usable,
+            }
+        )
     items.sort(key=lambda x: x["distance_km"])
     return resp.status_code, latency_ms, items, None
 
@@ -133,11 +135,15 @@ async def main():
 
     print("[P1-A] Probing 'welfare trust dastarkhwan'...")
     res_a = await probe_request(client, spec_a, johar.name, johar.geo, radius_km=10.0, page_size=20)
-    print(f"       Raw count: {res_a['raw_count']}, Usable ≤10km: {res_a['usable_within_10km']}, Latency: {res_a['latency_ms']}ms")
+    print(
+        f"       Raw count: {res_a['raw_count']}, Usable ≤10km: {res_a['usable_within_10km']}, Latency: {res_a['latency_ms']}ms"
+    )
 
     print("[P1-B] Probing 'dastarkhwan'...")
     res_b = await probe_request(client, spec_b, johar.name, johar.geo, radius_km=10.0, page_size=20)
-    print(f"       Raw count: {res_b['raw_count']}, Usable ≤10km: {res_b['usable_within_10km']}, Latency: {res_b['latency_ms']}ms")
+    print(
+        f"       Raw count: {res_b['raw_count']}, Usable ≤10km: {res_b['usable_within_10km']}, Latency: {res_b['latency_ms']}ms"
+    )
 
     print("\n--- Running P2: Nearby Search (New) Diagnostic at Gulberg ---")
     status_code, lat_nearby, items_nearby, err_nearby = await run_nearby_search(
@@ -173,47 +179,55 @@ async def main():
             f"| {label} | {r['raw_count']} | {r['has_phone_count']} | {open_str} | **{r['usable_within_10km']}** | {r['latency_ms']}ms | {r['status']} |"
         )
 
-    lines.extend([
-        "",
-        "#### P1-A Top Candidates (`welfare trust dastarkhwan`):",
-        "",
-        "| # | Name | Primary Type | Distance (km) | Phone Present | Open Now | Usable |",
-        "|---|---|---|---|---|---|---|",
-    ])
+    lines.extend(
+        [
+            "",
+            "#### P1-A Top Candidates (`welfare trust dastarkhwan`):",
+            "",
+            "| # | Name | Primary Type | Distance (km) | Phone Present | Open Now | Usable |",
+            "|---|---|---|---|---|---|---|",
+        ]
+    )
     for rank, item in enumerate(res_a["nearest_10"][:10], 1):
         lines.append(
             f"| {rank} | {escape_table(item['name'])} | `{item['primary_type']}` | {item['distance_km']} km | {'Yes' if item['phone_present'] else 'No'} | {'Yes' if item['open_now'] is True else ('No' if item['open_now'] is False else 'Unknown')} | {'Yes' if item['is_usable'] else 'No'} |"
         )
 
-    lines.extend([
-        "",
-        "#### P1-B Top Candidates (`dastarkhwan`):",
-        "",
-        "| # | Name | Primary Type | Distance (km) | Phone Present | Open Now | Usable |",
-        "|---|---|---|---|---|---|---|",
-    ])
+    lines.extend(
+        [
+            "",
+            "#### P1-B Top Candidates (`dastarkhwan`):",
+            "",
+            "| # | Name | Primary Type | Distance (km) | Phone Present | Open Now | Usable |",
+            "|---|---|---|---|---|---|---|",
+        ]
+    )
     for rank, item in enumerate(res_b["nearest_10"][:10], 1):
         lines.append(
             f"| {rank} | {escape_table(item['name'])} | `{item['primary_type']}` | {item['distance_km']} km | {'Yes' if item['phone_present'] else 'No'} | {'Yes' if item['open_now'] is True else ('No' if item['open_now'] is False else 'Unknown')} | {'Yes' if item['is_usable'] else 'No'} |"
         )
 
-    lines.extend([
-        "",
-        "### P2: Gulberg Nearby Search Diagnostic (`searchNearby`, 5000m radius)",
-        f"- **Status Code**: {status_code}",
-        f"- **Latency**: {lat_nearby}ms",
-        f"- **Raw Results Count**: {len(items_nearby)}",
-        "- **Text Search Nearest Baseline**: 4.42 km (`Maulvi Juice Corner`)",
-    ])
+    lines.extend(
+        [
+            "",
+            "### P2: Gulberg Nearby Search Diagnostic (`searchNearby`, 5000m radius)",
+            f"- **Status Code**: {status_code}",
+            f"- **Latency**: {lat_nearby}ms",
+            f"- **Raw Results Count**: {len(items_nearby)}",
+            "- **Text Search Nearest Baseline**: 4.42 km (`Maulvi Juice Corner`)",
+        ]
+    )
 
     if items_nearby:
         nearest_d = items_nearby[0]["distance_km"]
         lines.append(f"- **Nearby Search Nearest Distance**: {nearest_d} km")
-        lines.extend([
-            "",
-            "| # | Name | Primary Type | Distance (km) | Phone Present | Open Now | Usable |",
-            "|---|---|---|---|---|---|---|",
-        ])
+        lines.extend(
+            [
+                "",
+                "| # | Name | Primary Type | Distance (km) | Phone Present | Open Now | Usable |",
+                "|---|---|---|---|---|---|---|",
+            ]
+        )
         for rank, item in enumerate(items_nearby[:10], 1):
             lines.append(
                 f"| {rank} | {escape_table(item['name'])} | `{item['primary_type']}` | {item['distance_km']} km | {'Yes' if item['phone_present'] else 'No'} | {'Yes' if item['open_now'] is True else ('No' if item['open_now'] is False else 'Unknown')} | {'Yes' if item['is_usable'] else 'No'} |"
@@ -227,7 +241,7 @@ async def main():
     # Particularly "Bismillah Fresh Juice & Dahi bhally | Johar Town Lahore"
     existing_fixed = existing_content.replace(
         "Bismillah Fresh Juice & Dahi bhally | Johar Town Lahore",
-        "Bismillah Fresh Juice & Dahi bhally \\| Johar Town Lahore"
+        "Bismillah Fresh Juice & Dahi bhally \\| Johar Town Lahore",
     )
     probe_path.write_text(existing_fixed + "\n" + "\n".join(lines) + "\n")
     print(f"\nAppended P1 & P2 results to: {probe_path}")

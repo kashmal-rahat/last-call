@@ -773,9 +773,6 @@ async def test_batch_attempts_and_get_calls(store):
     assert calls_map[call.call_id].call_id == call.call_id
 
 
-
-
-
 async def test_live_lines_for_phone_demo(store):
     """Module 9: phone-demo transcript lines live on the call doc; get_call ignores them."""
     call, batch = build_call("easy_yes", now=NOW)

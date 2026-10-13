@@ -182,7 +182,9 @@ async def confirm_deal(
         return {"ok": False, "reasons": [err or "Failed to lock and save deal transaction."]}
 
     # 5. WhatsApp confirmation to the buyer (D62), recorded in the outbox
-    confirmation = deal_confirmation_text(call, quantity=quantity, price_per_unit=price_per_unit, pickup=pickup_dt, now=now)
+    confirmation = deal_confirmation_text(
+        call, quantity=quantity, price_per_unit=price_per_unit, pickup=pickup_dt, now=now
+    )
     delivered = await _notify_buyer(ctx, whatsapp_event("confirmation", confirmation))
     msg = OutboxMessage(
         mart_id=call.mart_id,

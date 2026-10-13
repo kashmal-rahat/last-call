@@ -11,7 +11,7 @@ from pydantic import SecretStr
 
 def phone_key(e164: str, secret: str | bytes | SecretStr) -> str:
     """Computes a keyed HMAC-SHA256 hash for an E.164 phone number.
-    
+
     Returns 'phone:' followed by the first 32 hex chars of the digest.
     """
     if isinstance(secret, SecretStr):
@@ -28,7 +28,7 @@ def phone_key(e164: str, secret: str | bytes | SecretStr) -> str:
 
 def mask_phone(e164: str) -> str:
     """Masks phone preserving country code prefix and last 3 digits.
-    
+
     e.g. '+92 300 1234567' / '+923001234567' -> '+92 ••••••• 567'
     """
     clean = "".join(c for c in e164 if c.isdigit() or c == "+")
@@ -41,7 +41,7 @@ def mask_phone(e164: str) -> str:
         return f"{country} {bullets} {rest[-3:]}"
     if clean.startswith("+") and len(clean) >= 6:
         country = clean[:3] if len(clean) > 8 else clean[:2]
-        rest = clean[len(country):]
+        rest = clean[len(country) :]
         bullets = "•" * max(1, len(rest) - 3)
         return f"{country} {bullets} {rest[-3:]}"
     if len(clean) >= 4:

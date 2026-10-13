@@ -328,13 +328,19 @@ async def test_post_demo_inspect_concurrency_semaphore():
 
         # Launch 3 requests concurrently
         t1 = asyncio.create_task(
-            client.post("/demo/inspect", headers=headers, files={"photo": ("img1.jpg", b"data1", "image/jpeg")}, data=data)
+            client.post(
+                "/demo/inspect", headers=headers, files={"photo": ("img1.jpg", b"data1", "image/jpeg")}, data=data
+            )
         )
         t2 = asyncio.create_task(
-            client.post("/demo/inspect", headers=headers, files={"photo": ("img2.jpg", b"data2", "image/jpeg")}, data=data)
+            client.post(
+                "/demo/inspect", headers=headers, files={"photo": ("img2.jpg", b"data2", "image/jpeg")}, data=data
+            )
         )
         t3 = asyncio.create_task(
-            client.post("/demo/inspect", headers=headers, files={"photo": ("img3.jpg", b"data3", "image/jpeg")}, data=data)
+            client.post(
+                "/demo/inspect", headers=headers, files={"photo": ("img3.jpg", b"data3", "image/jpeg")}, data=data
+            )
         )
 
         # Allow tasks to start and queue

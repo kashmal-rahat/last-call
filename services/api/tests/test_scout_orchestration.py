@@ -157,9 +157,17 @@ async def test_run_scout_two_searches_parallel(monkeypatch):
         async def search(self, spec, center, radius_km, deadline=None):
             searched_specs.append((spec.endpoint, spec.included_type or spec.text_query))
             if spec.included_type == "juice_shop":
-                return [make_raw_place("ChIJ_juice1", "Fresh Juice Bar", "juice_shop", lat=31.471, lng=74.274, phone="+92 300 1111111")]
+                return [
+                    make_raw_place(
+                        "ChIJ_juice1", "Fresh Juice Bar", "juice_shop", lat=31.471, lng=74.274, phone="+92 300 1111111"
+                    )
+                ]
             else:
-                return [make_raw_place("ChIJ_bake1", "Sweet Bakery", "bakery", lat=31.472, lng=74.275, phone="+92 300 2222222")]
+                return [
+                    make_raw_place(
+                        "ChIJ_bake1", "Sweet Bakery", "bakery", lat=31.472, lng=74.275, phone="+92 300 2222222"
+                    )
+                ]
 
     async def mock_call_structured(client, contents, config, schema, deadline, **kwargs):
         return (

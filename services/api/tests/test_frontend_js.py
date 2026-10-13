@@ -18,4 +18,3 @@ def test_frontend_node_tests():
     cmd = ["node", "--test", *[str(p) for p in test_files]]
     res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 0, f"Frontend node tests failed:\nSTDOUT:\n{res.stdout}\nSTDERR:\n{res.stderr}"
-

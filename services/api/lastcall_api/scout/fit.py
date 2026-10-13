@@ -72,9 +72,7 @@ async def screen_fit(
     if not candidates:
         return {}, UsageRecord(), stats
 
-    ref_to_place_id: dict[str, str] = {
-        f"c{i + 1}": c.place_id for i, c in enumerate(candidates)
-    }
+    ref_to_place_id: dict[str, str] = {f"c{i + 1}": c.place_id for i, c in enumerate(candidates)}
 
     biz_list = [
         {

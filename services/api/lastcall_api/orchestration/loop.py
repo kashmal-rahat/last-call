@@ -79,11 +79,7 @@ def next_action(
         return _steps_used_up()
 
     # 5. If scout is None, or scout.step != plan.step, or its buyer_types differ → needs_search
-    if (
-        scout is None
-        or scout.step != plan.step
-        or set(scout.buyer_types) != set(plan.buyer_types)
-    ):
+    if scout is None or scout.step != plan.step or set(scout.buyer_types) != set(plan.buyer_types):
         return NextAction(kind="needs_search", step=plan.step)
 
     # 6. The first buyer in rank order who isn't in called → call. If none, go to rule 7

@@ -171,7 +171,9 @@ def check_profile(p: ProduceProfile) -> tuple[ProduceProfile, list[str]]:
         p.ripening.sellable_for = ORDER_TO_BAND[rip_order]
 
     if over_order > rip_order:
-        notes.append(f"overripe band {p.overripe.sellable_for} > ripening band {p.ripening.sellable_for}; capped to ripening")
+        notes.append(
+            f"overripe band {p.overripe.sellable_for} > ripening band {p.ripening.sellable_for}; capped to ripening"
+        )
         over_order = rip_order
         p.overripe.sellable_for = ORDER_TO_BAND[over_order]
 

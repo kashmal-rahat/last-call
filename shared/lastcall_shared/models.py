@@ -177,9 +177,7 @@ class ItemAssessment(BaseModel):
     def validate_worst_stage(self) -> "ItemAssessment":
         order = {"fresh": 0, "ripening": 1, "overripe": 2, "spoiled": 3, "unsafe": 4}
         if order.get(self.worst_stage, 0) < order.get(self.stage, 0):
-            raise ValueError(
-                f"worst_stage ({self.worst_stage}) cannot be better than stage ({self.stage})"
-            )
+            raise ValueError(f"worst_stage ({self.worst_stage}) cannot be better than stage ({self.stage})")
         return self
 
 
@@ -248,6 +246,7 @@ class AgentDealBrief(BaseModel):
     extra="forbid" means a new DealBrief field breaks agent_view() until someone
     decides whether the agent may see it.
     """
+
     model_config = ConfigDict(extra="forbid")
 
     schema_version: str = "2.0.0"
@@ -406,6 +405,7 @@ class CallResult(BaseModel):
 # Module 2: Negotiator Domain Models, Policy and State
 # ==============================================================================
 
+
 class NegotiationPolicy(BaseModel):
     concession_fractions: list[float] = Field(default_factory=lambda: [0.4, 0.3, 0.2, 0.1])
     round_to: int = 5
@@ -422,7 +422,7 @@ class NegotiationPolicy(BaseModel):
                 raise ValueError(f"Each concession fraction must be > 0, got {x}")
         for i in range(len(v) - 1):
             if v[i] <= v[i + 1]:
-                raise ValueError(f"Concession fractions must be strictly decreasing: {v[i]} <= {v[i+1]}")
+                raise ValueError(f"Concession fractions must be strictly decreasing: {v[i]} <= {v[i + 1]}")
         total = sum(v)
         if abs(total - 1.0) > 1e-6:
             raise ValueError(f"Concession fractions must sum to 1.0 ± 1e-6, got {total}")
@@ -695,7 +695,9 @@ class MartRules(BaseModel):
 
     # Module 6 Orchestration configuration
     payment_terms: str = "Cash on pickup"
-    calling_hours: CallingHours = Field(default_factory=lambda: CallingHours(start=time(9, 0), end=time(21, 0), timezone="Asia/Karachi"))
+    calling_hours: CallingHours = Field(
+        default_factory=lambda: CallingHours(start=time(9, 0), end=time(21, 0), timezone="Asia/Karachi")
+    )
     city_style: Literal["karachi", "lahore", "islamabad"] = "karachi"
 
     def branch(self, branch_id: str | None = None) -> Branch:
@@ -757,9 +759,7 @@ class MartRules(BaseModel):
             raise ValueError(f"scout_radius_km must be between 0.5 and 10.0, got {self.scout_radius_km}")
 
         if not (0.0 <= self.buyer_cooldown_hours <= 168.0):
-            raise ValueError(
-                f"buyer_cooldown_hours must be between 0.0 and 168.0, got {self.buyer_cooldown_hours}"
-            )
+            raise ValueError(f"buyer_cooldown_hours must be between 0.0 and 168.0, got {self.buyer_cooldown_hours}")
 
         if not (1 <= self.scout_max_buyers <= 10):
             raise ValueError(f"scout_max_buyers must be between 1 and 10, got {self.scout_max_buyers}")
@@ -775,9 +775,7 @@ class MartRules(BaseModel):
             if not self.default_branch_id:
                 raise ValueError("default_branch_id must be set when branches is non-empty")
             if self.default_branch_id not in branch_ids:
-                raise ValueError(
-                    f"default_branch_id '{self.default_branch_id}' not found in branches"
-                )
+                raise ValueError(f"default_branch_id '{self.default_branch_id}' not found in branches")
 
         return self
 
@@ -827,8 +825,7 @@ class LadderDecision(BaseModel):
 
         if self.step == "donate":
             if any(
-                p is not None
-                for p in [self.discount_pct, self.discounted_price, self.opening_price, self.floor_price]
+                p is not None for p in [self.discount_pct, self.discounted_price, self.opening_price, self.floor_price]
             ):
                 raise ValueError("donate step has no prices")
 
@@ -951,7 +948,9 @@ class ScoutResult(BaseModel):
     expire_at: AwareDatetime  # searched_at + SCOUT_LIST_TTL (1 h): reused until then, unusable after, then Firestore TTL deletes it
     buyers: list[ScoutCandidate] = Field(default_factory=list)  # ≤ scout_max_buyers
     skipped: dict[SkipReason, int] = Field(default_factory=dict)
-    screened_out: list[ScreenedOut] = Field(default_factory=list)  # up to 10 businesses Gemini rated unlikely, nearest first (no phone, no place ID)
+    screened_out: list[ScreenedOut] = Field(
+        default_factory=list
+    )  # up to 10 businesses Gemini rated unlikely, nearest first (no phone, no place ID)
     meta: ScoutMeta
     attribution: str = "Google Maps"
 
@@ -959,5 +958,3 @@ class ScoutResult(BaseModel):
         d = self.model_dump(mode="json")
         d["buyers"] = [b.public_view() for b in self.buyers]
         return d
-
-

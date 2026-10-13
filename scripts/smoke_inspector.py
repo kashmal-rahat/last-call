@@ -189,11 +189,15 @@ async def run_smoke(photo_paths: list[Path], zoom: bool = False, thinking: str =
         }
         results.append(record)
 
-        print(f"  ✓ {res.photo_status}: {len(res.items)} groups | {lat_ms}ms | {calls} call(s) | {in_tok} in / {out_tok} out ({thought_tok} thoughts / {ans_tok} ans) | ${cost:.5f}")
+        print(
+            f"  ✓ {res.photo_status}: {len(res.items)} groups | {lat_ms}ms | {calls} call(s) | {in_tok} in / {out_tok} out ({thought_tok} thoughts / {ans_tok} ans) | ${cost:.5f}"
+        )
         for it in res.items:
             chk = f" [CHECK: {it.check_reason}]" if it.needs_staff_check else ""
             z_str = " (zoomed)" if it.zoomed else ""
-            print(f"     - {it.name}: {it.stage}.{it.stage_level} (worst: {it.worst_stage}), score={it.score}{z_str}{chk}")
+            print(
+                f"     - {it.name}: {it.stage}.{it.stage_level} (worst: {it.worst_stage}), score={it.score}{z_str}{chk}"
+            )
 
     return results
 
@@ -217,7 +221,9 @@ def write_smoke_markdown(results: list[dict], zoom: bool, thinking: str = "mediu
         md.append("Model: `gemini-3.8-flash` on Vertex AI (`eu`), `media_resolution=HIGH`\n\n")
 
     md.append(f"## {section_title}\n\n")
-    md.append("| # | Photo | Status | Groups | Zoomed | Latency (s) | Calls | Input Tok | Out (Thoughts / Ans) | Cached Tok | Cost ($) |\n")
+    md.append(
+        "| # | Photo | Status | Groups | Zoomed | Latency (s) | Calls | Input Tok | Out (Thoughts / Ans) | Cached Tok | Cost ($) |\n"
+    )
     md.append("|---|---|---|---|---|---|---|---|---|---|---|\n")
 
     for r in results:
@@ -225,8 +231,8 @@ def write_smoke_markdown(results: list[dict], zoom: bool, thinking: str = "mediu
         thoughts = r.get("thought_tokens", 0)
         answers = r.get("answer_tokens", r["output_tokens"] - thoughts)
         out_split = f"{r['output_tokens']} ({thoughts} / {answers})"
-        status_str = r['status']
-        if r['status'] == 'error' and r.get('orig_error_type'):
+        status_str = r["status"]
+        if r["status"] == "error" and r.get("orig_error_type"):
             status_str = f"error ({r['orig_error_type']})"
         md.append(
             f"| {r['index']} | `{r['filename']}` | {status_str} | {r['items_count']} | {r['zoomed_groups']} | {lat_s} | {r['calls']} | {r['input_tokens']} | {out_split} | {r['cached_tokens']} | ${r['cost_usd']:.5f} |\n"
@@ -236,19 +242,19 @@ def write_smoke_markdown(results: list[dict], zoom: bool, thinking: str = "mediu
     for r in results:
         md.append(f"#### Photo {r['index']}: `{r['filename']}`\n")
         md.append(f"- **Overlay Box Image**: `[{r['box_image']}](file://{REPO_DIR}/{r['box_image']})`\n")
-        if r['crop_images']:
+        if r["crop_images"]:
             md.append("- **Close-up Crops**:\n")
-            for c in r['crop_images']:
+            for c in r["crop_images"]:
                 md.append(f"  - `[{c}](file://{REPO_DIR}/{c})`\n")
         md.append("- **Groups Detected**:\n")
-        if not r['items']:
-            if r['status'] == 'error':
+        if not r["items"]:
+            if r["status"] == "error":
                 md.append(f"  - *Inspection failed: {r.get('error_reason')} (orig: {r.get('orig_error_type')})*\n")
             else:
                 md.append("  - *No items detected*\n")
-        for item in r['items']:
-            chk = f" *(Staff check: {item['check_reason']})*" if item['needs_staff_check'] else ""
-            z_mark = " **[Zoomed]**" if item['zoomed'] else ""
+        for item in r["items"]:
+            chk = f" *(Staff check: {item['check_reason']})*" if item["needs_staff_check"] else ""
+            z_mark = " **[Zoomed]**" if item["zoomed"] else ""
             md.append(
                 f"  - **{item['name']}**: stage `{item['stage']}` (`{item['stage_level']}`), worst stage `{item['worst_stage']}`, confidence `{item['confidence_level']}`, score `{item['score']}`, observed `{item['observed']}`, quantity `{item['quantity']}`{z_mark}{chk}\n"
             )
@@ -275,7 +281,9 @@ def write_smoke_markdown(results: list[dict], zoom: bool, thinking: str = "mediu
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Smoke test for Freshness Inspector")
     parser.add_argument("--zoom", action="store_true", default=False, help="Enable pass-2 zoom")
-    parser.add_argument("--thinking", choices=["low", "medium"], default=THINKING_LEVEL, help="Thinking level for Gemini Flash")
+    parser.add_argument(
+        "--thinking", choices=["low", "medium"], default=THINKING_LEVEL, help="Thinking level for Gemini Flash"
+    )
     args = parser.parse_args()
 
     photos_dir = REPO_DIR / "data/shelf_photos"

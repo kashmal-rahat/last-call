@@ -186,12 +186,14 @@ async def test_3_differing_parameters_is_miss(monkeypatch):
     """3. Same image with different bin_capacity_kg, zoom setting or prompt version -> miss."""
     img = _make_dummy_image("blue")
     out = _make_valid_output("apple")
-    client = FakeGenAIClient([
-        FakeResponse(parsed=out),
-        FakeResponse(parsed=out),
-        FakeResponse(parsed=out),
-        FakeResponse(parsed=out),
-    ])
+    client = FakeGenAIClient(
+        [
+            FakeResponse(parsed=out),
+            FakeResponse(parsed=out),
+            FakeResponse(parsed=out),
+            FakeResponse(parsed=out),
+        ]
+    )
     store = InMemoryStore()
 
     # Initial baseline
@@ -256,12 +258,14 @@ async def test_4_zoom_failure_does_not_cache():
     out_with_mould = _make_valid_output("apple", stage="fresh", worst_stage="spoiled", visible_issues=["mould"])
 
     # First run: pass 1 succeeds, pass 2 (zoom crop) fails with APIError
-    client = FakeGenAIClient([
-        FakeResponse(parsed=out_with_mould),
-        RuntimeError("Zoom crop call failed"),
-        FakeResponse(parsed=out_with_mould),
-        FakeResponse(parsed=out_with_mould),  # if zoom runs again
-    ])
+    client = FakeGenAIClient(
+        [
+            FakeResponse(parsed=out_with_mould),
+            RuntimeError("Zoom crop call failed"),
+            FakeResponse(parsed=out_with_mould),
+            FakeResponse(parsed=out_with_mould),  # if zoom runs again
+        ]
+    )
     store = InMemoryStore()
 
     res1 = await inspect_photo(

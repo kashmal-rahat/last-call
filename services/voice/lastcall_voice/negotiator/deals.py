@@ -42,9 +42,7 @@ def validate_deal_terms(
     if quantity <= 0:
         reasons.append("Quantity must be greater than zero.")
     elif quantity > batch.remaining_quantity:
-        reasons.append(
-            f"Quantity ({quantity}) exceeds available remaining stock ({batch.remaining_quantity})."
-        )
+        reasons.append(f"Quantity ({quantity}) exceeds available remaining stock ({batch.remaining_quantity}).")
 
     # 3. Pickup time validation
     if pickup_time.tzinfo is None:

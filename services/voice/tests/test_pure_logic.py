@@ -59,6 +59,7 @@ def make_test_brief(floor: int = 120, opening: int = 180, deal_type: str = "sale
 # Step 3: Shared Models & Floor Isolation Tests
 # ==============================================================================
 
+
 def test_negotiation_policy_validation():
     # Valid default policy
     p = NegotiationPolicy()
@@ -113,6 +114,7 @@ def test_floor_isolation_163_in_agent_view_and_ladder():
 # ==============================================================================
 # Step 4: Property Tests (Hypothesis)
 # ==============================================================================
+
 
 @given(
     opening=st.integers(min_value=50, max_value=1000),
@@ -184,6 +186,7 @@ def test_verify_offer_decision_transitions():
 # ==============================================================================
 # Deals Validation Tests
 # ==============================================================================
+
 
 def test_validate_deal_terms_scenarios():
     brief = make_test_brief(floor=100, opening=150)
@@ -291,6 +294,7 @@ def test_price_guard_cues_and_fallback():
             models = FakeModels()
 
     import asyncio
+
     prices, unchecked = asyncio.run(fallback_extract_prices("aik sau pantalees rupay", FakeClient()))
     assert prices == [145]
     assert unchecked is False
@@ -350,17 +354,17 @@ def test_prompt_template_v1_6_male_voice_consistency():
         city_style="- Karachi market style",
         now=NOW,
     )
-    assert 'main bol raha hoon' in male_text
-    assert 'kar deta hoon' in male_text
-    assert 'keh raha tha' in male_text
-    assert 'ka AI assistant hoon' in male_text
-    assert 'Photo bhej deta hoon' in male_text
-    assert 'bol rahi' not in male_text
-    assert 'kar deti' not in male_text
-    assert 'keh rahi thi' not in male_text
-    assert 'ki AI assistant' not in male_text
-    assert 'Text testing mode' in male_text
-    assert 'Rs 145 per kilo' in male_text
+    assert "main bol raha hoon" in male_text
+    assert "kar deta hoon" in male_text
+    assert "keh raha tha" in male_text
+    assert "ka AI assistant hoon" in male_text
+    assert "Photo bhej deta hoon" in male_text
+    assert "bol rahi" not in male_text
+    assert "kar deti" not in male_text
+    assert "keh rahi thi" not in male_text
+    assert "ki AI assistant" not in male_text
+    assert "Text testing mode" in male_text
+    assert "Rs 145 per kilo" in male_text
     assert expected_rule in male_text
     assert qty_rule in male_text
     assert sauda_rule in male_text
@@ -374,17 +378,17 @@ def test_prompt_template_v1_6_male_voice_consistency():
         city_style="- Karachi market style",
         now=NOW,
     )
-    assert 'main bol raha hoon' in male_voice
-    assert 'kar deta hoon' in male_voice
-    assert 'keh raha tha' in male_voice
-    assert 'ka AI assistant hoon' in male_voice
-    assert 'Photo bhej deta hoon' in male_voice
-    assert 'bol rahi' not in male_voice
-    assert 'kar deti' not in male_voice
-    assert 'keh rahi thi' not in male_voice
-    assert 'ki AI assistant' not in male_voice
-    assert 'Text testing mode' not in male_voice
-    assert 'plainly in words' in male_voice
+    assert "main bol raha hoon" in male_voice
+    assert "kar deta hoon" in male_voice
+    assert "keh raha tha" in male_voice
+    assert "ka AI assistant hoon" in male_voice
+    assert "Photo bhej deta hoon" in male_voice
+    assert "bol rahi" not in male_voice
+    assert "kar deti" not in male_voice
+    assert "keh rahi thi" not in male_voice
+    assert "ki AI assistant" not in male_voice
+    assert "Text testing mode" not in male_voice
+    assert "plainly in words" in male_voice
     assert expected_rule in male_voice
     assert qty_rule in male_voice
     assert sauda_rule in male_voice
@@ -596,7 +600,10 @@ def test_prompt_h5_cleanups():
     rendered_sale = render_instruction(view_sale, now=NOW)
     assert "Chhilka thora daagi" not in rendered_sale
     # condition is "Ripe, minor spots" -> condition_short is "ripe"
-    assert "Bahar se thora ripe hai, andar se maal theek hai. Photo bhej deta hoon, khud tasalli kar lein." in rendered_sale
+    assert (
+        "Bahar se thora ripe hai, andar se maal theek hai. Photo bhej deta hoon, khud tasalli kar lein."
+        in rendered_sale
+    )
 
     # 4. City style mapping
     prompt_lahore = render_instruction(view_sale, city_style="lahore", now=NOW)
@@ -688,6 +695,3 @@ def test_verify_offer_no_numeric_offer_ladder_progression():
     # 8. After accept, even buyer_asks_lower=True returns accepted price 140 without moving
     d_try_lower = verify_offer(state, policy, "sale", None, buyer_asks_lower=True)
     assert d_try_lower.price_per_unit == 140
-
-
-

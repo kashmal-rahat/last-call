@@ -137,7 +137,9 @@ def test_confirmation_text_uses_mart_time_and_totals():
     pickup_utc = datetime(2026, 10, 14, 13, 0, tzinfo=timezone.utc)  # 18:00 in Lahore
     text = deal_confirmation_text(call, quantity=1.5, price_per_unit=105, pickup=pickup_utc, now=NOW)
     lines = text.split("\n")
-    assert lines[1] == f"1.5 {call.brief.quantity_unit} {call.brief.item} at Rs 105 / {call.brief.quantity_unit} (Rs 158)"
+    assert (
+        lines[1] == f"1.5 {call.brief.quantity_unit} {call.brief.item} at Rs 105 / {call.brief.quantity_unit} (Rs 158)"
+    )
     assert lines[2] == "Pickup: today, by 6:00 PM"
     assert lines[3] == f"Payment: {call.brief.payment_terms}"
     tomorrow = deal_confirmation_text(call, quantity=1, price_per_unit=105, pickup=NOW + timedelta(days=1), now=NOW)

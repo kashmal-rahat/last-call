@@ -141,9 +141,7 @@ async def probe_urdu_and_transcription() -> dict[str, Any]:
         response_modalities=["AUDIO"],
         output_audio_transcription=types.AudioTranscriptionConfig(),
         speech_config=types.SpeechConfig(
-            voice_config=types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=CHOSEN_VOICE)
-            )
+            voice_config=types.VoiceConfig(prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=CHOSEN_VOICE))
         ),
         session_resumption=types.SessionResumptionConfig(),
     )
@@ -154,7 +152,7 @@ async def probe_urdu_and_transcription() -> dict[str, Any]:
     print(f"  ✓ Saved Urdu reply WAV: {urdu_wav} ({len(res['audio_pcm'])} bytes)")
 
     transcript_text = " ".join(res["output_transcripts"])
-    has_urdu_script = any("\u0600" <= c <= "\u06FF" for c in transcript_text)
+    has_urdu_script = any("\u0600" <= c <= "\u06ff" for c in transcript_text)
     script_type = "Urdu Script" if has_urdu_script else "Roman Urdu"
     print(f"  ✓ Output Transcription: '{transcript_text}' (Detected: {script_type})")
     print(f"  ✓ Resumption updates received: {len(res['resumption_updates'])}")
@@ -196,9 +194,7 @@ async def probe_blocking_tool() -> dict[str, Any]:
         response_modalities=["AUDIO"],
         output_audio_transcription=types.AudioTranscriptionConfig(),
         speech_config=types.SpeechConfig(
-            voice_config=types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=CHOSEN_VOICE)
-            )
+            voice_config=types.VoiceConfig(prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=CHOSEN_VOICE))
         ),
     )
 
@@ -218,7 +214,11 @@ async def probe_blocking_tool() -> dict[str, Any]:
                 first_audio_after_tool = t
 
     is_blocking = tool_returned_t is not None and not audio_preceded
-    delay_ms = round((first_audio_after_tool - tool_returned_t) * 1000, 1) if (tool_returned_t and first_audio_after_tool) else None
+    delay_ms = (
+        round((first_audio_after_tool - tool_returned_t) * 1000, 1)
+        if (tool_returned_t and first_audio_after_tool)
+        else None
+    )
     print(f"  ✓ BLOCKING Tool verified: {is_blocking} (audio delayed by {delay_ms}ms after tool return, 0 bytes prior)")
 
     return {
@@ -257,9 +257,7 @@ async def probe_voices_and_compression() -> dict[str, Any]:
         run_config = RunConfig(
             response_modalities=["AUDIO"],
             speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
-                )
+                voice_config=types.VoiceConfig(prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name))
             ),
             context_window_compression=compression_config,
         )
@@ -289,9 +287,7 @@ async def probe_thinking_level() -> dict[str, Any]:
         run_config = RunConfig(
             response_modalities=["AUDIO"],
             speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=CHOSEN_VOICE)
-                )
+                voice_config=types.VoiceConfig(prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=CHOSEN_VOICE))
             ),
         )
         res = await run_single_turn(agent, run_config, "Quick test", session_id="thinking_test")
@@ -317,7 +313,7 @@ async def probe_input_audio_and_latency(wav_path: Path) -> dict[str, Any]:
         framerate = wav.getframerate()
         frames = wav.readframes(wav.getnframes())
 
-    print(f"  Loaded {wav_path}: {framerate}Hz, {n_channels}ch, {sampwidth*8}bit, {len(frames)} bytes")
+    print(f"  Loaded {wav_path}: {framerate}Hz, {n_channels}ch, {sampwidth * 8}bit, {len(frames)} bytes")
 
     latencies: list[float] = []
     input_transcriptions: list[str] = []
@@ -346,9 +342,7 @@ async def probe_input_audio_and_latency(wav_path: Path) -> dict[str, Any]:
                 )
             ),
             speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=CHOSEN_VOICE)
-                )
+                voice_config=types.VoiceConfig(prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=CHOSEN_VOICE))
             ),
         )
 
@@ -357,7 +351,9 @@ async def probe_input_audio_and_latency(wav_path: Path) -> dict[str, Any]:
 
         async def collect_latency():
             nonlocal t_first_out
-            async for event in runner.run_live(session_id=session_id, user_id="probe_user", live_request_queue=queue, run_config=run_config):
+            async for event in runner.run_live(
+                session_id=session_id, user_id="probe_user", live_request_queue=queue, run_config=run_config
+            ):
                 if event.content and event.content.parts:
                     for p in event.content.parts:
                         if p.inline_data and p.inline_data.data and t_first_out == 0.0:
@@ -391,7 +387,7 @@ async def probe_input_audio_and_latency(wav_path: Path) -> dict[str, Any]:
             if t_first_out > 0 and t_end_speech > 0:
                 lat = round((t_first_out - t_end_speech) * 1000, 1)
                 latencies.append(lat)
-                print(f"    Turn {i+1} latency (speech end -> first audio): {lat}ms")
+                print(f"    Turn {i + 1} latency (speech end -> first audio): {lat}ms")
         except asyncio.TimeoutError:
             task.cancel()
         finally:
@@ -444,7 +440,7 @@ def write_probe_doc(
 **Target Environment:** Vertex AI (`{LOCATION}` multi-region endpoint), project `{PROJECT_ID}`  
 **Model:** `{LIVE_MODEL}`  
 **SDK / Framework:** `google-adk==2.11.0`, Python 3.12  
-**Date:** {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}  
+**Date:** {time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())}  
 
 ---
 
@@ -453,14 +449,14 @@ def write_probe_doc(
 | # | Probe Item | Target / Requirement | Result | Status |
 |---|---|---|---|---|
 | 1 | **Urdu Audio Reply** | Produces natural 24 kHz Urdu audio | Audio generated & saved to `data/probe/urdu_reply.wav` | **PASS** |
-| 2 | **Input Audio Transcription** | Real 16 kHz PCM transcribed | Transcribed: `"{input_res['input_transcriptions'][0] if input_res.get('input_transcriptions') else '₹110 में दोगे?'}"` | **PASS** |
+| 2 | **Input Audio Transcription** | Real 16 kHz PCM transcribed | Transcribed: `"{input_res["input_transcriptions"][0] if input_res.get("input_transcriptions") else "₹110 में दोगे?"}"` | **PASS** |
 | 3 | **Output Audio Transcription** | Transcription arrives with text | Arrived in Urdu script and Roman Urdu | **PASS** |
-| 4 | **BLOCKING Tool Behavior** | 0 audio bytes before tool return | 2.0s tool execution; 0 audio before return; audio started +{tool_res['delay_after_tool_ms']}ms after return | **PASS** |
+| 4 | **BLOCKING Tool Behavior** | 0 audio bytes before tool return | 2.0s tool execution; 0 audio before return; audio started +{tool_res["delay_after_tool_ms"]}ms after return | **PASS** |
 | 5 | **Session Resumption** | Session resumption config accepted | Config applied cleanly | **PASS** |
 | 6 | **Context Compression & Voices** | Compression accepted, voices evaluated | Sliding window accepted; Kore, Puck, Charon generated; **User selected: `{CHOSEN_VOICE}` ({CHOSEN_GENDER})** | **PASS** |
 | 7 | **Thinking Level** | Evaluated on live audio | Live model uses low-latency native pipeline without extra thinking delay | **PASS** |
-| 8 | **Audio-to-Audio Latency** | Median over 5 real audio turns | **{input_res.get('median_latency_ms', '-')} ms** (Median of 5 runs: {input_res.get('latencies_ms', [])}) | **PASS** |
-| 9 | **Cost & Demo Session Cap** | Enforce $25/mo hard spend guardrail | Cost rate: **${cost_res['estimated_cost_per_minute_usd']}/min**; **`DEMO_DAILY_SESSION_CAP = {cost_res['daily_session_cap']}`** | **PASS** |
+| 8 | **Audio-to-Audio Latency** | Median over 5 real audio turns | **{input_res.get("median_latency_ms", "-")} ms** (Median of 5 runs: {input_res.get("latencies_ms", [])}) | **PASS** |
+| 9 | **Cost & Demo Session Cap** | Enforce $25/mo hard spend guardrail | Cost rate: **${cost_res["estimated_cost_per_minute_usd"]}/min**; **`DEMO_DAILY_SESSION_CAP = {cost_res["daily_session_cap"]}`** | **PASS** |
 
 ---
 
@@ -492,15 +488,15 @@ Voices evaluated:
 ### Item 2 & 8: Input Audio Transcription & Turn Latency
 The user provided [`data/probe/urdu_offer.wav`](file:///Users/kashmalrahat/AI-Builder-Cup/last-call/data/probe/urdu_offer.wav) (16 kHz mono 16-bit PCM, duration: 1.92s).
 Across 5 turns streaming the input audio followed by 700ms VAD silence padding:
-- **Turn Latencies (Speech End to First Audio Output):** {input_res.get('latencies_ms', [])} ms
-- **Median Latency:** **{input_res.get('median_latency_ms', '-')} ms**
-- **Input Transcription Sample:** `"{input_res['input_transcriptions'][0] if input_res.get('input_transcriptions') else '₹110 में दोगे?'}"`
+- **Turn Latencies (Speech End to First Audio Output):** {input_res.get("latencies_ms", [])} ms
+- **Median Latency:** **{input_res.get("median_latency_ms", "-")} ms**
+- **Input Transcription Sample:** `"{input_res["input_transcriptions"][0] if input_res.get("input_transcriptions") else "₹110 में दोगे?"}"`
 
 ### Item 9: Cost Calculation & Demo Session Cap
-- Estimated Gemini 3.8 Live blended rate: **${cost_res['estimated_cost_per_minute_usd']} / minute**.
+- Estimated Gemini 3.8 Live blended rate: **${cost_res["estimated_cost_per_minute_usd"]} / minute**.
 - With a 5-minute maximum call cap and a 30-day billing cycle under a $25 USD monthly budget:
   $$\\text{{DEMO\\_DAILY\\_SESSION\\_CAP}} = \\lfloor \\frac{{25}}{{5 \\times 0.072 \\times 30}} \\rfloor = \\lfloor \\frac{{25}}{{10.8}} \\rfloor = 2$$
-- Configured value: `DEMO_DAILY_SESSION_CAP = {cost_res['daily_session_cap']}`.
+- Configured value: `DEMO_DAILY_SESSION_CAP = {cost_res["daily_session_cap"]}`.
 """
     with open(doc_path, "w", encoding="utf-8") as f:
         f.write(content)

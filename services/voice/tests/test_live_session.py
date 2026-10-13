@@ -105,6 +105,7 @@ def test_ws_busy_and_retry(monkeypatch):
             )()
 
     from lastcall_voice import live_session
+
     monkeypatch.setattr(live_session, "Runner", DummyRunner)
 
     with client.websocket_connect("/ws/call") as ws:
@@ -138,6 +139,7 @@ def test_ws_finally_runs_on_exception(monkeypatch):
             yield None
 
     from lastcall_voice import live_session
+
     monkeypatch.setattr(live_session, "Runner", FailingRunner)
 
     client = TestClient(app)
@@ -188,6 +190,7 @@ def test_ws_timeout_and_flags(monkeypatch):
             yield None
 
     from lastcall_voice import live_session
+
     monkeypatch.setattr(live_session, "Runner", HangingRunner)
     monkeypatch.setattr(live_session, "LiveRequestQueue", MockQueue)
 
@@ -244,6 +247,7 @@ def test_ws_privacy_logging(caplog, monkeypatch):
             )()
 
     from lastcall_voice import live_session
+
     monkeypatch.setattr(live_session, "Runner", MockLiveRunner)
 
     caplog.clear()
@@ -297,6 +301,7 @@ def test_ws_transcription_entries_saved(monkeypatch):
             )()
 
     from lastcall_voice import live_session
+
     monkeypatch.setattr(live_session, "Runner", MockLiveRunner)
 
     client = TestClient(app)
@@ -313,4 +318,3 @@ def test_ws_transcription_entries_saved(monkeypatch):
     assert updated.transcript[0].speaker == "buyer"
     assert updated.transcript[0].text == "Aam kitnay kay hain?"
     assert updated.transcript[1].speaker == "agent"
-

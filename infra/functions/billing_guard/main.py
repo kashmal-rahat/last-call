@@ -69,7 +69,9 @@ def billing_guard(cloud_event):
 
         permissions = res.get("permissions", [])
         if "resourcemanager.projects.deleteBillingAssignment" not in permissions:
-            logger.error("Missing required permission 'resourcemanager.projects.deleteBillingAssignment' to disable billing!")
+            logger.error(
+                "Missing required permission 'resourcemanager.projects.deleteBillingAssignment' to disable billing!"
+            )
             return
 
         # 2. Simulate or deactivate

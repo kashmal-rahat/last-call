@@ -30,8 +30,13 @@ def make_candidate(place_id: str, name: str, buyer_type: str = "juice_shop") -> 
 
 
 FORBIDDEN_CONFIG_KEYS = {
-    "temperature", "top_p", "top_k", "seed", "candidate_count",
-    "presence_penalty", "frequency_penalty"
+    "temperature",
+    "top_p",
+    "top_k",
+    "seed",
+    "candidate_count",
+    "presence_penalty",
+    "frequency_penalty",
 }
 
 

@@ -152,6 +152,7 @@ def test_hours_until_closing():
     # Fixed time in PKT: 20:00 PKT with closing 23:00 -> 3.0 hours
     dt = datetime(2026, 10, 10, 20, 0, 0, tzinfo=timezone.utc)
     from zoneinfo import ZoneInfo
+
     tz = ZoneInfo("Asia/Karachi")
     t1 = datetime(2026, 10, 10, 19, 0, 0, tzinfo=tz)  # 19:00 PKT -> 4 hours until 23:00
     assert abs(hours_until_closing(rules, t1) - 4.0) < 0.01
@@ -308,7 +309,10 @@ def test_hours_until_closing():
         (
             15,
             {"name": "coriander", "stage": "overripe", "stage_level": "mid"},
-            {"over_uses": {"juice_shop": False, "restaurant": False, "bakery": False, "charity": True}, "overripe_ok_for_cattle": False},
+            {
+                "over_uses": {"juice_shop": False, "restaurant": False, "bakery": False, "charity": True},
+                "overripe_ok_for_cattle": False,
+            },
             13.0,
             "discount",
             40,
@@ -377,7 +381,12 @@ def test_hours_until_closing():
         # 22: unknown produce, overripe, fallback profile, 10:00 (H=13) -> bulk_sale, buyers restaurant; on_hold, identify_item, enter_shelf_price
         (
             22,
-            {"name": "unknown produce", "stage": "overripe", "stage_level": "mid", "staff_check_reasons": ["unknown_produce"]},
+            {
+                "name": "unknown produce",
+                "stage": "overripe",
+                "stage_level": "mid",
+                "staff_check_reasons": ["unknown_produce"],
+            },
             {"over_uses": {"juice_shop": False, "restaurant": True, "bakery": False, "charity": True}},
             13.0,
             "bulk_sale",
@@ -424,7 +433,9 @@ def test_twenty_four_scenarios_table_driven(
 
     assert dec.step == expected_step, f"Scenario {scenario_id} expected step {expected_step}, got {dec.step}"
     if expected_discount is not None:
-        assert dec.discount_pct == expected_discount, f"Scenario {scenario_id} expected discount {expected_discount}%, got {dec.discount_pct}%"
+        assert dec.discount_pct == expected_discount, (
+            f"Scenario {scenario_id} expected discount {expected_discount}%, got {dec.discount_pct}%"
+        )
 
     for flag in flags_to_check:
         if flag == "recheck_next_photo":
@@ -551,7 +562,9 @@ def test_exhaustive_engine_loop_zero_violations():
 
                             # 1. Step must always be allowed
                             if dec.step not in dec.allowed_steps:
-                                violations.append(f"Step {dec.step} not in allowed {dec.allowed_steps} for stage {stage}")
+                                violations.append(
+                                    f"Step {dec.step} not in allowed {dec.allowed_steps} for stage {stage}"
+                                )
 
                             # 2. D44: fresh and ripening never get an off-shelf step
                             if stage in ("fresh", "ripening") and dec.step not in ("keep", "discount"):
@@ -566,8 +579,13 @@ def test_exhaustive_engine_loop_zero_violations():
                             if dec.step == "discount":
                                 if dec.discount_pct is None:
                                     violations.append("Discount step missing discount_pct")
-                                elif dec.discount_pct < rules.min_discount_pct or dec.discount_pct > rules.max_discount_pct:
-                                    violations.append(f"Discount {dec.discount_pct} outside [{rules.min_discount_pct}, {rules.max_discount_pct}]")
+                                elif (
+                                    dec.discount_pct < rules.min_discount_pct
+                                    or dec.discount_pct > rules.max_discount_pct
+                                ):
+                                    violations.append(
+                                        f"Discount {dec.discount_pct} outside [{rules.min_discount_pct}, {rules.max_discount_pct}]"
+                                    )
 
     assert not violations, f"Exhaustive test found {len(violations)} violations:\n" + "\n".join(violations[:10])
     assert total_checked > 2000

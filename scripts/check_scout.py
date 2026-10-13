@@ -52,6 +52,7 @@ async def main() -> None:
 
     # 1. Target 1: Engine decision for banana
     from lastcall_shared.firestore_store import FirestoreStore
+
     fs = FirestoreStore()
     profiles = await fs.get_profiles(["banana__v1"])
     banana_prof = profiles.get("banana__v1")
@@ -151,7 +152,9 @@ async def main() -> None:
         print("  Top 5 Buyers:")
         for b in r.buyers[:5]:
             open_str = "open now" if b.open_now is True else ("closed now" if b.open_now is False else "unknown")
-            print(f"    #{b.rank} {b.name} ({b.buyer_type}, {b.distance_km:.1f} km, {open_str}) [{b.fit}]: {b.fit_why} | {b.reason}")
+            print(
+                f"    #{b.rank} {b.name} ({b.buyer_type}, {b.distance_km:.1f} km, {open_str}) [{b.fit}]: {b.fit_why} | {b.reason}"
+            )
         print("  Screened out (unlikely):")
         for so in r.screened_out:
             print(f"    - {so.name} ({so.buyer_type}, {so.distance_km:.1f} km): {so.why}")
@@ -162,6 +165,7 @@ async def main() -> None:
             content = RESULTS_FILE.read_text(encoding="utf-8")
             # Replace Run 1 summary row
             import re
+
             row_pattern = r"\| Run 1: Overripe Banana \(Bulk Sale\) @ Johar Town \(Default\) \| [^|]+ \| [^|]+ \| \d+ \| \d+ \| \d+ \| \d+ ms \| \d+ / \d+ \| (?:True|False) \|"
             new_row = (
                 f"| Run 1: Overripe Banana (Bulk Sale) @ Johar Town (Default) | {r.step} ({', '.join(r.buyer_types)}) | "
@@ -196,10 +200,12 @@ async def main() -> None:
             if not r.screened_out:
                 sec_lines.append("*No candidates screened out as unlikely fit.*")
             else:
-                sec_lines.extend([
-                    "| Business Name | Type | Distance | Fit Why | Sense check (user) |",
-                    "|---|---|---|---|---|",
-                ])
+                sec_lines.extend(
+                    [
+                        "| Business Name | Type | Distance | Fit Why | Sense check (user) |",
+                        "|---|---|---|---|---|",
+                    ]
+                )
                 for so in r.screened_out:
                     sec_lines.append(
                         f"| {sanitize_table_text(so.name)} | {so.buyer_type} | {so.distance_km:.1f} km | "
@@ -243,21 +249,23 @@ async def main() -> None:
     md.extend(["", "---", ""])
 
     for run_name, r, elapsed_s in results:
-        md.extend([
-            f"## {run_name}",
-            "",
-            f"- **Branch:** `{r.branch_id}` ({r.branch_name})",
-            f"- **Step:** `{r.step}`",
-            f"- **Buyer Types Searched:** `{', '.join(r.buyer_types)}`",
-            f"- **Places Requests:** {r.meta.places_requests} | **Raw Places Returned:** {r.meta.places_results}",
-            f"- **Latency:** {r.meta.latency_ms} ms | **Tokens:** {r.meta.input_tokens} in / {r.meta.output_tokens} out",
-            f"- **Skipped Counts:** `{r.skipped}`",
-            "",
-            "### Top Ranked Buyers",
-            "",
-            "| Rank | Business Name | Type | Distance | Open Now | Fit | Why | Reason | Sense check (user) |",
-            "|---|---|---|---|---|---|---|---|---|",
-        ])
+        md.extend(
+            [
+                f"## {run_name}",
+                "",
+                f"- **Branch:** `{r.branch_id}` ({r.branch_name})",
+                f"- **Step:** `{r.step}`",
+                f"- **Buyer Types Searched:** `{', '.join(r.buyer_types)}`",
+                f"- **Places Requests:** {r.meta.places_requests} | **Raw Places Returned:** {r.meta.places_results}",
+                f"- **Latency:** {r.meta.latency_ms} ms | **Tokens:** {r.meta.input_tokens} in / {r.meta.output_tokens} out",
+                f"- **Skipped Counts:** `{r.skipped}`",
+                "",
+                "### Top Ranked Buyers",
+                "",
+                "| Rank | Business Name | Type | Distance | Open Now | Fit | Why | Reason | Sense check (user) |",
+                "|---|---|---|---|---|---|---|---|---|",
+            ]
+        )
 
         if not r.buyers:
             md.append("| - | *No buyers found* | - | - | - | - | - | - | |")
@@ -273,10 +281,12 @@ async def main() -> None:
         if not r.screened_out:
             md.append("*No candidates screened out as unlikely fit.*")
         else:
-            md.extend([
-                "| Business Name | Type | Distance | Fit Why | Sense check (user) |",
-                "|---|---|---|---|---|",
-            ])
+            md.extend(
+                [
+                    "| Business Name | Type | Distance | Fit Why | Sense check (user) |",
+                    "|---|---|---|---|---|",
+                ]
+            )
             for so in r.screened_out:
                 md.append(
                     f"| {sanitize_table_text(so.name)} | {so.buyer_type} | {so.distance_km:.1f} km | "
@@ -295,29 +305,31 @@ async def main() -> None:
     pids_gulberg = {b.place_id for b in r_banana_gulberg.buyers}
     overlap_count = len(pids_johar & pids_gulberg)
 
-    md.extend([
-        "## Branch Contrast Analysis",
-        "",
-        "### Bulk Sale Contrast: Johar Town (Suburban Residential) vs Gulberg (Dense Commercial)",
-        "",
-        f"- **Place ID Overlap (M3):** {overlap_count} overlapping places out of "
-        f"{len(pids_johar)} (Johar Town) and {len(pids_gulberg)} (Gulberg).",
-        f"- **Johar Town Average Top-5 Distance:** "
-        f"{(sum(b.distance_km for b in r_banana_johar.buyers[:5]) / max(1, len(r_banana_johar.buyers[:5]))):.2f} km",
-        f"- **Gulberg Average Top-5 Distance:** "
-        f"{(sum(b.distance_km for b in r_banana_gulberg.buyers[:5]) / max(1, len(r_banana_gulberg.buyers[:5]))):.2f} km",
-        "",
-        "| Aspect | Johar Town (`johar_town`) | Gulberg (`gulberg`) |",
-        "|---|---|---|",
-        f"| Raw Places Found | {r_banana_johar.meta.places_results} | {r_banana_gulberg.meta.places_results} |",
-        f"| Qualified Buyers | {len(r_banana_johar.buyers)} | {len(r_banana_gulberg.buyers)} |",
-        f"| Top 1 Buyer | {sanitize_table_text(r_banana_johar.buyers[0].name if r_banana_johar.buyers else 'None')} ({r_banana_johar.buyers[0].distance_km:.1f} km) | {sanitize_table_text(r_banana_gulberg.buyers[0].name if r_banana_gulberg.buyers else 'None')} ({r_banana_gulberg.buyers[0].distance_km:.1f} km) |",
-        f"| Top 2 Buyer | {sanitize_table_text(r_banana_johar.buyers[1].name if len(r_banana_johar.buyers) > 1 else 'None')} ({r_banana_johar.buyers[1].distance_km:.1f} km) | {sanitize_table_text(r_banana_gulberg.buyers[1].name if len(r_banana_gulberg.buyers) > 1 else 'None')} ({r_banana_gulberg.buyers[1].distance_km:.1f} km) |",
-        f"| Skipped Breakdown | `{r_banana_johar.skipped}` | `{r_banana_gulberg.skipped}` |",
-        "",
-        "### Animal Feed Contrast: Johar Town vs Bahria Town (Peri-Urban / Cattle Area)",
-        "",
-    ])
+    md.extend(
+        [
+            "## Branch Contrast Analysis",
+            "",
+            "### Bulk Sale Contrast: Johar Town (Suburban Residential) vs Gulberg (Dense Commercial)",
+            "",
+            f"- **Place ID Overlap (M3):** {overlap_count} overlapping places out of "
+            f"{len(pids_johar)} (Johar Town) and {len(pids_gulberg)} (Gulberg).",
+            f"- **Johar Town Average Top-5 Distance:** "
+            f"{(sum(b.distance_km for b in r_banana_johar.buyers[:5]) / max(1, len(r_banana_johar.buyers[:5]))):.2f} km",
+            f"- **Gulberg Average Top-5 Distance:** "
+            f"{(sum(b.distance_km for b in r_banana_gulberg.buyers[:5]) / max(1, len(r_banana_gulberg.buyers[:5]))):.2f} km",
+            "",
+            "| Aspect | Johar Town (`johar_town`) | Gulberg (`gulberg`) |",
+            "|---|---|---|",
+            f"| Raw Places Found | {r_banana_johar.meta.places_results} | {r_banana_gulberg.meta.places_results} |",
+            f"| Qualified Buyers | {len(r_banana_johar.buyers)} | {len(r_banana_gulberg.buyers)} |",
+            f"| Top 1 Buyer | {sanitize_table_text(r_banana_johar.buyers[0].name if r_banana_johar.buyers else 'None')} ({r_banana_johar.buyers[0].distance_km:.1f} km) | {sanitize_table_text(r_banana_gulberg.buyers[0].name if r_banana_gulberg.buyers else 'None')} ({r_banana_gulberg.buyers[0].distance_km:.1f} km) |",
+            f"| Top 2 Buyer | {sanitize_table_text(r_banana_johar.buyers[1].name if len(r_banana_johar.buyers) > 1 else 'None')} ({r_banana_johar.buyers[1].distance_km:.1f} km) | {sanitize_table_text(r_banana_gulberg.buyers[1].name if len(r_banana_gulberg.buyers) > 1 else 'None')} ({r_banana_gulberg.buyers[1].distance_km:.1f} km) |",
+            f"| Skipped Breakdown | `{r_banana_johar.skipped}` | `{r_banana_gulberg.skipped}` |",
+            "",
+            "### Animal Feed Contrast: Johar Town vs Bahria Town (Peri-Urban / Cattle Area)",
+            "",
+        ]
+    )
 
     r_feed_johar = results[2][1]
     r_feed_bahria = results[4][1]
@@ -325,19 +337,21 @@ async def main() -> None:
     pids_feed_bahria = {b.place_id for b in r_feed_bahria.buyers}
     feed_overlap = len(pids_feed_johar & pids_feed_bahria)
 
-    md.extend([
-        f"- **Place ID Overlap (M3):** {feed_overlap} overlapping places.",
-        f"- **Johar Town Qualified Dairy Farms:** {len(r_feed_johar.buyers)}",
-        f"- **Bahria Town Qualified Dairy Farms:** {len(r_feed_bahria.buyers)}",
-        "",
-        "| Aspect | Johar Town (`johar_town`) | Bahria Town (`bahria_town`) |",
-        "|---|---|---|",
-        f"| Raw Results | {r_feed_johar.meta.places_results} | {r_feed_bahria.meta.places_results} |",
-        f"| Qualified Buyers | {len(r_feed_johar.buyers)} | {len(r_feed_bahria.buyers)} |",
-        f"| Top-ranked buyer | {sanitize_table_text(r_feed_johar.buyers[0].name if r_feed_johar.buyers else 'None')} ({r_feed_johar.buyers[0].distance_km:.1f} km) | {sanitize_table_text(r_feed_bahria.buyers[0].name if r_feed_bahria.buyers else 'None')} ({r_feed_bahria.buyers[0].distance_km:.1f} km) |",
-        f"| Skipped Breakdown | `{r_feed_johar.skipped}` | `{r_feed_bahria.skipped}` |",
-        "",
-    ])
+    md.extend(
+        [
+            f"- **Place ID Overlap (M3):** {feed_overlap} overlapping places.",
+            f"- **Johar Town Qualified Dairy Farms:** {len(r_feed_johar.buyers)}",
+            f"- **Bahria Town Qualified Dairy Farms:** {len(r_feed_bahria.buyers)}",
+            "",
+            "| Aspect | Johar Town (`johar_town`) | Bahria Town (`bahria_town`) |",
+            "|---|---|---|",
+            f"| Raw Results | {r_feed_johar.meta.places_results} | {r_feed_bahria.meta.places_results} |",
+            f"| Qualified Buyers | {len(r_feed_johar.buyers)} | {len(r_feed_bahria.buyers)} |",
+            f"| Top-ranked buyer | {sanitize_table_text(r_feed_johar.buyers[0].name if r_feed_johar.buyers else 'None')} ({r_feed_johar.buyers[0].distance_km:.1f} km) | {sanitize_table_text(r_feed_bahria.buyers[0].name if r_feed_bahria.buyers else 'None')} ({r_feed_bahria.buyers[0].distance_km:.1f} km) |",
+            f"| Skipped Breakdown | `{r_feed_johar.skipped}` | `{r_feed_bahria.skipped}` |",
+            "",
+        ]
+    )
 
     RESULTS_FILE.write_text("\n".join(md), encoding="utf-8")
     print(f"\nWrote full report to {RESULTS_FILE}")

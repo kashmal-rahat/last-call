@@ -163,23 +163,27 @@ def find_critical_misses(matches: list[tuple[LabelRow, ItemAssessment | None]]) 
 
         if pred is None:
             # Undetected bad produce is also a critical miss
-            misses.append({
-                "filename": lbl.filename,
-                "item": lbl.item,
-                "expected": lbl.expected_stage,
-                "predicted": "not_detected",
-                "staff_check": False,
-                "evidence": "Produce group was not detected by model.",
-            })
+            misses.append(
+                {
+                    "filename": lbl.filename,
+                    "item": lbl.item,
+                    "expected": lbl.expected_stage,
+                    "predicted": "not_detected",
+                    "staff_check": False,
+                    "evidence": "Produce group was not detected by model.",
+                }
+            )
         elif pred.worst_stage in benign_stages and not pred.needs_staff_check:
-            misses.append({
-                "filename": lbl.filename,
-                "item": lbl.item,
-                "expected": lbl.expected_stage,
-                "predicted": pred.worst_stage,
-                "staff_check": pred.needs_staff_check,
-                "evidence": pred.evidence,
-            })
+            misses.append(
+                {
+                    "filename": lbl.filename,
+                    "item": lbl.item,
+                    "expected": lbl.expected_stage,
+                    "predicted": pred.worst_stage,
+                    "staff_check": pred.needs_staff_check,
+                    "evidence": pred.evidence,
+                }
+            )
     return misses
 
 
@@ -194,14 +198,16 @@ def find_false_alarms(matches: list[tuple[LabelRow, ItemAssessment | None]]) -> 
             continue
         if lbl.expected_stage in benign_stages and lbl.get_expected_worst() in benign_stages:
             if pred.worst_stage in bad_stages or pred.stage in bad_stages:
-                alarms.append({
-                    "filename": lbl.filename,
-                    "item": lbl.item,
-                    "expected": lbl.expected_stage,
-                    "predicted": pred.stage,
-                    "predicted_worst": pred.worst_stage,
-                    "evidence": pred.evidence,
-                })
+                alarms.append(
+                    {
+                        "filename": lbl.filename,
+                        "item": lbl.item,
+                        "expected": lbl.expected_stage,
+                        "predicted": pred.stage,
+                        "predicted_worst": pred.worst_stage,
+                        "evidence": pred.evidence,
+                    }
+                )
     return alarms
 
 
@@ -216,9 +222,7 @@ def calculate_name_accuracy(matches: list[tuple[LabelRow, ItemAssessment | None]
 
 def calculate_confusion_matrix(matches: list[tuple[LabelRow, ItemAssessment | None]]) -> dict[str, dict[str, int]]:
     """Builds a 5x5 confusion matrix: matrix[expected][predicted]."""
-    matrix: dict[str, dict[str, int]] = {
-        exp: {pred: 0 for pred in STAGES} for exp in STAGES
-    }
+    matrix: dict[str, dict[str, int]] = {exp: {pred: 0 for pred in STAGES} for exp in STAGES}
     for lbl, pred in matches:
         if not lbl.item.strip() or pred is None:
             continue
@@ -271,10 +275,12 @@ def calculate_consistency(run1_items: list[ItemAssessment], run2_items: list[Ite
         # Pick closest center
         c1y = (it1.position.ymin + it1.position.ymax) / 2.0
         c1x = (it1.position.xmin + it1.position.xmax) / 2.0
-        cand.sort(key=lambda it2: (
-            ((it2.position.ymin + it2.position.ymax) / 2.0 - c1y) ** 2
-            + ((it2.position.xmin + it2.position.xmax) / 2.0 - c1x) ** 2
-        ))
+        cand.sort(
+            key=lambda it2: (
+                ((it2.position.ymin + it2.position.ymax) / 2.0 - c1y) ** 2
+                + ((it2.position.xmin + it2.position.xmax) / 2.0 - c1x) ** 2
+            )
+        )
         best2 = cand[0]
         matches += 1
         if it1.stage == best2.stage and it1.worst_stage == best2.worst_stage:

@@ -113,7 +113,9 @@ def to_produce_profile(item: ProfileOut, votes: int = 1, uncertain_fields: list[
 def run_worked_examples(profiles_map: dict[str, ProduceProfile]) -> list[dict[str, Any]]:
     rules = load_mart_rules("demo_mart")
 
-    def _item(name: str, stage: str, stage_level: str, worst_stage: str | None = None, issues: list[str] | None = None) -> ItemAssessment:
+    def _item(
+        name: str, stage: str, stage_level: str, worst_stage: str | None = None, issues: list[str] | None = None
+    ) -> ItemAssessment:
         ws = worst_stage if worst_stage is not None else stage
         unit = "dozen" if name in ("banana", "kinnow") else "kg"
         return ItemAssessment(
@@ -152,20 +154,22 @@ def run_worked_examples(profiles_map: dict[str, ProduceProfile]) -> list[dict[st
         if not prof:
             continue
         dec = decide_item(item, prof, rules, H=H, price=price)
-        results.append({
-            "title": title,
-            "produce": name,
-            "stage": f"{stage} ({level})",
-            "H": H,
-            "shelf_price": price,
-            "step": dec.step,
-            "discount_pct": dec.discount_pct,
-            "discounted_price": dec.discounted_price,
-            "opening_price": dec.opening_price,
-            "floor_price": dec.floor_price,
-            "buyer_types": dec.buyer_types,
-            "reason": dec.reason,
-        })
+        results.append(
+            {
+                "title": title,
+                "produce": name,
+                "stage": f"{stage} ({level})",
+                "H": H,
+                "shelf_price": price,
+                "step": dec.step,
+                "discount_pct": dec.discount_pct,
+                "discounted_price": dec.discounted_price,
+                "opening_price": dec.opening_price,
+                "floor_price": dec.floor_price,
+                "buyer_types": dec.buyer_types,
+                "reason": dec.reason,
+            }
+        )
     return results
 
 
@@ -353,28 +357,40 @@ async def check_profiles_flow(
                 f"| {name} | `{p.fresh.sellable_for}` | `{p.ripening.sellable_for}` | `{p.overripe.sellable_for}` | {', '.join(f_uses) or 'none'} | {', '.join(r_uses) or 'none'} | {', '.join(o_uses) or 'none'} | {cattle} | {note_esc} | {v_count} | {uncert_str} | |"
             )
 
-    lines.extend([
-        "",
-        "## Variation Comparison: Raw (Single-Call) vs 5-Vote Consensus",
-        "| Produce | Raw (Single-Call) Variation | 5-Vote Consensus Variation |",
-        "|---|---|---|",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Variation Comparison: Raw (Single-Call) vs 5-Vote Consensus",
+            "| Produce | Raw (Single-Call) Variation | 5-Vote Consensus Variation |",
+            "|---|---|---|",
+        ]
+    )
 
     for name in produce_names:
         pkey = produce_key(name)
         raw_comp = raw_comparisons.get(pkey, {"identical": True, "diffs": []})
         c_comp = consensus_comparisons.get(pkey, {"identical": True, "diffs": []})
 
-        raw_status = "✓ Identical" if raw_comp["identical"] else f"✗ Differed ({raw_comp['diff_count']}): " + "; ".join(raw_comp["diffs"])
-        c_status = "✓ Identical" if c_comp["identical"] else f"✗ Differed ({c_comp['diff_count']}): " + "; ".join(c_comp["diffs"])
+        raw_status = (
+            "✓ Identical"
+            if raw_comp["identical"]
+            else f"✗ Differed ({raw_comp['diff_count']}): " + "; ".join(raw_comp["diffs"])
+        )
+        c_status = (
+            "✓ Identical"
+            if c_comp["identical"]
+            else f"✗ Differed ({c_comp['diff_count']}): " + "; ".join(c_comp["diffs"])
+        )
         lines.append(f"| {name} | {raw_status} | {c_status} |")
 
-    lines.extend([
-        "",
-        "## Step 4 Worked Examples Decisions (Using 5-Vote Consensus Profiles)",
-        "| Case | Produce | Stage & Level | H to Closing | Shelf Price | Engine Step | Pricing / Discount | Buyer Types | Reason |",
-        "|---|---|---|---|---|---|---|---|---|",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Step 4 Worked Examples Decisions (Using 5-Vote Consensus Profiles)",
+            "| Case | Produce | Stage & Level | H to Closing | Shelf Price | Engine Step | Pricing / Discount | Buyer Types | Reason |",
+            "|---|---|---|---|---|---|---|---|---|",
+        ]
+    )
 
     for r in worked_results:
         pricing_str = "-"

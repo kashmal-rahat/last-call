@@ -132,6 +132,7 @@ async def run_call_summary(call_id: str, store: CallStore) -> None:
 
 def _get_genai_client() -> Any:
     from google import genai
+
     settings = get_settings()
     return genai.Client(
         vertexai=settings.GOOGLE_GENAI_USE_VERTEXAI,
@@ -290,9 +291,7 @@ async def handle_live_call_websocket(
         run_config = RunConfig(
             response_modalities=["AUDIO"],
             speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=agent_voice)
-                )
+                voice_config=types.VoiceConfig(prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=agent_voice))
             ),
             output_audio_transcription=types.AudioTranscriptionConfig(),
             input_audio_transcription=build_input_transcription_config(
@@ -395,9 +394,7 @@ async def handle_live_call_websocket(
                         )
                         transcript_buffer.append(entry)
                         if websocket.client_state == WebSocketState.CONNECTED:
-                            await websocket.send_json(
-                                {"type": "transcript", "speaker": "buyer", "text": buyer_text}
-                            )
+                            await websocket.send_json({"type": "transcript", "speaker": "buyer", "text": buyer_text})
 
                 # Agent speech finished
                 if event.output_transcription and event.output_transcription.text:
@@ -411,9 +408,7 @@ async def handle_live_call_websocket(
                         )
                         transcript_buffer.append(entry)
                         if websocket.client_state == WebSocketState.CONNECTED:
-                            await websocket.send_json(
-                                {"type": "transcript", "speaker": "agent", "text": agent_text}
-                            )
+                            await websocket.send_json({"type": "transcript", "speaker": "agent", "text": agent_text})
 
                         # Price guard verification (C1 & C2)
                         prices = price_guard.find_prices(agent_text)
@@ -429,9 +424,7 @@ async def handle_live_call_websocket(
                             )
                             if classification in ("below_floor", "unapproved"):
                                 flag_name = (
-                                    "floor_correction"
-                                    if classification == "below_floor"
-                                    else "unapproved_price"
+                                    "floor_correction" if classification == "below_floor" else "unapproved_price"
                                 )
                                 if flag_name not in ctx.flags:
                                     ctx.flags.append(flag_name)
@@ -450,6 +443,7 @@ async def handle_live_call_websocket(
                                     )
                                 )
                         elif price_guard.has_spoken_price_cue(agent_text):
+
                             async def _check_spoken_price_fallback(text: str) -> None:
                                 try:
                                     client_to_use = flash_client or _get_genai_client()
@@ -551,11 +545,7 @@ async def handle_live_call_websocket(
                 queue.send_content(
                     types.Content(
                         role="user",
-                        parts=[
-                            types.Part.from_text(
-                                text="[SYSTEM] Time is almost up; confirm or close politely."
-                            )
-                        ],
+                        parts=[types.Part.from_text(text="[SYSTEM] Time is almost up; confirm or close politely.")],
                     )
                 )
                 await asyncio.sleep(rem_delay)
@@ -624,6 +614,7 @@ async def handle_live_call_websocket(
             pass
         if not ctx:
             from lastcall_voice.call_context import get_context
+
             ctx = get_context(call_id)
 
         if call and ctx:
@@ -644,9 +635,7 @@ async def handle_live_call_websocket(
                     ch = call.brief.calling_hours
                     t = target_dt.time()
                     if t < ch.start:
-                        target_dt = target_dt.replace(
-                            hour=ch.start.hour, minute=ch.start.minute, second=0
-                        )
+                        target_dt = target_dt.replace(hour=ch.start.hour, minute=ch.start.minute, second=0)
                     elif t > ch.end:
                         target_dt = (target_dt + timedelta(days=1)).replace(
                             hour=ch.start.hour, minute=ch.start.minute, second=0
@@ -665,15 +654,11 @@ async def handle_live_call_websocket(
                     outcome=final_outcome,  # type: ignore[arg-type]
                     agreed_price_per_unit=ctx.agreed_price_per_unit,
                     agreed_price_unit=(
-                        call.brief.opening_price_unit
-                        if ctx.agreed_price_per_unit is not None
-                        else None
+                        call.brief.opening_price_unit if ctx.agreed_price_per_unit is not None else None
                     ),
                     currency=call.brief.currency,
                     agreed_quantity=ctx.agreed_quantity,
-                    agreed_quantity_unit=(
-                        call.brief.quantity_unit if ctx.agreed_quantity is not None else None
-                    ),
+                    agreed_quantity_unit=(call.brief.quantity_unit if ctx.agreed_quantity is not None else None),
                     pickup_time=ctx.pickup_time,
                     callback_at=ctx.callback_at,
                     transcript=[],  # L4: keep document small; transcript stored in calls.transcript

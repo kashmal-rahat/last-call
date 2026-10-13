@@ -25,12 +25,14 @@ async def get_oauth_token() -> str:
     global _credentials
     if _credentials is None:
         import google.auth
+
         _credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
 
     if not _credentials.valid:
         async with _token_lock:
             if not _credentials.valid:
                 import google.auth.transport.requests
+
                 req = google.auth.transport.requests.Request()
                 await asyncio.to_thread(_credentials.refresh, req)
 

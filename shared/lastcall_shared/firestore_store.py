@@ -279,9 +279,7 @@ class FirestoreStore:
             locked_until_raw = batch_data.get("locked_until")
             if locked_until_raw:
                 locked_until = (
-                    datetime.fromisoformat(locked_until_raw)
-                    if isinstance(locked_until_raw, str)
-                    else locked_until_raw
+                    datetime.fromisoformat(locked_until_raw) if isinstance(locked_until_raw, str) else locked_until_raw
                 )
                 if locked_until <= now:
                     return False, "Batch lock has expired"
@@ -292,8 +290,7 @@ class FirestoreStore:
                 existing = deal_snap.to_dict() or {}
                 p_time_raw = existing.get("pickup_time")
                 existing_time_str = (
-                    p_time_raw if isinstance(p_time_raw, str)
-                    else p_time_raw.isoformat() if p_time_raw else None
+                    p_time_raw if isinstance(p_time_raw, str) else p_time_raw.isoformat() if p_time_raw else None
                 )
                 deal_time_str = deal.pickup_time.isoformat() if deal.pickup_time else None
 
@@ -329,12 +326,16 @@ class FirestoreStore:
 
     async def add_do_not_call(self, mart_id: str, buyer_id: str) -> None:
         doc_id = f"{mart_id}_{buyer_id}"
-        await self._col("do_not_call").document(doc_id).set(
-            {
-                "mart_id": mart_id,
-                "buyer_id": buyer_id,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            }
+        await (
+            self._col("do_not_call")
+            .document(doc_id)
+            .set(
+                {
+                    "mart_id": mart_id,
+                    "buyer_id": buyer_id,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
         )
 
     async def is_do_not_call(self, mart_id: str, buyer_id: str) -> bool:
@@ -572,7 +573,7 @@ class FirestoreStore:
                 if b_id:
                     out.add(b_id)
                 else:
-                    out.add(snap.id[len(mart_id) + 1:])
+                    out.add(snap.id[len(mart_id) + 1 :])
         return out
 
     async def clean_prefix(self) -> None:

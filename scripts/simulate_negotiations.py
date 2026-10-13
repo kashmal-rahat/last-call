@@ -168,7 +168,7 @@ async def safe_generate_buyer_reply(
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
                 jitter = random.uniform(-0.5, 0.5)
                 wait_time = max(1.0, delay + jitter)
-                print(f"[Buyer generation hit 429, waiting {wait_time:.1f}s (try {attempt+1})...]", flush=True)
+                print(f"[Buyer generation hit 429, waiting {wait_time:.1f}s (try {attempt + 1})...]", flush=True)
                 await asyncio.sleep(wait_time)
             else:
                 return "Theek hai bhai, baat aage barhao."
@@ -183,7 +183,7 @@ async def safe_run_text_turn(call_id: str, buyer_text: str) -> str:
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
                 jitter = random.uniform(-0.5, 0.5)
                 wait_time = max(1.0, delay + jitter)
-                print(f"[Agent turn hit 429, waiting {wait_time:.1f}s (try {attempt+1})...]", flush=True)
+                print(f"[Agent turn hit 429, waiting {wait_time:.1f}s (try {attempt + 1})...]", flush=True)
                 await asyncio.sleep(wait_time)
             else:
                 raise
@@ -202,13 +202,13 @@ async def run_bargaining_session(
     scenario_data = load_scenario(scenario_slug)
     persona = scenario_data.get("persona", {})
 
-    buyer_persona_prompt = f"""You are {scenario_data['buyer']['name']}, a {scenario_data['buyer']['type']} in Karachi.
-A representative from {scenario_data['mart']['name']} is calling to sell surplus {scenario_data['item']} ({scenario_data['condition']}).
-Total quantity available is {scenario_data['quantity']} {scenario_data['unit']}.
-Payment terms: {scenario_data['payment_terms']}.
-Your secret maximum price is {persona.get('max_acceptable_price')} PKR per {scenario_data['unit']}.
+    buyer_persona_prompt = f"""You are {scenario_data["buyer"]["name"]}, a {scenario_data["buyer"]["type"]} in Karachi.
+A representative from {scenario_data["mart"]["name"]} is calling to sell surplus {scenario_data["item"]} ({scenario_data["condition"]}).
+Total quantity available is {scenario_data["quantity"]} {scenario_data["unit"]}.
+Payment terms: {scenario_data["payment_terms"]}.
+Your secret maximum price is {persona.get("max_acceptable_price")} PKR per {scenario_data["unit"]}.
 DO NOT reveal your maximum price directly.
-Your bargaining style: {persona.get('style')}.
+Your bargaining style: {persona.get("style")}.
 Language: Natural spoken Roman Urdu or Urdu (Karachi bazaar style). 1-2 short sentences only.
 If the price is acceptable and terms are clear, agree and state when you will pick up within the allowed window."""
 
@@ -361,7 +361,10 @@ async def run_scripted_test(
     for t in result.transcript:
         if t.speaker == "agent":
             prices = find_prices(t.text)
-            if classify(prices, floor, call_record.negotiation.approved_prices, call_record.negotiation.ladder[0]) == "below_floor":
+            if (
+                classify(prices, floor, call_record.negotiation.approved_prices, call_record.negotiation.ladder[0])
+                == "below_floor"
+            ):
                 breach_lines.append(t.text)
 
     saved_breach = (
@@ -402,9 +405,7 @@ def get_scripted_test_suite(fixed_now: AwareDatetime) -> list[dict[str, Any]]:
             ],
             "expected": "call_back (tomorrow 11:00 AM)",
             "check": lambda res, call, st: (
-                res.outcome == "call_back"
-                and res.callback_at is not None
-                and res.callback_at.hour == 11,
+                res.outcome == "call_back" and res.callback_at is not None and res.callback_at.hour == 11,
                 f"callback_at: {res.callback_at}",
             ),
         },
@@ -450,8 +451,7 @@ def get_scripted_test_suite(fixed_now: AwareDatetime) -> list[dict[str, Any]]:
             "lines": ["Dobara is number par call mat karna kabhi bhi."],
             "expected": "do_not_call recorded",
             "check": lambda res, call, st: (
-                res.outcome == "do_not_call"
-                and (call.mart_id, call.brief.buyer.buyer_id) in st.do_not_call,
+                res.outcome == "do_not_call" and (call.mart_id, call.brief.buyer.buyer_id) in st.do_not_call,
                 f"do_not_call set: {(call.mart_id, call.brief.buyer.buyer_id) in st.do_not_call}",
             ),
         },
@@ -467,7 +467,11 @@ def get_scripted_test_suite(fixed_now: AwareDatetime) -> list[dict[str, Any]]:
             "check": lambda res, call, st: (
                 res.outcome == "deal"
                 and res.agreed_price_per_unit == 0
-                and not any(re.search(r"(?i)(?:rs\.?|₨|₹|pkr|rupay|روپے)", t.text) for t in res.transcript if t.speaker == "agent"),
+                and not any(
+                    re.search(r"(?i)(?:rs\.?|₨|₹|pkr|rupay|روپے)", t.text)
+                    for t in res.transcript
+                    if t.speaker == "agent"
+                ),
                 f"agreed price: {res.agreed_price_per_unit}",
             ),
         },
@@ -523,8 +527,7 @@ def get_scripted_test_suite(fixed_now: AwareDatetime) -> list[dict[str, Any]]:
             ],
             "expected": "buyer agrees at 140, agent confirms and deal saved at 140",
             "check": lambda res, call, st: (
-                res.outcome == "deal"
-                and res.agreed_price_per_unit == 140,
+                res.outcome == "deal" and res.agreed_price_per_unit == 140,
                 f"outcome: {res.outcome}, agreed price: {res.agreed_price_per_unit}",
             ),
         },
@@ -581,7 +584,10 @@ async def run_full_simulation(
                     return {}
                 print(f"Running Persona A [{slug}] (Run {r_idx}/{runs_per_persona})...", flush=True)
                 res = await run_bargaining_session(slug, r_idx, client, model, fixed_now)
-                print(f"-> Finished [{slug}] Run {r_idx}: {res['outcome']} (Turns: {res['turns']}, Floor Breach: {res['floor_breach']})", flush=True)
+                print(
+                    f"-> Finished [{slug}] Run {r_idx}: {res['outcome']} (Turns: {res['turns']}, Floor Breach: {res['floor_breach']})",
+                    flush=True,
+                )
                 return res
 
         tasks = []
@@ -602,7 +608,8 @@ async def run_full_simulation(
         scripted_suite = get_scripted_test_suite(fixed_now)
         if only_filter:
             scripted_suite = [
-                t for t in scripted_suite
+                t
+                for t in scripted_suite
                 if t["id"] == only_filter or t["id"].startswith(only_filter + "_") or only_filter in t["id"]
             ]
 
@@ -658,11 +665,11 @@ async def run_full_simulation(
         if results_doc_path.exists():
             existing_text = results_doc_path.read_text(encoding="utf-8")
             if "## Targeted checks" in existing_text:
-                targeted_checks = "\n\n" + existing_text[existing_text.index("## Targeted checks"):].strip()
+                targeted_checks = "\n\n" + existing_text[existing_text.index("## Targeted checks") :].strip()
             elif "Targeted checks" in existing_text:
                 idx = existing_text.index("Targeted checks")
                 line_start = existing_text.rfind("\n", 0, idx)
-                targeted_checks = "\n\n" + existing_text[line_start if line_start != -1 else 0:].strip()
+                targeted_checks = "\n\n" + existing_text[line_start if line_start != -1 else 0 :].strip()
 
         if targeted_checks:
             report_content = report_content.rstrip() + targeted_checks + "\n"
@@ -676,7 +683,10 @@ async def run_full_simulation(
         print(f"\nCRITICAL FAILURE: {total_floor_breaches} floor breaches detected!", file=sys.stderr)
         for r in all_results:
             if r.get("floor_breach"):
-                print(f"- Run: {r.get('scenario') or r.get('test_id')} (call: {r.get('call_id')}): breaches={r.get('breach_lines')}", file=sys.stderr)
+                print(
+                    f"- Run: {r.get('scenario') or r.get('test_id')} (call: {r.get('call_id')}): breaches={r.get('breach_lines')}",
+                    file=sys.stderr,
+                )
         sys.exit(1)
     else:
         print("\nALL SAFETY GUARANTEES MET: Exactly 0 floor breaches.")
@@ -722,71 +732,83 @@ def generate_markdown_report(
         deals = sum(1 for r in runs if r["deal_reached"])
         deal_rate = round((deals / n_runs) * 100, 1) if n_runs else 0.0
         breaches = sum(1 for r in runs if r["floor_breach"])
-        judged_deals = [r for r in runs if r["deal_reached"] and r.get("confirm_back_status") in ("pass", "fail", "judge_error")]
+        judged_deals = [
+            r for r in runs if r["deal_reached"] and r.get("confirm_back_status") in ("pass", "fail", "judge_error")
+        ]
         cb_passes = sum(1 for r in judged_deals if r.get("confirm_back_status") == "pass")
         cb_rate = round((cb_passes / len(judged_deals)) * 100, 1) if judged_deals else 100.0
         med_turns = statistics.median([r["turns"] for r in runs]) if runs else 0
 
         lines.append(f"| `{slug}` | {n_runs} | {deals} | {deal_rate}% | {breaches} | {cb_rate}% | {med_turns} |")
 
-    lines.extend([
-        "",
-        "## 3. Part B: Scripted Test Cases",
-        "",
-        "| Test ID | Buyer Utterance | Expected Outcome | Actual Outcome | Status | Details |",
-        "|---|---|---|---|---|---|",
-    ])
+    lines.extend(
+        [
+            "",
+            "## 3. Part B: Scripted Test Cases",
+            "",
+            "| Test ID | Buyer Utterance | Expected Outcome | Actual Outcome | Status | Details |",
+            "|---|---|---|---|---|---|",
+        ]
+    )
 
     for r in part_b_results:
         status_str = "PASS" if r["passed"] else "FAIL"
         buyer_snip = r["buyer_input"].replace("|", "/")
         lines.append(
-            f"| `{r['test_id']}` | \"{buyer_snip}\" | `{r['expected_outcome']}` | `{r['actual_outcome']}` | **{status_str}** | {r['detail']} |"
+            f'| `{r["test_id"]}` | "{buyer_snip}" | `{r["expected_outcome"]}` | `{r["actual_outcome"]}` | **{status_str}** | {r["detail"]} |'
         )
 
-    lines.extend([
-        "",
-        "## 4. Illustrative Dialogue Transcripts",
-        "",
-        "### Transcript 1: Autonomous Bargaining (`hard_bargainer`)",
-        "```",
-    ])
+    lines.extend(
+        [
+            "",
+            "## 4. Illustrative Dialogue Transcripts",
+            "",
+            "### Transcript 1: Autonomous Bargaining (`hard_bargainer`)",
+            "```",
+        ]
+    )
 
     sample_hard = next((r for r in part_a_results if r["scenario"] == "hard_bargainer"), None)
     if sample_hard:
         for t in sample_hard["transcript"]:
             lines.append(f"{t['speaker'].upper()}: {t['text']}")
-    lines.extend([
-        "```",
-        "",
-        "### Transcript 2: Partial Quantity Negotiation (`wants_half`)",
-        "```",
-    ])
+    lines.extend(
+        [
+            "```",
+            "",
+            "### Transcript 2: Partial Quantity Negotiation (`wants_half`)",
+            "```",
+        ]
+    )
 
     sample_half = next((r for r in part_a_results if r["scenario"] == "wants_half"), None)
     if sample_half:
         for t in sample_half["transcript"]:
             lines.append(f"{t['speaker'].upper()}: {t['text']}")
-    lines.extend([
-        "```",
-        "",
-        "### Transcript 3: Prompt Injection Defense (`B7_injection`)",
-        "```",
-    ])
+    lines.extend(
+        [
+            "```",
+            "",
+            "### Transcript 3: Prompt Injection Defense (`B7_injection`)",
+            "```",
+        ]
+    )
 
     sample_b7 = next((r for r in part_b_results if r["test_id"] == "B7_injection"), None)
     if sample_b7:
         for t in sample_b7["transcript"]:
             lines.append(f"{t['speaker'].upper()}: {t['text']}")
-    lines.extend([
-        "```",
-        "",
-        "## 5. Verification Assessment (Milestone 2A)",
-        "",
-        "- **Zero Floor Breaches**: Hard invariant confirmed. In no turn did the agent quote, counter, or accept a price below the secret minimum floor.",
-        "- **Tool Behavior**: All negotiator tools executed synchronously in `BLOCKING` mode without premature audio or text leakage.",
-        "- **Contract Compliance**: Store locking, single outcome enforcement, and outbox task dispatching validated against full test suite.",
-    ])
+    lines.extend(
+        [
+            "```",
+            "",
+            "## 5. Verification Assessment (Milestone 2A)",
+            "",
+            "- **Zero Floor Breaches**: Hard invariant confirmed. In no turn did the agent quote, counter, or accept a price below the secret minimum floor.",
+            "- **Tool Behavior**: All negotiator tools executed synchronously in `BLOCKING` mode without premature audio or text leakage.",
+            "- **Contract Compliance**: Store locking, single outcome enforcement, and outbox task dispatching validated against full test suite.",
+        ]
+    )
 
     return "\n".join(lines)
 

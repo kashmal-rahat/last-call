@@ -284,6 +284,7 @@ async def test_places_client_retries_429_then_succeeds():
 @pytest.mark.asyncio
 async def test_places_client_raises_places_error_on_400():
     """PlacesClient raises PlacesError on 400 Bad Request without token in error."""
+
     def mock_handler(request: httpx.Request):
         return httpx.Response(400, json={"error": {"message": "Invalid field mask"}})
 

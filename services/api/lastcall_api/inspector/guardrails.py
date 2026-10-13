@@ -320,7 +320,9 @@ def apply_guardrails(
 
         if "mould" in issues or "slime" in issues:
             worst_stage = "unsafe"
-        elif ("rot" in issues or "leaking" in issues) and STAGE_ORDER.get(worst_stage, 0) < STAGE_ORDER.get("spoiled", 0):
+        elif ("rot" in issues or "leaking" in issues) and STAGE_ORDER.get(worst_stage, 0) < STAGE_ORDER.get(
+            "spoiled", 0
+        ):
             worst_stage = "spoiled"
 
         if worst_stage != prev_worst:

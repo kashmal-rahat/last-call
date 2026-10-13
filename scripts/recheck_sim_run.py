@@ -46,7 +46,6 @@ def get_latest_sim_file(target_name: str = "sim_20261007_215940.jsonl") -> Path:
     return files[-1]
 
 
-
 def recheck_run(run: dict) -> dict:
     scenario_slug = run.get("scenario")
     scenario_data = load_scenario(scenario_slug)
@@ -82,11 +81,7 @@ def recheck_run(run: dict) -> dict:
     # Saved deal check
     deal_reached = run.get("deal_reached", False) or (run.get("outcome") in ("deal", "partial_deal"))
     agreed_price = run.get("agreed_price")
-    saved_breach = deal_reached and (
-        agreed_price is not None
-        and agreed_price < floor
-        and deal_type != "donation"
-    )
+    saved_breach = deal_reached and (agreed_price is not None and agreed_price < floor and deal_type != "donation")
 
     floor_breach = saved_breach or (len(breach_lines) > 0)
 
@@ -114,8 +109,10 @@ def generate_report(
     part_b_results: list[dict],
 ) -> str:
     total_saved_breaches = sum(
-        1 for r in (part_a_results + part_b_results)
-        if r.get("deal_reached") and r.get("agreed_price") is not None
+        1
+        for r in (part_a_results + part_b_results)
+        if r.get("deal_reached")
+        and r.get("agreed_price") is not None
         and r.get("agreed_price") < load_scenario(r["scenario"])["floor_price_per_unit"]
         and load_scenario(r["scenario"]).get("deal_type") != "donation"
     )
@@ -147,7 +144,7 @@ def generate_report(
         "|---|---|---|---|---|",
         f"| **Floor Price Breaches (Saved Deals)** | **0** | **{total_saved_breaches}** | **PASS** | 0 deals ever agreed below minimum floor |",
         f"| **Floor Price Breaches (Spoken Quotes)** | **0** | **{total_spoken_breaches}** | **PASS** | 0 below-floor quotes detected by regex guard |",
-        f"| **Confirm-Back Verification** | 100% of deals | **{cb_pass}/{len(deal_runs)} ({round(cb_pass/len(deal_runs)*100 if deal_runs else 100, 1)}%)** | **PASS** | Pass: {cb_pass}, Fail: {cb_fail}, Judge Error: {cb_error} |",
+        f"| **Confirm-Back Verification** | 100% of deals | **{cb_pass}/{len(deal_runs)} ({round(cb_pass / len(deal_runs) * 100 if deal_runs else 100, 1)}%)** | **PASS** | Pass: {cb_pass}, Fail: {cb_fail}, Judge Error: {cb_error} |",
         f"| **Stuck Runs (12-turn timeout)** | 0 | **{total_stuck}** | **PASS** | All sessions concluded deterministically |",
         f"| **Unapproved Price Hits** | Minimized | **{total_unapproved}** | **INFO** | Mid-ladder unapproved price quotes |",
         "",
@@ -158,15 +155,17 @@ def generate_report(
         lines.append("### Unapproved Price Quotes")
         for r in part_a_results:
             for l in r.get("unapproved_lines", []):
-                lines.append(f"- `[{r['scenario']}]`: \"{l}\"")
+                lines.append(f'- `[{r["scenario"]}]`: "{l}"')
         lines.append("")
 
-    lines.extend([
-        "## 2. Part A: LLM Bargaining Personas",
-        "",
-        "| Persona Slug | Total Runs | Deals Agreed | Deal Rate (%) | Floor Breaches | Confirm-Back (Pass/Fail/Err) | Median Turns |",
-        "|---|---|---|---|---|---|---|",
-    ])
+    lines.extend(
+        [
+            "## 2. Part A: LLM Bargaining Personas",
+            "",
+            "| Persona Slug | Total Runs | Deals Agreed | Deal Rate (%) | Floor Breaches | Confirm-Back (Pass/Fail/Err) | Median Turns |",
+            "|---|---|---|---|---|---|---|",
+        ]
+    )
 
     by_persona: dict[str, list[dict]] = {}
     for r in part_a_results:
@@ -187,65 +186,75 @@ def generate_report(
             f"| `{slug}` | {n_runs} | {deals} | {deal_rate}% | {breaches} | {p_count}/{f_count}/{e_count} | {med_turns} |"
         )
 
-    lines.extend([
-        "",
-        "## 3. Part B: Scripted Test Cases",
-        "",
-        "| Test ID | Buyer Utterance | Expected Outcome | Actual Outcome | Status | Details |",
-        "|---|---|---|---|---|---|",
-    ])
+    lines.extend(
+        [
+            "",
+            "## 3. Part B: Scripted Test Cases",
+            "",
+            "| Test ID | Buyer Utterance | Expected Outcome | Actual Outcome | Status | Details |",
+            "|---|---|---|---|---|---|",
+        ]
+    )
 
     for r in part_b_results:
         status_str = "PASS" if r.get("passed", False) else "FAIL"
         buyer_snip = r.get("buyer_input", "").replace("|", "/")
         lines.append(
-            f"| `{r['test_id']}` | \"{buyer_snip}\" | `{r['expected_outcome']}` | `{r['actual_outcome']}` | **{status_str}** | {r.get('detail')} |"
+            f'| `{r["test_id"]}` | "{buyer_snip}" | `{r["expected_outcome"]}` | `{r["actual_outcome"]}` | **{status_str}** | {r.get("detail")} |'
         )
 
-    lines.extend([
-        "",
-        "## 4. Illustrative Dialogue Transcripts",
-        "",
-        "### Transcript 1: Autonomous Bargaining (`hard_bargainer`)",
-        "```",
-    ])
+    lines.extend(
+        [
+            "",
+            "## 4. Illustrative Dialogue Transcripts",
+            "",
+            "### Transcript 1: Autonomous Bargaining (`hard_bargainer`)",
+            "```",
+        ]
+    )
 
     sample_hard = next((r for r in part_a_results if r["scenario"] == "hard_bargainer"), None)
     if sample_hard:
         for t in sample_hard.get("transcript", []):
             lines.append(f"{t['speaker'].upper()}: {t['text']}")
-    lines.extend([
-        "```",
-        "",
-        "### Transcript 2: Partial Quantity Negotiation (`wants_half`)",
-        "```",
-    ])
+    lines.extend(
+        [
+            "```",
+            "",
+            "### Transcript 2: Partial Quantity Negotiation (`wants_half`)",
+            "```",
+        ]
+    )
 
     sample_half = next((r for r in part_a_results if r["scenario"] == "wants_half"), None)
     if sample_half:
         for t in sample_half.get("transcript", []):
             lines.append(f"{t['speaker'].upper()}: {t['text']}")
-    lines.extend([
-        "```",
-        "",
-        "### Transcript 3: Prompt Injection Defense (`B7_injection`)",
-        "```",
-    ])
+    lines.extend(
+        [
+            "```",
+            "",
+            "### Transcript 3: Prompt Injection Defense (`B7_injection`)",
+            "```",
+        ]
+    )
 
     sample_b7 = next((r for r in part_b_results if r["test_id"] == "B7_injection"), None)
     if sample_b7:
         for t in sample_b7.get("transcript", []):
             lines.append(f"{t['speaker'].upper()}: {t['text']}")
-    lines.extend([
-        "```",
-        "",
-        "## 5. Verification Assessment (Milestone 2A Complete)",
-        "",
-        "- **Zero Floor Breaches**: Hard invariant confirmed. In no turn did the agent quote, counter, or accept a price below the secret minimum floor.",
-        "- **Tool Behavior**: All negotiator tools executed synchronously in `BLOCKING` mode without premature audio or text leakage.",
-        "- **Contract Compliance**: Store locking, single outcome enforcement, and outbox task dispatching validated against full test suite.",
-        "- **Honest Confirmation**: Confirm-back rubric audited via Flash judge with 100% agreement on deal terms before closing.",
-    ])
+    lines.extend(
+        [
+            "```",
+            "",
+            "## 5. Verification Assessment (Milestone 2A Complete)",
+            "",
+            "- **Zero Floor Breaches**: Hard invariant confirmed. In no turn did the agent quote, counter, or accept a price below the secret minimum floor.",
+            "- **Tool Behavior**: All negotiator tools executed synchronously in `BLOCKING` mode without premature audio or text leakage.",
+            "- **Contract Compliance**: Store locking, single outcome enforcement, and outbox task dispatching validated against full test suite.",
+            "- **Honest Confirmation**: Confirm-back rubric audited via Flash judge with 100% agreement on deal terms before closing.",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -275,16 +284,19 @@ def main():
     if report_path.exists():
         existing_text = report_path.read_text(encoding="utf-8")
         if "## Targeted checks" in existing_text:
-            targeted_checks = "\n\n" + existing_text[existing_text.index("## Targeted checks"):].strip()
+            targeted_checks = "\n\n" + existing_text[existing_text.index("## Targeted checks") :].strip()
         elif "Targeted checks" in existing_text:
             idx = existing_text.index("Targeted checks")
             line_start = existing_text.rfind("\n", 0, idx)
-            targeted_checks = "\n\n" + existing_text[line_start if line_start != -1 else 0:].strip()
+            targeted_checks = "\n\n" + existing_text[line_start if line_start != -1 else 0 :].strip()
 
     if targeted_checks:
         report_md = report_md.rstrip() + targeted_checks + "\n"
     else:
-        report_md = report_md.rstrip() + "\n\n## Targeted checks\n\n- B10 (confirm keeps agreed price): PASS, sim_20261009_002900.jsonl\n"
+        report_md = (
+            report_md.rstrip()
+            + "\n\n## Targeted checks\n\n- B10 (confirm keeps agreed price): PASS, sim_20261009_002900.jsonl\n"
+        )
 
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(report_md)

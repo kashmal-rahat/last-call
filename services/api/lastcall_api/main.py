@@ -74,7 +74,9 @@ async def _check_ip_limit(
     detail: str | None = None,
 ) -> None:
     forwarded = request.headers.get("x-forwarded-for", "")
-    client_ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "127.0.0.1")
+    client_ip = (
+        forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "127.0.0.1")
+    )
     now_ts = time.time()
     key = (bucket, client_ip)
 
@@ -133,7 +135,6 @@ async def add_cache_control_headers(request: Request, call_next):
 # Mount static files directory
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
 
 
 @lru_cache
@@ -215,20 +216,22 @@ async def _build_batch_response(
         name = candidate.name if candidate else f"Buyer #{a.rank}"
         call_status = call.status if call else "pending"
         res = call.result if call else None
-        attempts_data.append({
-            "call_id": a.call_id,
-            "buyer_id": a.buyer_id,
-            "name": name,
-            "rank": a.rank,
-            "type": a.buyer_type,
-            "step": a.step,
-            "call_status": call_status,
-            "outcome": res.outcome if res else None,
-            "agreed_price": res.agreed_price_per_unit if res else None,
-            "agreed_quantity": res.agreed_quantity if res else None,
-            "pickup_time": res.pickup_time.isoformat() if (res and res.pickup_time) else None,
-            "callback_at": res.callback_at.isoformat() if (res and res.callback_at) else None,
-        })
+        attempts_data.append(
+            {
+                "call_id": a.call_id,
+                "buyer_id": a.buyer_id,
+                "name": name,
+                "rank": a.rank,
+                "type": a.buyer_type,
+                "step": a.step,
+                "call_status": call_status,
+                "outcome": res.outcome if res else None,
+                "agreed_price": res.agreed_price_per_unit if res else None,
+                "agreed_quantity": res.agreed_quantity if res else None,
+                "pickup_time": res.pickup_time.isoformat() if (res and res.pickup_time) else None,
+                "callback_at": res.callback_at.isoformat() if (res and res.callback_at) else None,
+            }
+        )
 
     outside = False
     if rules.calling_hours:

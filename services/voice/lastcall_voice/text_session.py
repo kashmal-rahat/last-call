@@ -94,7 +94,7 @@ async def start_text_call(
         view=call.brief.agent_view(),
         mode="text",
         agent_gender=agent_gender,  # type: ignore[arg-type]
-        city_style=city_style,      # type: ignore[arg-type]
+        city_style=city_style,  # type: ignore[arg-type]
         clock=lambda: now_dt,
     )
     agent.retry_config = retry_cfg
@@ -144,9 +144,7 @@ async def run_text_turn(
         clean_text = re.sub(r"^\[SYSTEM\]\s*", "", buyer_text).strip()
         input_text = clean_text
         ctx.buyer_spoke = True
-        call.transcript.append(
-            TranscriptEntry(speaker="buyer", text=clean_text, at=at_time)
-        )
+        call.transcript.append(TranscriptEntry(speaker="buyer", text=clean_text, at=at_time))
 
     msg = types.Content(role="user", parts=[types.Part(text=input_text)])
     agent_text = ""
@@ -180,9 +178,7 @@ async def run_text_turn(
             ctx.flags.append("unapproved_price")
 
     # Record agent turn in transcript
-    call.transcript.append(
-        TranscriptEntry(speaker="agent", text=agent_text, at=at_time)
-    )
+    call.transcript.append(TranscriptEntry(speaker="agent", text=agent_text, at=at_time))
 
     return agent_text
 
@@ -220,7 +216,9 @@ async def end_text_call(call_id: str) -> CallResult:
             if t < ch.start:
                 target_dt = target_dt.replace(hour=ch.start.hour, minute=ch.start.minute, second=0)
             elif t > ch.end:
-                target_dt = (target_dt + timedelta(days=1)).replace(hour=ch.start.hour, minute=ch.start.minute, second=0)
+                target_dt = (target_dt + timedelta(days=1)).replace(
+                    hour=ch.start.hour, minute=ch.start.minute, second=0
+                )
             ctx.callback_at = target_dt
             if "dropped" not in ctx.flags:
                 ctx.flags.append("dropped")

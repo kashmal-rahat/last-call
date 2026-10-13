@@ -156,9 +156,7 @@ def test_phone_call_runs_through_the_unchanged_handler(voice_app, monkeypatch):
         def __init__(self, audio=None, agent_text=None):
             self.content = type("Content", (), {"parts": [Part(audio)]})() if audio else None
             self.input_transcription = None
-            self.output_transcription = (
-                type("T", (), {"text": agent_text, "finished": True})() if agent_text else None
-            )
+            self.output_transcription = type("T", (), {"text": agent_text, "finished": True})() if agent_text else None
             self.turn_complete = False
             self.interrupted = False
             self.usage_metadata = None
@@ -218,14 +216,27 @@ async def test_adapter_shows_and_sends_whatsapp_messages():
     ws = FakeTwilioSocket([_start(token)])
     adapter = TwilioStreamAdapter(ws, store=store, signing_key=KEY, send_whatsapp=fake_whatsapp)
     await adapter.receive_text()
-    photo = {"type": "whatsapp", "whatsapp": "photo", "text": "Banana · ripe", "media_url": "https://api.example.com/p.jpg"}
+    photo = {
+        "type": "whatsapp",
+        "whatsapp": "photo",
+        "text": "Banana · ripe",
+        "media_url": "https://api.example.com/p.jpg",
+    }
     await adapter.send_json(photo)
-    await adapter.send_json({"type": "whatsapp", "whatsapp": "confirmation", "text": "Deal confirmed", "media_url": None})
+    await adapter.send_json(
+        {"type": "whatsapp", "whatsapp": "confirmation", "text": "Deal confirmed", "media_url": None}
+    )
     await adapter.close()
 
     assert sent == [("Banana · ripe", "https://api.example.com/p.jpg"), ("Deal confirmed", None)]
     lines = await store.get_live_lines(call.call_id)
-    assert lines[0] == {"i": 0, "kind": "whatsapp", "whatsapp": "photo", "text": "Banana · ripe", "media_url": "https://api.example.com/p.jpg"}
+    assert lines[0] == {
+        "i": 0,
+        "kind": "whatsapp",
+        "whatsapp": "photo",
+        "text": "Banana · ripe",
+        "media_url": "https://api.example.com/p.jpg",
+    }
     assert lines[1]["whatsapp"] == "confirmation"
 
 
@@ -238,9 +249,13 @@ async def test_adapter_still_shows_whatsapp_when_sending_fails():
     async def failing_whatsapp(body: str, *, media_url: str | None = None) -> None:
         raise RuntimeError("Twilio Messages.json returned HTTP 400")
 
-    adapter = TwilioStreamAdapter(FakeTwilioSocket([_start(token)]), store=store, signing_key=KEY, send_whatsapp=failing_whatsapp)
+    adapter = TwilioStreamAdapter(
+        FakeTwilioSocket([_start(token)]), store=store, signing_key=KEY, send_whatsapp=failing_whatsapp
+    )
     await adapter.receive_text()
-    await adapter.send_json({"type": "whatsapp", "whatsapp": "confirmation", "text": "Deal confirmed", "media_url": None})
+    await adapter.send_json(
+        {"type": "whatsapp", "whatsapp": "confirmation", "text": "Deal confirmed", "media_url": None}
+    )
     await adapter.close()
     assert (await store.get_live_lines(call.call_id))[0]["text"] == "Deal confirmed"
 
@@ -257,7 +272,9 @@ async def test_whatsapp_messages_arrive_in_order_even_if_the_first_is_slow():
             await asyncio.sleep(0.05)
         sent.append(body)
 
-    adapter = TwilioStreamAdapter(FakeTwilioSocket([_start(token)]), store=store, signing_key=KEY, send_whatsapp=slow_first)
+    adapter = TwilioStreamAdapter(
+        FakeTwilioSocket([_start(token)]), store=store, signing_key=KEY, send_whatsapp=slow_first
+    )
     await adapter.receive_text()
     await adapter.send_json({"type": "whatsapp", "whatsapp": "photo", "text": "photo", "media_url": None})
     await adapter.send_json({"type": "whatsapp", "whatsapp": "confirmation", "text": "confirmation", "media_url": None})
@@ -268,7 +285,12 @@ async def test_whatsapp_messages_arrive_in_order_even_if_the_first_is_slow():
 async def test_damaged_twilio_frames_are_skipped_not_fatal():
     good = {"event": "media", "media": {"payload": base64.b64encode(bytes([0xFF] * 160)).decode()}}
     ws = FakeTwilioSocket([])
-    ws.incoming = ["not json", json.dumps([1, 2]), json.dumps({"event": "media", "media": {"payload": "%%%"}}), json.dumps(good)]
+    ws.incoming = [
+        "not json",
+        json.dumps([1, 2]),
+        json.dumps({"event": "media", "media": {"payload": "%%%"}}),
+        json.dumps(good),
+    ]
     adapter = TwilioStreamAdapter(ws, store=InMemoryStore(), signing_key=KEY)
     msg = await adapter.receive()
     assert msg["type"] == "websocket.receive" and len(msg["bytes"]) == 640

@@ -72,35 +72,41 @@ async def run_latency_probe(photo_path: Path, iterations: int = 12) -> dict:
             )
             lat = time.monotonic() - t0
             latencies.append(lat)
-            records.append({
-                "call": i,
-                "latency_s": lat,
-                "status": "ok",
-                "items_count": len(output.items),
-                "in_tokens": usage.input_tokens,
-                "out_tokens": usage.output_tokens,
-                "thought_tokens": usage.thought_tokens,
-                "cand_tokens": usage.candidate_tokens,
-                "error": None,
-            })
-            print(f"  [{i:02d}/{iterations}] ok | {lat:.2f}s | {len(output.items)} items | tokens: in={usage.input_tokens}, out={usage.output_tokens} (thoughts={usage.thought_tokens})")
+            records.append(
+                {
+                    "call": i,
+                    "latency_s": lat,
+                    "status": "ok",
+                    "items_count": len(output.items),
+                    "in_tokens": usage.input_tokens,
+                    "out_tokens": usage.output_tokens,
+                    "thought_tokens": usage.thought_tokens,
+                    "cand_tokens": usage.candidate_tokens,
+                    "error": None,
+                }
+            )
+            print(
+                f"  [{i:02d}/{iterations}] ok | {lat:.2f}s | {len(output.items)} items | tokens: in={usage.input_tokens}, out={usage.output_tokens} (thoughts={usage.thought_tokens})"
+            )
         except Exception as exc:
             lat = time.monotonic() - t0
             orig = getattr(exc, "original_exc", None)
             orig_name = type(orig).__name__ if orig is not None else type(exc).__name__
             error_msg = str(exc)
             error_type = orig_name
-            records.append({
-                "call": i,
-                "latency_s": lat,
-                "status": "error",
-                "items_count": 0,
-                "in_tokens": 0,
-                "out_tokens": 0,
-                "thought_tokens": 0,
-                "cand_tokens": 0,
-                "error": f"{error_msg} ({error_type})",
-            })
+            records.append(
+                {
+                    "call": i,
+                    "latency_s": lat,
+                    "status": "error",
+                    "items_count": 0,
+                    "in_tokens": 0,
+                    "out_tokens": 0,
+                    "thought_tokens": 0,
+                    "cand_tokens": 0,
+                    "error": f"{error_msg} ({error_type})",
+                }
+            )
             print(f"  [{i:02d}/{iterations}] ERROR | {lat:.2f}s | {error_msg} ({error_type})")
 
     p_min = min(latencies) if latencies else 0.0

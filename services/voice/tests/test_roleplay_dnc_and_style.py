@@ -103,6 +103,7 @@ async def test_lock_released_after_deal_in_text_session():
     ctx.agreed_price_per_unit = 160
     ctx.agreed_quantity = 30.0
     from datetime import timedelta
+
     ctx.pickup_time = NOW + timedelta(hours=2)
 
     call = await store.get_call(call_id)

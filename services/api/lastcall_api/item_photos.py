@@ -85,7 +85,9 @@ async def save_shelf_photo(photo_store: PhotoStore | None, inspection_id: str, u
         await photo_store.put_shelf_photo(inspection_id, prepared.jpeg)
         return True
     except Exception as exc:
-        logger.warning("shelf_photo_not_saved", extra={"inspection_id": inspection_id, "error_class": type(exc).__name__})
+        logger.warning(
+            "shelf_photo_not_saved", extra={"inspection_id": inspection_id, "error_class": type(exc).__name__}
+        )
         return False
 
 

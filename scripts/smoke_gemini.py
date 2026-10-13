@@ -34,7 +34,7 @@ async def smoke_flash() -> bool:
         model=FLASH_MODEL,
         contents="Say 'Assalam-o-Alaikum' and confirm you are operational.",
     )
-    print(f"  ✓ Text call passed ({round((time.time() - t0)*1000)}ms): {resp_text.text.strip()[:60]}...")
+    print(f"  ✓ Text call passed ({round((time.time() - t0) * 1000)}ms): {resp_text.text.strip()[:60]}...")
 
     # 2. Vision
     img = Image.new("RGB", (64, 64), color="yellow")
@@ -45,7 +45,7 @@ async def smoke_flash() -> bool:
         model=FLASH_MODEL,
         contents=[types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg"), "What color is this?"],
     )
-    print(f"  ✓ Vision call passed ({round((time.time() - t0)*1000)}ms): {resp_img.text.strip()[:40]}...")
+    print(f"  ✓ Vision call passed ({round((time.time() - t0) * 1000)}ms): {resp_img.text.strip()[:40]}...")
 
     # 3. Structured Output
     t0 = time.time()
@@ -57,7 +57,7 @@ async def smoke_flash() -> bool:
             response_schema=SmokeAssessment,
         ),
     )
-    print(f"  ✓ Structured call passed ({round((time.time() - t0)*1000)}ms): {resp_struct.text.strip()}")
+    print(f"  ✓ Structured call passed ({round((time.time() - t0) * 1000)}ms): {resp_struct.text.strip()}")
     return True
 
 
@@ -81,7 +81,9 @@ async def smoke_live() -> bool:
             if resp.server_content and resp.server_content.turn_complete:
                 break
         t_total = round((time.time() - t0) * 1000)
-        print(f"  ✓ Live native audio session passed (connect={t_conn}ms, total={t_total}ms, audio={audio_bytes} bytes)")
+        print(
+            f"  ✓ Live native audio session passed (connect={t_conn}ms, total={t_total}ms, audio={audio_bytes} bytes)"
+        )
     return True
 
 

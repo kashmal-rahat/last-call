@@ -19,35 +19,37 @@ FIELD_MASK: str = (
 )
 
 # Known Atmosphere fields (which bill as Enterprise + Atmosphere, $40/1k).
-ATMOSPHERE_FIELDS = frozenset([
-    "reviews",
-    "dineIn",
-    "delivery",
-    "takeout",
-    "curbsidePickup",
-    "reservable",
-    "servesBreakfast",
-    "servesLunch",
-    "servesDinner",
-    "servesBeer",
-    "servesWine",
-    "servesBrunch",
-    "servesVegetarianFood",
-    "outdoorSeating",
-    "liveMusic",
-    "menuForChildren",
-    "servesCocktails",
-    "servesDessert",
-    "servesCoffee",
-    "goodForChildren",
-    "allowsDogs",
-    "restroom",
-    "goodForGroups",
-    "goodForWatchingSports",
-    "paymentOptions",
-    "parkingOptions",
-    "accessibilityOptions",
-])
+ATMOSPHERE_FIELDS = frozenset(
+    [
+        "reviews",
+        "dineIn",
+        "delivery",
+        "takeout",
+        "curbsidePickup",
+        "reservable",
+        "servesBreakfast",
+        "servesLunch",
+        "servesDinner",
+        "servesBeer",
+        "servesWine",
+        "servesBrunch",
+        "servesVegetarianFood",
+        "outdoorSeating",
+        "liveMusic",
+        "menuForChildren",
+        "servesCocktails",
+        "servesDessert",
+        "servesCoffee",
+        "goodForChildren",
+        "allowsDogs",
+        "restroom",
+        "goodForGroups",
+        "goodForWatchingSports",
+        "paymentOptions",
+        "parkingOptions",
+        "accessibilityOptions",
+    ]
+)
 
 
 @dataclass(frozen=True)

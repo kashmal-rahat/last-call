@@ -100,10 +100,38 @@ def test_filter_dedupe_by_place_id():
 
 def test_filter_not_operational():
     """Places with business_status != OPERATIONAL are skipped."""
-    p_closed = PlaceRaw(id="ChIJ_closed", name="Closed", business_status="CLOSED_PERMANENTLY", lat=31.448, lng=74.270, international_phone="+923001111111")
-    p_temp = PlaceRaw(id="ChIJ_temp", name="Temp Closed", business_status="CLOSED_TEMPORARILY", lat=31.448, lng=74.270, international_phone="+923001111111")
-    p_ok = PlaceRaw(id="ChIJ_ok", name="Ok", business_status="OPERATIONAL", lat=31.448, lng=74.270, international_phone="+923001111111")
-    p_none = PlaceRaw(id="ChIJ_none", name="None Status", business_status=None, lat=31.448, lng=74.270, international_phone="+923002222222")
+    p_closed = PlaceRaw(
+        id="ChIJ_closed",
+        name="Closed",
+        business_status="CLOSED_PERMANENTLY",
+        lat=31.448,
+        lng=74.270,
+        international_phone="+923001111111",
+    )
+    p_temp = PlaceRaw(
+        id="ChIJ_temp",
+        name="Temp Closed",
+        business_status="CLOSED_TEMPORARILY",
+        lat=31.448,
+        lng=74.270,
+        international_phone="+923001111111",
+    )
+    p_ok = PlaceRaw(
+        id="ChIJ_ok",
+        name="Ok",
+        business_status="OPERATIONAL",
+        lat=31.448,
+        lng=74.270,
+        international_phone="+923001111111",
+    )
+    p_none = PlaceRaw(
+        id="ChIJ_none",
+        name="None Status",
+        business_status=None,
+        lat=31.448,
+        lng=74.270,
+        international_phone="+923002222222",
+    )
 
     kept, skipped = apply_filters(
         [p_closed, p_temp, p_ok, p_none],
@@ -122,7 +150,7 @@ def test_filter_not_operational():
 def test_filter_too_far():
     """Places beyond scout_radius_km are skipped."""
     p_near = PlaceRaw(id="ChIJ_near", name="Near", lat=31.45, lng=74.27, international_phone="+923001111111")  # ~0.2 km
-    p_far = PlaceRaw(id="ChIJ_far", name="Far", lat=31.60, lng=74.27, international_phone="+923002222222")   # ~16.8 km
+    p_far = PlaceRaw(id="ChIJ_far", name="Far", lat=31.60, lng=74.27, international_phone="+923002222222")  # ~16.8 km
 
     kept, skipped = apply_filters(
         [p_near, p_far],
@@ -168,7 +196,9 @@ def test_filter_do_not_call_by_place_id_and_phone_key():
     dnc = {"places:ChIJ_dnc_id", pk_blocked}
 
     p_dnc_id = PlaceRaw(id="ChIJ_dnc_id", name="DNC ID", lat=31.45, lng=74.27, international_phone="+923001111111")
-    p_dnc_phone = PlaceRaw(id="ChIJ_other_id", name="DNC Phone", lat=31.45, lng=74.27, international_phone="+923009999999")
+    p_dnc_phone = PlaceRaw(
+        id="ChIJ_other_id", name="DNC Phone", lat=31.45, lng=74.27, international_phone="+923009999999"
+    )
     p_ok = PlaceRaw(id="ChIJ_ok", name="Ok", lat=31.45, lng=74.27, international_phone="+923002222222")
 
     kept, skipped = apply_filters(
@@ -259,7 +289,14 @@ def test_filter_duplicate_phone():
 def test_filter_order():
     """Verifies sequential filter order priority (first matching reason applies)."""
     # A candidate that is NOT_OPERATIONAL, TOO_FAR, and NO_PHONE -> must be skipped as not_operational
-    p = PlaceRaw(id="ChIJ_multi", name="Multi", business_status="CLOSED_PERMANENTLY", lat=32.0, lng=75.0, international_phone=None)
+    p = PlaceRaw(
+        id="ChIJ_multi",
+        name="Multi",
+        business_status="CLOSED_PERMANENTLY",
+        lat=32.0,
+        lng=75.0,
+        international_phone=None,
+    )
     kept, skipped = apply_filters(
         [p],
         center=CENTER,
@@ -356,12 +393,16 @@ def test_rank_six_candidates_table():
     histories = {"places:P1": hist1, "places:P2": hist2}
 
     candidates = [
-        FilteredCandidate("P6", "Shop 6", "juice_shop", None, [], "+923006666666", 2.0, False, None),  # closed, possible
-        FilteredCandidate("P5", "Shop 5", "restaurant", None, [], "+923005555555", 1.5, True, None),   # open, possible
-        FilteredCandidate("P4", "Shop 4", "bakery", None, [], "+923004444444", 0.5, True, None),       # open, likely
-        FilteredCandidate("P3", "Shop 3", "juice_shop", None, [], "+923003333333", 1.2, None, None),   # unknown, likely
-        FilteredCandidate("P2", "Shop 2", "restaurant", None, [], "+923002222222", 3.0, True, None),   # deal 5d ago
-        FilteredCandidate("P1", "Shop 1", "juice_shop", None, [], "+923001111111", 5.0, False, None),  # deal 2d ago (newer)
+        FilteredCandidate(
+            "P6", "Shop 6", "juice_shop", None, [], "+923006666666", 2.0, False, None
+        ),  # closed, possible
+        FilteredCandidate("P5", "Shop 5", "restaurant", None, [], "+923005555555", 1.5, True, None),  # open, possible
+        FilteredCandidate("P4", "Shop 4", "bakery", None, [], "+923004444444", 0.5, True, None),  # open, likely
+        FilteredCandidate("P3", "Shop 3", "juice_shop", None, [], "+923003333333", 1.2, None, None),  # unknown, likely
+        FilteredCandidate("P2", "Shop 2", "restaurant", None, [], "+923002222222", 3.0, True, None),  # deal 5d ago
+        FilteredCandidate(
+            "P1", "Shop 1", "juice_shop", None, [], "+923001111111", 5.0, False, None
+        ),  # deal 2d ago (newer)
     ]
 
     fits = {

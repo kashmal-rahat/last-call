@@ -105,7 +105,7 @@ def test_strict_and_lenient_accuracy():
     )
 
     pred1 = _make_assessment(name="banana", stage="fresh")  # acceptable, but not strict match
-    pred2 = _make_assessment(name="apple", stage="fresh")   # exact match
+    pred2 = _make_assessment(name="apple", stage="fresh")  # exact match
 
     matches = [(lbl1, pred1), (lbl2, pred2)]
     assert calculate_strict_stage_accuracy(matches) == 0.5

@@ -14,8 +14,16 @@ from typing import Any, Literal
 from lastcall_shared.config import get_settings
 
 URDU_DIGITS = {
-    "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
-    "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
+    "۰": "0",
+    "۱": "1",
+    "۲": "2",
+    "۳": "3",
+    "۴": "4",
+    "۵": "5",
+    "۶": "6",
+    "۷": "7",
+    "۸": "8",
+    "۹": "9",
 }
 
 PREFIX_REGEX = re.compile(r"(?i)^(?:rs|₨|₹|pkr)$")
@@ -118,7 +126,7 @@ async def fallback_extract_prices(
         "You are auditing an Urdu sales call utterance.\n"
         "List the per-unit prices the speaker offers or agrees to, not prices the other person mentioned.\n"
         f"Utterance: {text}\n"
-        "Respond in strictly valid JSON: {\"agent_offered_prices\": [int]}"
+        'Respond in strictly valid JSON: {"agent_offered_prices": [int]}'
     )
     try:
         from google.genai import types

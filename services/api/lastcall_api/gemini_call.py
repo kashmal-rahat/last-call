@@ -45,7 +45,9 @@ def _is_retryable_error(exc: Exception) -> bool:
     - Empty response or JSON / validation parse errors
     Any other API error (e.g. 400 INVALID_ARGUMENT) is NOT retried.
     """
-    if isinstance(exc, (asyncio.TimeoutError, TimeoutError, ValueError, json.JSONDecodeError, pydantic.ValidationError)):
+    if isinstance(
+        exc, (asyncio.TimeoutError, TimeoutError, ValueError, json.JSONDecodeError, pydantic.ValidationError)
+    ):
         return True
 
     if isinstance(exc, APIError):
@@ -101,6 +103,7 @@ async def call_structured(
         attempts += 1
 
         try:
+
             async def _generate():
                 return await client.aio.models.generate_content(
                     model=model_id,

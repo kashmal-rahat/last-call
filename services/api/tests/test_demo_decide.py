@@ -129,7 +129,6 @@ def test_decide_400_validations(client, mock_store):
     )
     assert r.status_code == 400
 
-
     # Invalid inspection_id format (B3)
     r = client.post("/demo/decide", json={"inspection_id": "bad/path/123"}, headers=headers)
     assert r.status_code == 400
@@ -174,11 +173,13 @@ async def test_decide_200_saves_overwrites_and_passes_params(client, mock_store)
     recorded_calls = []
 
     async def fake_decide_fn(insp, *, rules, store, now, hours_override, price_overrides):
-        recorded_calls.append({
-            "insp_id": insp.inspection_id,
-            "hours": hours_override,
-            "prices": price_overrides,
-        })
+        recorded_calls.append(
+            {
+                "insp_id": insp.inspection_id,
+                "hours": hours_override,
+                "prices": price_overrides,
+            }
+        )
         return _make_dummy_result(insp.inspection_id, hours=hours_override or 12.0)
 
     app.state.decide_fn = fake_decide_fn

@@ -155,6 +155,7 @@ def test_demo_scout_errors_parametrized(
     """Parametrized error handling: 401, 400s, 404s, and 409."""
     # Seed decisions if insp_01
     import asyncio
+
     if insp_id == "insp_01":
         ladder_res = _make_ladder_result(insp_id, step=seed_step)
         asyncio.run(mock_store.save_decisions(ladder_res))
@@ -172,6 +173,7 @@ def test_demo_scout_errors_parametrized(
 def test_demo_scout_429s_and_502(client, mock_store, monkeypatch):
     """Verifies daily cap 429, IP rate limit 429, and scout failure 502."""
     import asyncio
+
     ladder_res = _make_ladder_result("insp_429", step="bulk_sale")
     asyncio.run(mock_store.save_decisions(ladder_res))
 
@@ -211,6 +213,7 @@ def test_demo_scout_429s_and_502(client, mock_store, monkeypatch):
 def test_demo_scout_200_public_view_no_raw_phones(client, mock_store):
     """POST /demo/scout 200 drops raw E.164 phone numbers and returns public_view format."""
     import asyncio
+
     ladder_res = _make_ladder_result("insp_200", step="bulk_sale")
     asyncio.run(mock_store.save_decisions(ladder_res))
 
@@ -240,6 +243,7 @@ def test_demo_scout_200_public_view_no_raw_phones(client, mock_store):
 def test_demo_scout_reuse_within_1h(client, mock_store):
     """Reuse within 1h returns cached result with reused=True without calling scout_fn."""
     import asyncio
+
     ladder_res = _make_ladder_result("insp_reuse", step="bulk_sale")
     asyncio.run(mock_store.save_decisions(ladder_res))
 
@@ -279,6 +283,7 @@ def test_demo_scout_reuse_within_1h(client, mock_store):
 def test_demo_scout_cap_counter_keyed_by_pacific_date(client, mock_store):
     """Daily places counter is incremented with amount=len(types) and Pacific date key."""
     import asyncio
+
     ladder_res = _make_ladder_result("insp_cap_key", step="bulk_sale")
     asyncio.run(mock_store.save_decisions(ladder_res))
 
@@ -310,6 +315,7 @@ def test_demo_scout_cap_counter_keyed_by_pacific_date(client, mock_store):
 def test_demo_scout_scout_not_applicable_inside_scout_fn_409(client, mock_store):
     """G2: ScoutNotApplicable inside scout_fn maps to 409 detail 'This item stays in store; no buyers needed'."""
     import asyncio
+
     ladder_res = _make_ladder_result("insp_g2", step="bulk_sale")
     asyncio.run(mock_store.save_decisions(ladder_res))
 
@@ -327,11 +333,13 @@ def test_demo_scout_scout_not_applicable_inside_scout_fn_409(client, mock_store)
 def test_demo_scout_no_branches_configured_409(client, mock_store, monkeypatch):
     """G3: When no branches are configured on mart, returns 409 detail 'Buyer search isn't set up for this mart'."""
     import asyncio
+
     ladder_res = _make_ladder_result("insp_g3", step="bulk_sale")
     asyncio.run(mock_store.save_decisions(ladder_res))
 
     # Monkeypatch mart rules to have empty branches and no default
     from lastcall_shared.marts.loader import load_mart_rules
+
     real_rules = load_mart_rules("demo_mart")
     empty_branch_rules = real_rules.model_copy(update={"branches": [], "default_branch_id": None})
     monkeypatch.setattr("lastcall_api.main.load_mart_rules", lambda mart_id: empty_branch_rules)

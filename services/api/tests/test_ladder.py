@@ -93,7 +93,9 @@ async def test_decide_inspection_end_to_end_and_consistency_guarantee():
     sp_fresh = StageProfile(sellable_for="1_to_3_days", juice_shop=True, restaurant=True, bakery=False, charity=True)
     sp_rip = StageProfile(sellable_for="6_to_24h", juice_shop=True, restaurant=True, bakery=True, charity=True)
     sp_over = StageProfile(sellable_for="under_6h", juice_shop=True, restaurant=False, bakery=True, charity=True)
-    sp_spinach_over = StageProfile(sellable_for="under_6h", juice_shop=False, restaurant=False, bakery=False, charity=True)
+    sp_spinach_over = StageProfile(
+        sellable_for="under_6h", juice_shop=False, restaurant=False, bakery=False, charity=True
+    )
 
     fake_out = ProfilesOut(
         profiles=[

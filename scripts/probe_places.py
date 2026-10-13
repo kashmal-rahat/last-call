@@ -102,15 +102,17 @@ async def probe_request(
         if is_usable:
             usable_within_10km += 1
 
-        items.append({
-            "name": clean_name(p.name),
-            "primary_type": p.primary_type or "—",
-            "distance_km": dist,
-            "phone_present": phone_present,
-            "open_now": p.open_now,
-            "business_status": b_status,
-            "is_usable": is_usable,
-        })
+        items.append(
+            {
+                "name": clean_name(p.name),
+                "primary_type": p.primary_type or "—",
+                "distance_km": dist,
+                "phone_present": phone_present,
+                "open_now": p.open_now,
+                "business_status": b_status,
+                "is_usable": is_usable,
+            }
+        )
 
     # Sort by distance
     items.sort(key=lambda x: x["distance_km"])
@@ -162,7 +164,9 @@ async def main():
         print(f"[{i}/{len(targets)}] Probing {spec.buyer_type} at {b_name}...")
         res = await probe_request(client, spec, b_name, b_geo, radius_km=10.0)
         results.append(res)
-        print(f"    Status: {res['status']}, Count: {res['raw_count']}, Usable (≤10km+phone): {res['usable_within_10km']}, Latency: {res['latency_ms']}ms")
+        print(
+            f"    Status: {res['status']}, Count: {res['raw_count']}, Usable (≤10km+phone): {res['usable_within_10km']}, Latency: {res['latency_ms']}ms"
+        )
 
     # Generate Markdown Report
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -178,34 +182,39 @@ async def main():
 
     for idx, r in enumerate(results, 1):
         open_str = f"{r['open_now_true']}/{r['open_now_false']}/{r['open_now_unknown']}"
-        usable_warn = f"**{r['usable_within_10km']}**" if r['usable_within_10km'] < 3 else str(r['usable_within_10km'])
+        usable_warn = f"**{r['usable_within_10km']}**" if r["usable_within_10km"] < 3 else str(r["usable_within_10km"])
         lines.append(
             f"| {idx} | {r['branch_name']} | `{r['buyer_type']}` | `{r['query']}` | {r['rank_preference']} | "
             f"{r['raw_count']} | {r['has_phone_count']} | {open_str} | {usable_warn} | {r['latency_ms']}ms | {r['status']} |"
         )
 
-    lines.extend([
-        "",
-        "## SKU & Field Mask Verification",
-        "- **Field Mask**: `places.id,places.displayName,places.primaryType,places.types,places.location,places.businessStatus,places.internationalPhoneNumber,places.currentOpeningHours.openNow,places.googleMapsUri`",
-        "- **Field Mask Status**: Accepted by Places API (New) without rejection.",
-        "- **Atmosphere Fields**: Zero Atmosphere fields requested (strictly Enterprise SKU).",
-        "- **Rank Preferences**: `DISTANCE` accepted for typed queries (`juice_shop`, `restaurant`, `bakery`); `RELEVANCE` accepted for free-text queries (`charity`, `dairy_farm`).",
-        "",
-        "## Detailed Candidate Lists (Top 10 Nearest per Probe)",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## SKU & Field Mask Verification",
+            "- **Field Mask**: `places.id,places.displayName,places.primaryType,places.types,places.location,places.businessStatus,places.internationalPhoneNumber,places.currentOpeningHours.openNow,places.googleMapsUri`",
+            "- **Field Mask Status**: Accepted by Places API (New) without rejection.",
+            "- **Atmosphere Fields**: Zero Atmosphere fields requested (strictly Enterprise SKU).",
+            "- **Rank Preferences**: `DISTANCE` accepted for typed queries (`juice_shop`, `restaurant`, `bakery`); `RELEVANCE` accepted for free-text queries (`charity`, `dairy_farm`).",
+            "",
+            "## Detailed Candidate Lists (Top 10 Nearest per Probe)",
+            "",
+        ]
+    )
 
     for idx, r in enumerate(results, 1):
-        lines.extend([
-            f"### Probe {idx}: {r['buyer_type']} ({r['branch_name']})",
-            f"- **Query**: `{r['query']}`",
-            f"- **Business Status Counts**: {json.dumps(r['status_counts'])}",
-            f"- **Usable Count (Operational + Phone + ≤10km)**: {r['usable_within_10km']}" + (" ⚠️ **Fewer than 3 usable candidates!**" if r['usable_within_10km'] < 3 else ""),
-            "",
-            "| # | Name | Primary Type | Distance (km) | Phone Present | Open Now | Operational | Usable |",
-            "|---|---|---|---|---|---|---|---|",
-        ])
+        lines.extend(
+            [
+                f"### Probe {idx}: {r['buyer_type']} ({r['branch_name']})",
+                f"- **Query**: `{r['query']}`",
+                f"- **Business Status Counts**: {json.dumps(r['status_counts'])}",
+                f"- **Usable Count (Operational + Phone + ≤10km)**: {r['usable_within_10km']}"
+                + (" ⚠️ **Fewer than 3 usable candidates!**" if r["usable_within_10km"] < 3 else ""),
+                "",
+                "| # | Name | Primary Type | Distance (km) | Phone Present | Open Now | Operational | Usable |",
+                "|---|---|---|---|---|---|---|---|",
+            ]
+        )
         for rank, item in enumerate(r["nearest_10"], 1):
             open_display = "Yes" if item["open_now"] is True else ("No" if item["open_now"] is False else "Unknown")
             phone_display = "Yes" if item["phone_present"] else "No"

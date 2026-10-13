@@ -161,6 +161,7 @@ def test_build_step_plans_exceptions(demo_rules):
 
 def _make_item(low: float, high: float) -> ItemAssessment:
     from lastcall_shared.models import BoundingBox, ObservedQuantity
+
     return ItemAssessment(
         item_key="k1",
         name="banana",
@@ -462,7 +463,9 @@ def test_next_action_table_driven(demo_rules):
             "step_index": 1,  # on step "donate" (last step)
             "then_compost": True,
             "attempts": [
-                BatchAttempt(call_id="cd", buyer_id="places:charity", rank=1, buyer_type="charity", step="donate", created_at=now)
+                BatchAttempt(
+                    call_id="cd", buyer_id="places:charity", rank=1, buyer_type="charity", step="donate", created_at=now
+                )
             ],
         }
     )
@@ -515,13 +518,28 @@ def test_next_action_table_driven(demo_rules):
         reason="Nearby",
     )
     scout_with_remaining = scout_bulk.model_copy(
-        update={"buyers": [
-            ScoutCandidate(rank=i, buyer_id=f"places:b{i}", place_id=f"b{i}", name=f"Buyer {i}", buyer_type="juice_shop", phone=f"+92300111111{i}", distance_km=0.5, open_now=True, fit="likely", reason="Nearby")
-            for i in range(1, 7)
-        ]}
+        update={
+            "buyers": [
+                ScoutCandidate(
+                    rank=i,
+                    buyer_id=f"places:b{i}",
+                    place_id=f"b{i}",
+                    name=f"Buyer {i}",
+                    buyer_type="juice_shop",
+                    phone=f"+92300111111{i}",
+                    distance_km=0.5,
+                    open_now=True,
+                    fit="likely",
+                    reason="Nearby",
+                )
+                for i in range(1, 7)
+            ]
+        }
     )
     attempts_5 = [
-        BatchAttempt(call_id=f"c_{i}", buyer_id=f"places:b{i}", rank=i, buyer_type="juice_shop", step="bulk_sale", created_at=now)
+        BatchAttempt(
+            call_id=f"c_{i}", buyer_id=f"places:b{i}", rank=i, buyer_type="juice_shop", step="bulk_sale", created_at=now
+        )
         for i in range(1, 6)
     ]
     statuses_5 = {f"c_{i}": "completed" for i in range(1, 6)}

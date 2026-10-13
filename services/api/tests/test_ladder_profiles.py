@@ -20,7 +20,15 @@ from lastcall_api.ladder.profiles import (
 from lastcall_shared.models import ProduceProfile, ShelfLifeBand, StageProfile
 from lastcall_shared.store import InMemoryStore
 
-FORBIDDEN_CONFIG_KEYS = {"temperature", "top_p", "top_k", "seed", "candidate_count", "presence_penalty", "frequency_penalty"}
+FORBIDDEN_CONFIG_KEYS = {
+    "temperature",
+    "top_p",
+    "top_k",
+    "seed",
+    "candidate_count",
+    "presence_penalty",
+    "frequency_penalty",
+}
 NOW = datetime(2026, 10, 10, 12, 0, 0, tzinfo=timezone.utc)
 
 
@@ -202,9 +210,33 @@ async def test_resolve_profiles_three_unknowns_one_call_and_cached():
 
     out = ProfilesOut(
         profiles=[
-            ProfileOut(input_name="apple", note="Fresh apple", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
-            ProfileOut(input_name="guava", note="Fresh guava", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
-            ProfileOut(input_name="mango", note="Fresh mango", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
+            ProfileOut(
+                input_name="apple",
+                note="Fresh apple",
+                fresh=sp,
+                ripening=sp,
+                overripe=sp,
+                overripe_ok_for_cattle=True,
+                spoiled_ok_for_cattle=False,
+            ),
+            ProfileOut(
+                input_name="guava",
+                note="Fresh guava",
+                fresh=sp,
+                ripening=sp,
+                overripe=sp,
+                overripe_ok_for_cattle=True,
+                spoiled_ok_for_cattle=False,
+            ),
+            ProfileOut(
+                input_name="mango",
+                note="Fresh mango",
+                fresh=sp,
+                ripening=sp,
+                overripe=sp,
+                overripe_ok_for_cattle=True,
+                spoiled_ok_for_cattle=False,
+            ),
         ]
     )
     fake_client = FakeGenAIClient([FakeResponse(parsed=out)])
@@ -239,7 +271,15 @@ async def test_resolve_profiles_missing_answer_gives_fallback_for_that_only():
     # Gemini only returns 'apple', misses 'papaya'
     out = ProfilesOut(
         profiles=[
-            ProfileOut(input_name="apple", note="Fresh apple", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
+            ProfileOut(
+                input_name="apple",
+                note="Fresh apple",
+                fresh=sp,
+                ripening=sp,
+                overripe=sp,
+                overripe_ok_for_cattle=True,
+                spoiled_ok_for_cattle=False,
+            ),
         ]
     )
     fake_client = FakeGenAIClient([FakeResponse(parsed=out)])
@@ -319,7 +359,15 @@ async def test_resolve_profiles_race_condition_reads_back_stored(monkeypatch):
     sp = StageProfile(sellable_for="1_to_3_days", juice_shop=True, restaurant=True, bakery=False, charity=True)
     out = ProfilesOut(
         profiles=[
-            ProfileOut(input_name="banana", note="My new banana", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
+            ProfileOut(
+                input_name="banana",
+                note="My new banana",
+                fresh=sp,
+                ripening=sp,
+                overripe=sp,
+                overripe_ok_for_cattle=True,
+                spoiled_ok_for_cattle=False,
+            ),
         ]
     )
     fake_client = FakeGenAIClient([FakeResponse(parsed=out)])
@@ -364,7 +412,15 @@ async def test_resolve_profiles_save_exception_still_uses_generated(monkeypatch)
     sp = StageProfile(sellable_for="1_to_3_days", juice_shop=True, restaurant=True, bakery=False, charity=True)
     out = ProfilesOut(
         profiles=[
-            ProfileOut(input_name="mango", note="Fresh mango", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
+            ProfileOut(
+                input_name="mango",
+                note="Fresh mango",
+                fresh=sp,
+                ripening=sp,
+                overripe=sp,
+                overripe_ok_for_cattle=True,
+                spoiled_ok_for_cattle=False,
+            ),
         ]
     )
     fake_client = FakeGenAIClient([FakeResponse(parsed=out)])
@@ -390,14 +446,31 @@ async def test_resolve_profiles_save_exception_still_uses_generated(monkeypatch)
 
 # --- Step 6B Consensus & merge_votes Tests ---
 
+
 def test_merge_votes_majority_uses():
     """3 of 5 yes -> yes; 2 of 5 yes -> no."""
     sp_yes = StageProfile(sellable_for="1_to_3_days", juice_shop=True, restaurant=True, bakery=False, charity=True)
     sp_no = StageProfile(sellable_for="1_to_3_days", juice_shop=False, restaurant=False, bakery=False, charity=True)
 
     # 3 answers with juice_shop=True, 2 answers with juice_shop=False
-    ans_yes = ProfileOut(input_name="banana", note="Note", fresh=sp_yes, ripening=sp_yes, overripe=sp_yes, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False)
-    ans_no = ProfileOut(input_name="banana", note="Note", fresh=sp_no, ripening=sp_no, overripe=sp_no, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False)
+    ans_yes = ProfileOut(
+        input_name="banana",
+        note="Note",
+        fresh=sp_yes,
+        ripening=sp_yes,
+        overripe=sp_yes,
+        overripe_ok_for_cattle=True,
+        spoiled_ok_for_cattle=False,
+    )
+    ans_no = ProfileOut(
+        input_name="banana",
+        note="Note",
+        fresh=sp_no,
+        ripening=sp_no,
+        overripe=sp_no,
+        overripe_ok_for_cattle=True,
+        spoiled_ok_for_cattle=False,
+    )
 
     merged, uncertain = merge_votes([ans_yes, ans_yes, ans_yes, ans_no, ans_no])
     assert merged.fresh.juice_shop is True  # 3 > 2.5
@@ -411,9 +484,18 @@ def test_merge_votes_majority_uses():
 
 def test_merge_votes_median_band():
     """Bands [under_6h, 6_to_24h, 6_to_24h, 1_to_3_days, over_3_days] -> 6_to_24h."""
+
     def _make_prof(band: ShelfLifeBand) -> ProfileOut:
         sp = StageProfile(sellable_for=band, juice_shop=True, restaurant=True, bakery=False, charity=True)
-        return ProfileOut(input_name="banana", note="Note", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False)
+        return ProfileOut(
+            input_name="banana",
+            note="Note",
+            fresh=sp,
+            ripening=sp,
+            overripe=sp,
+            overripe_ok_for_cattle=True,
+            spoiled_ok_for_cattle=False,
+        )
 
     answers = [
         _make_prof("under_6h"),
@@ -441,8 +523,24 @@ def test_merge_votes_median_band():
 def test_merge_votes_cattle_rules():
     """Cattle yes only with >=80% of votes (4 of 5 yes; 3 of 5 is no)."""
     sp = StageProfile(sellable_for="1_to_3_days", juice_shop=True, restaurant=True, bakery=False, charity=True)
-    ans_yes = ProfileOut(input_name="guava", note="Note", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=True)
-    ans_no = ProfileOut(input_name="guava", note="Note", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=False, spoiled_ok_for_cattle=False)
+    ans_yes = ProfileOut(
+        input_name="guava",
+        note="Note",
+        fresh=sp,
+        ripening=sp,
+        overripe=sp,
+        overripe_ok_for_cattle=True,
+        spoiled_ok_for_cattle=True,
+    )
+    ans_no = ProfileOut(
+        input_name="guava",
+        note="Note",
+        fresh=sp,
+        ripening=sp,
+        overripe=sp,
+        overripe_ok_for_cattle=False,
+        spoiled_ok_for_cattle=False,
+    )
 
     # 3 of 5 yes -> False
     merged_3, uncertain_3 = merge_votes([ans_yes, ans_yes, ans_yes, ans_no, ans_no])
@@ -461,8 +559,24 @@ def test_merge_votes_uncertain_fields_exact():
     sp2 = StageProfile(sellable_for="1_to_3_days", juice_shop=True, restaurant=True, bakery=False, charity=True)
     # All 5 agree on sellable_for, juice_shop, restaurant, charity, cattle.
     # Exactly bakery splits 3 vs 2.
-    ans_a = ProfileOut(input_name="apple", note="Note", fresh=sp1, ripening=sp1, overripe=sp1, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False)
-    ans_b = ProfileOut(input_name="apple", note="Note", fresh=sp2, ripening=sp2, overripe=sp2, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False)
+    ans_a = ProfileOut(
+        input_name="apple",
+        note="Note",
+        fresh=sp1,
+        ripening=sp1,
+        overripe=sp1,
+        overripe_ok_for_cattle=True,
+        spoiled_ok_for_cattle=False,
+    )
+    ans_b = ProfileOut(
+        input_name="apple",
+        note="Note",
+        fresh=sp2,
+        ripening=sp2,
+        overripe=sp2,
+        overripe_ok_for_cattle=True,
+        spoiled_ok_for_cattle=False,
+    )
 
     merged, uncertain = merge_votes([ans_a, ans_a, ans_a, ans_b, ans_b])
     assert sorted(uncertain) == ["fresh.bakery", "overripe.bakery", "ripening.bakery"]
@@ -475,7 +589,15 @@ async def test_resolve_profiles_concurrent_calls():
     sp = StageProfile(sellable_for="1_to_3_days", juice_shop=True, restaurant=True, bakery=False, charity=True)
     out = ProfilesOut(
         profiles=[
-            ProfileOut(input_name="banana", note="Note", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
+            ProfileOut(
+                input_name="banana",
+                note="Note",
+                fresh=sp,
+                ripening=sp,
+                overripe=sp,
+                overripe_ok_for_cattle=True,
+                spoiled_ok_for_cattle=False,
+            ),
         ]
     )
     fake_client = FakeGenAIClient([FakeResponse(parsed=out)])
@@ -498,9 +620,21 @@ async def test_resolve_profiles_two_votes_fail_merges_three():
     """2 votes fail -> merge of 3 answers succeeds."""
     store = InMemoryStore()
     sp = StageProfile(sellable_for="1_to_3_days", juice_shop=True, restaurant=True, bakery=False, charity=True)
-    resp = FakeResponse(parsed=ProfilesOut(profiles=[
-        ProfileOut(input_name="banana", note="Note", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
-    ]))
+    resp = FakeResponse(
+        parsed=ProfilesOut(
+            profiles=[
+                ProfileOut(
+                    input_name="banana",
+                    note="Note",
+                    fresh=sp,
+                    ripening=sp,
+                    overripe=sp,
+                    overripe_ok_for_cattle=True,
+                    spoiled_ok_for_cattle=False,
+                ),
+            ]
+        )
+    )
     # 2 exceptions, 3 successes
     responses = [
         RuntimeError("Vote 1 timeout"),
@@ -529,9 +663,21 @@ async def test_resolve_profiles_three_votes_fail_gives_fallback():
     """3 votes fail -> 2 answers (< MIN_VOTES) -> fallback profile, nothing saved."""
     store = InMemoryStore()
     sp = StageProfile(sellable_for="1_to_3_days", juice_shop=True, restaurant=True, bakery=False, charity=True)
-    resp = FakeResponse(parsed=ProfilesOut(profiles=[
-        ProfileOut(input_name="banana", note="Note", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
-    ]))
+    resp = FakeResponse(
+        parsed=ProfilesOut(
+            profiles=[
+                ProfileOut(
+                    input_name="banana",
+                    note="Note",
+                    fresh=sp,
+                    ripening=sp,
+                    overripe=sp,
+                    overripe_ok_for_cattle=True,
+                    spoiled_ok_for_cattle=False,
+                ),
+            ]
+        )
+    )
     # 3 exceptions, 2 successes
     responses = [
         RuntimeError("Vote 1 fail"),
@@ -562,14 +708,54 @@ async def test_resolve_profiles_deduplicates_multiple_answers_in_same_vote():
     """B4: Count at most one answer per produce per vote even if one response lists duplicates."""
     store = InMemoryStore()
     sp = StageProfile(sellable_for="1_to_3_days", juice_shop=True, restaurant=True, bakery=False, charity=True)
-    dup_resp = FakeResponse(parsed=ProfilesOut(profiles=[
-        ProfileOut(input_name="banana", note="Banana First", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
-        ProfileOut(input_name="banana", note="Banana Duplicate 1", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
-        ProfileOut(input_name="banana", note="Banana Duplicate 2", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
-    ]))
-    single_resp = FakeResponse(parsed=ProfilesOut(profiles=[
-        ProfileOut(input_name="banana", note="Banana Normal", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
-    ]))
+    dup_resp = FakeResponse(
+        parsed=ProfilesOut(
+            profiles=[
+                ProfileOut(
+                    input_name="banana",
+                    note="Banana First",
+                    fresh=sp,
+                    ripening=sp,
+                    overripe=sp,
+                    overripe_ok_for_cattle=True,
+                    spoiled_ok_for_cattle=False,
+                ),
+                ProfileOut(
+                    input_name="banana",
+                    note="Banana Duplicate 1",
+                    fresh=sp,
+                    ripening=sp,
+                    overripe=sp,
+                    overripe_ok_for_cattle=True,
+                    spoiled_ok_for_cattle=False,
+                ),
+                ProfileOut(
+                    input_name="banana",
+                    note="Banana Duplicate 2",
+                    fresh=sp,
+                    ripening=sp,
+                    overripe=sp,
+                    overripe_ok_for_cattle=True,
+                    spoiled_ok_for_cattle=False,
+                ),
+            ]
+        )
+    )
+    single_resp = FakeResponse(
+        parsed=ProfilesOut(
+            profiles=[
+                ProfileOut(
+                    input_name="banana",
+                    note="Banana Normal",
+                    fresh=sp,
+                    ripening=sp,
+                    overripe=sp,
+                    overripe_ok_for_cattle=True,
+                    spoiled_ok_for_cattle=False,
+                ),
+            ]
+        )
+    )
     responses = [dup_resp, single_resp, single_resp, single_resp, single_resp]
     fake_client = FakeGenAIClient(responses)
     deadline = asyncio.get_event_loop().time() + 10.0
@@ -582,5 +768,3 @@ async def test_resolve_profiles_deduplicates_multiple_answers_in_same_vote():
     )
     assert profiles["banana"].votes == 5
     assert profiles["banana"].source == "gemini"
-
-

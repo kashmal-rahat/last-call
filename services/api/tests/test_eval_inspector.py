@@ -141,37 +141,59 @@ shelf_err.jpg,test,normal,,,banana,center,spoiled,,spoiled,5,1.0,Err
 """
     labels_csv.write_text(csv_content, encoding="utf-8")
 
-    async def inspect_with_error(raw_bytes, *, mart_id, shelf_id, previous=None, now=None, zoom=False, thinking_level=None):
+    async def inspect_with_error(
+        raw_bytes, *, mart_id, shelf_id, previous=None, now=None, zoom=False, thinking_level=None
+    ):
         if b"shelf_err" in raw_bytes or shelf_id == "eval_shelf":
             # For shelf_err raise exception
             pass
         # Let's inspect by checking photo
         # In run_evaluation, inspect_fn gets raw_bytes. Let's make shelf_err raise RuntimeError
-        if len(raw_bytes) == 1234: # marker or by counter
+        if len(raw_bytes) == 1234:  # marker or by counter
             pass
 
     call_count = 0
+
     async def inspect_mock(raw_bytes, *, mart_id, shelf_id, previous=None, now=None, zoom=False, thinking_level=None):
         nonlocal call_count
         call_count += 1
         if call_count % 2 == 0:
             raise RuntimeError("Gemini connection timed out")
         meta = InspectorMeta(
-            model="fake-flash", prompt_version="1.0", thinking_level="low",
-            latency_ms=1000, calls=1, input_tokens=1000, output_tokens=200,
+            model="fake-flash",
+            prompt_version="1.0",
+            thinking_level="low",
+            latency_ms=1000,
+            calls=1,
+            input_tokens=1000,
+            output_tokens=200,
         )
         return FreshnessResult(
-            schema_version="3.0.0", mart_id=mart_id, shelf_id=shelf_id,
-            inspection_id="insp_ok", photo_uri="upload:123", taken_at=datetime.now(timezone.utc),
+            schema_version="3.0.0",
+            mart_id=mart_id,
+            shelf_id=shelf_id,
+            inspection_id="insp_ok",
+            photo_uri="upload:123",
+            taken_at=datetime.now(timezone.utc),
             photo_status="ok",
             items=[
                 ItemAssessment(
-                    item_key="item_0", name="apple", position=BoundingBox(ymin=0.1, xmin=0.1, ymax=0.3, xmax=0.3),
-                    grid="top-left", in_mixed_crate=False, issues=[], evidence="Good",
-                    stage="fresh", stage_level="mid", worst_stage="fresh", score=88.0,
+                    item_key="item_0",
+                    name="apple",
+                    position=BoundingBox(ymin=0.1, xmin=0.1, ymax=0.3, xmax=0.3),
+                    grid="top-left",
+                    in_mixed_crate=False,
+                    issues=[],
+                    evidence="Good",
+                    stage="fresh",
+                    stage_level="mid",
+                    worst_stage="fresh",
+                    score=88.0,
                     observed=ObservedQuantity(method="count", min=10, max=10),
                     quantity=QuantityEstimate(unit="kg", low=2.0, high=2.0),
-                    confidence=0.9, confidence_level="high", needs_staff_check=False,
+                    confidence=0.9,
+                    confidence_level="high",
+                    needs_staff_check=False,
                 )
             ],
             inspector=meta,
@@ -194,4 +216,3 @@ shelf_err.jpg,test,normal,,,banana,center,spoiled,,spoiled,5,1.0,Err
     # Crucially, errored photo is NOT counted as a critical miss
     assert len(m["critical_misses"]) == 0
     assert m["strict_acc"] == 1.0
-

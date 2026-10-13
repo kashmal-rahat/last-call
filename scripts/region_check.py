@@ -134,16 +134,30 @@ def generate_report(flash_res: dict[str, Any], live_res: dict[str, Any]) -> str:
 
     # Flash
     txt = flash_res.get("text", {})
-    md.append(f"| `{FLASH_MODEL}` | Text Turn (Urdu) | `{LOCATION}` | {txt.get('status')} | {txt.get('latency_ms', '-')} ms | {txt.get('output', txt.get('error', ''))[:70]} |")
+    md.append(
+        f"| `{FLASH_MODEL}` | Text Turn (Urdu) | `{LOCATION}` | {txt.get('status')} | {txt.get('latency_ms', '-')} ms | {txt.get('output', txt.get('error', ''))[:70]} |"
+    )
     img = flash_res.get("image", {})
-    md.append(f"| `{FLASH_MODEL}` | Image Vision Turn | `{LOCATION}` | {img.get('status')} | {img.get('latency_ms', '-')} ms | Output: \"{img.get('output', img.get('error', ''))}\" |")
+    md.append(
+        f'| `{FLASH_MODEL}` | Image Vision Turn | `{LOCATION}` | {img.get("status")} | {img.get("latency_ms", "-")} ms | Output: "{img.get("output", img.get("error", ""))}" |'
+    )
     st = flash_res.get("structured", {})
-    md.append(f"| `{FLASH_MODEL}` | Structured Output | `{LOCATION}` | {st.get('status')} | {st.get('latency_ms', '-')} ms | Valid JSON schema parsed |")
+    md.append(
+        f"| `{FLASH_MODEL}` | Structured Output | `{LOCATION}` | {st.get('status')} | {st.get('latency_ms', '-')} ms | Valid JSON schema parsed |"
+    )
 
     # Live
     st_live = live_res.get("status")
-    lat_live = f"Connect: {live_res.get('connect_latency_ms')}ms, Total: {live_res.get('total_latency_ms')}ms" if st_live == "PASS" else "-"
-    det_live = f"Native Audio received: {live_res.get('audio_bytes')} bytes" if st_live == "PASS" else live_res.get("error", "")[:70]
+    lat_live = (
+        f"Connect: {live_res.get('connect_latency_ms')}ms, Total: {live_res.get('total_latency_ms')}ms"
+        if st_live == "PASS"
+        else "-"
+    )
+    det_live = (
+        f"Native Audio received: {live_res.get('audio_bytes')} bytes"
+        if st_live == "PASS"
+        else live_res.get("error", "")[:70]
+    )
     md.append(f"| `{LIVE_MODEL}` | Bidirectional Native Audio | `{LOCATION}` | {st_live} | {lat_live} | {det_live} |")
 
     md.append("")

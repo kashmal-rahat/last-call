@@ -11,6 +11,7 @@ Image.MAX_IMAGE_PIXELS = 40_000_000
 
 class ImageError(ValueError):
     """Raised when an image cannot be opened, decoded, or read."""
+
     pass
 
 

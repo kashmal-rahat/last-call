@@ -273,9 +273,7 @@ def rank(
         past_deals = hist.deals if hist else 0
         has_deal_flag = 0 if past_deals > 0 else 1
 
-        last_deal_ts = (
-            -hist.last_deal_at.timestamp() if (hist and hist.last_deal_at) else 0.0
-        )
+        last_deal_ts = -hist.last_deal_at.timestamp() if (hist and hist.last_deal_at) else 0.0
 
         is_closed_flag = 1 if c.open_now is False else 0
 

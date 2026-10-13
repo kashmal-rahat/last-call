@@ -85,10 +85,7 @@ def test_capping_14_groups_keeps_12_largest_by_box_area():
     small_2 = _make_item(name="small_2", box_2d=[10, 10, 20, 20])
 
     # 12 large groups lower down (area = 50 * 50 = 2500)
-    large_items = [
-        _make_item(name=f"large_{i}", box_2d=[100 + i * 50, 100, 150 + i * 50, 150])
-        for i in range(12)
-    ]
+    large_items = [_make_item(name=f"large_{i}", box_2d=[100 + i * 50, 100, 150 + i * 50, 150]) for i in range(12)]
 
     all_14 = [small_1, small_2] + large_items
     out = InspectorOutput(photo_status="ok", photo_note="", photo_issues=[], items=all_14)
@@ -361,5 +358,3 @@ def test_sale_quantity_rounded_half_up_to_tenth(
     assert len(drafts) == 1
     assert drafts[0].quantity.low == expected_low
     assert drafts[0].quantity.high == expected_high
-
-

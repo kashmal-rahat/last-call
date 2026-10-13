@@ -83,19 +83,53 @@ def test_compare_profiles_identical_and_differing():
 async def test_check_profiles_flow_with_fake_client(tmp_path):
     sp = StageProfile(sellable_for="1_to_3_days", juice_shop=True, restaurant=True, bakery=False, charity=True)
     items1 = [
-        ProfileOut(input_name="banana", note="banana", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
-        ProfileOut(input_name="spinach", note="spinach", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=False, spoiled_ok_for_cattle=False),
+        ProfileOut(
+            input_name="banana",
+            note="banana",
+            fresh=sp,
+            ripening=sp,
+            overripe=sp,
+            overripe_ok_for_cattle=True,
+            spoiled_ok_for_cattle=False,
+        ),
+        ProfileOut(
+            input_name="spinach",
+            note="spinach",
+            fresh=sp,
+            ripening=sp,
+            overripe=sp,
+            overripe_ok_for_cattle=False,
+            spoiled_ok_for_cattle=False,
+        ),
     ]
     sp_differ = StageProfile(sellable_for="under_6h", juice_shop=False, restaurant=False, bakery=False, charity=True)
     items2 = [
-        ProfileOut(input_name="banana", note="banana", fresh=sp, ripening=sp, overripe=sp, overripe_ok_for_cattle=True, spoiled_ok_for_cattle=False),
-        ProfileOut(input_name="spinach", note="spinach", fresh=sp, ripening=sp, overripe=sp_differ, overripe_ok_for_cattle=False, spoiled_ok_for_cattle=False),
+        ProfileOut(
+            input_name="banana",
+            note="banana",
+            fresh=sp,
+            ripening=sp,
+            overripe=sp,
+            overripe_ok_for_cattle=True,
+            spoiled_ok_for_cattle=False,
+        ),
+        ProfileOut(
+            input_name="spinach",
+            note="spinach",
+            fresh=sp,
+            ripening=sp,
+            overripe=sp_differ,
+            overripe_ok_for_cattle=False,
+            spoiled_ok_for_cattle=False,
+        ),
     ]
 
-    client = FakeClient([
-        FakeResponse(parsed=ProfilesOut(profiles=items1)),
-        FakeResponse(parsed=ProfilesOut(profiles=items2)),
-    ])
+    client = FakeClient(
+        [
+            FakeResponse(parsed=ProfilesOut(profiles=items1)),
+            FakeResponse(parsed=ProfilesOut(profiles=items2)),
+        ]
+    )
 
     out_md = tmp_path / "profiles.md"
     results = await check_profiles_flow(

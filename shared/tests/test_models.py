@@ -144,7 +144,6 @@ def test_observed_quantity_validation():
         ObservedQuantity(method="fill_level", min=20, max=110)
 
 
-
 def test_bounding_box_validation():
     # Valid
     box = BoundingBox(ymin=0.1, xmin=0.2, ymax=0.8, xmax=0.9)
@@ -730,4 +729,3 @@ def test_loader_unknown_mart_raises_key_error():
 
     with pytest.raises(KeyError, match="Unknown mart"):
         load_mart_rules("non_existent_mart_999")
-

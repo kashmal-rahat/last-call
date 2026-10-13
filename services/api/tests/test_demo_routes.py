@@ -60,9 +60,19 @@ def _make_item(item_key: str, produce: str, qty: QuantityEstimate | None) -> Ite
     )
 
 
-async def seed_demo_data(store: InMemoryStore, on_hold: bool = False, step: str = "bulk_sale", needs_price: bool = False, no_quantity: bool = False):
+async def seed_demo_data(
+    store: InMemoryStore,
+    on_hold: bool = False,
+    step: str = "bulk_sale",
+    needs_price: bool = False,
+    no_quantity: bool = False,
+):
     now = datetime.now(PKT)
-    qty = QuantityEstimate(unit="dozen", low=0.0, high=0.0) if no_quantity else QuantityEstimate(unit="dozen", low=20.0, high=30.0)
+    qty = (
+        QuantityEstimate(unit="dozen", low=0.0, high=0.0)
+        if no_quantity
+        else QuantityEstimate(unit="dozen", low=20.0, high=30.0)
+    )
     inspection = FreshnessResult(
         inspection_id="insp_1",
         mart_id="demo_mart",
@@ -156,7 +166,11 @@ def test_auth_endpoints():
     # Missing / wrong auth on /demo/calls
     r1 = client.post("/demo/calls", json={"inspection_id": "insp_1", "item_key": "item_banana_1"})
     assert r1.status_code == 401
-    r2 = client.post("/demo/calls", headers={"X-Demo-Access-Code": "bad"}, json={"inspection_id": "insp_1", "item_key": "item_banana_1"})
+    r2 = client.post(
+        "/demo/calls",
+        headers={"X-Demo-Access-Code": "bad"},
+        json={"inspection_id": "insp_1", "item_key": "item_banana_1"},
+    )
     assert r2.status_code == 401
 
     # Missing / wrong auth on /demo/batches/{id}
@@ -178,10 +192,16 @@ async def test_demo_calls_errors_parametrized(setup_api_test):
     r_bad_id = client.post("/demo/calls", headers=headers, json={"inspection_id": "INVALID!!", "item_key": "item_1"})
     assert r_bad_id.status_code == 400
 
-    r_bad_qty = client.post("/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_1", "quantity": -5})
+    r_bad_qty = client.post(
+        "/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_1", "quantity": -5}
+    )
     assert r_bad_qty.status_code == 400
 
-    r_bad_buyer_id = client.post("/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_1", "buyer_id": "invalid_buyer"})
+    r_bad_buyer_id = client.post(
+        "/demo/calls",
+        headers=headers,
+        json={"inspection_id": "insp_1", "item_key": "item_1", "buyer_id": "invalid_buyer"},
+    )
     assert r_bad_buyer_id.status_code == 400
 
     # 404 Missing inspection / decision
@@ -190,7 +210,11 @@ async def test_demo_calls_errors_parametrized(setup_api_test):
 
     # 409 On hold waiting for staff check
     await seed_demo_data(store, on_hold=True)
-    r_hold = client.post("/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_banana_1", "staff_checked": False})
+    r_hold = client.post(
+        "/demo/calls",
+        headers=headers,
+        json={"inspection_id": "insp_1", "item_key": "item_banana_1", "staff_checked": False},
+    )
     assert r_hold.status_code == 409
     assert "Waiting for staff check" in r_hold.json()["detail"]
 
@@ -232,12 +256,18 @@ async def test_daily_cap_and_refusal_does_not_increment_cap(monkeypatch, setup_a
     headers = {"X-Demo-Access-Code": CODE}
 
     # 1. A refusal (409) does NOT count against daily cap
-    r_refused = client.post("/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_banana_1", "staff_checked": False})
+    r_refused = client.post(
+        "/demo/calls",
+        headers=headers,
+        json={"inspection_id": "insp_1", "item_key": "item_banana_1", "staff_checked": False},
+    )
     assert r_refused.status_code == 409
 
     # 2. Re-seed with on_hold=False, so first call succeeds
     await seed_demo_data(store, on_hold=False)
-    r_success = client.post("/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_banana_1"})
+    r_success = client.post(
+        "/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_banana_1"}
+    )
     assert r_success.status_code == 200
 
     # 3. Next call hits daily cap 429
@@ -299,14 +329,17 @@ async def test_existing_batch_ignores_new_quantity(setup_api_test):
     data1 = r1.json()
 
     # Finish call 1 as declined
-    await store.finish_call(data1["call_id"], CallResult(
-        mart_id="demo_mart",
-        batch_id="insp_1__item_banana_1__johar_town",
-        call_id=data1["call_id"],
-        status="completed",
-        outcome="declined",
-        flags=[],
-    ))
+    await store.finish_call(
+        data1["call_id"],
+        CallResult(
+            mart_id="demo_mart",
+            batch_id="insp_1__item_banana_1__johar_town",
+            call_id=data1["call_id"],
+            status="completed",
+            outcome="declined",
+            flags=[],
+        ),
+    )
 
     # Second call with new quantity=50.0 should be ignored; batch retains 20.0
     r2 = client.post(
@@ -335,14 +368,17 @@ async def test_second_call_offers_rank_2(setup_api_test):
     assert data1["buyer"]["rank"] == 1
 
     # Finish call 1
-    await store.finish_call(data1["call_id"], CallResult(
-        mart_id="demo_mart",
-        batch_id="insp_1__item_banana_1__johar_town",
-        call_id=data1["call_id"],
-        status="completed",
-        outcome="declined",
-        flags=[],
-    ))
+    await store.finish_call(
+        data1["call_id"],
+        CallResult(
+            mart_id="demo_mart",
+            batch_id="insp_1__item_banana_1__johar_town",
+            call_id=data1["call_id"],
+            status="completed",
+            outcome="declined",
+            flags=[],
+        ),
+    )
 
     # Attempting to call buyer 1 again in the same step yields 409
     r_dup = client.post(
@@ -397,25 +433,31 @@ async def test_next_step_then_demo_scout_charity(setup_api_test):
     # 1. Make call 1 and complete it
     r1 = client.post("/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_banana_1"})
     batch_id = r1.json()["batch_id"]
-    await store.finish_call(r1.json()["call_id"], CallResult(
-        mart_id="demo_mart",
-        batch_id=batch_id,
-        call_id=r1.json()["call_id"],
-        status="completed",
-        outcome="declined",
-        flags=[],
-    ))
+    await store.finish_call(
+        r1.json()["call_id"],
+        CallResult(
+            mart_id="demo_mart",
+            batch_id=batch_id,
+            call_id=r1.json()["call_id"],
+            status="completed",
+            outcome="declined",
+            flags=[],
+        ),
+    )
 
     # 2. Make call 2 and complete it
     r2 = client.post("/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_banana_1"})
-    await store.finish_call(r2.json()["call_id"], CallResult(
-        mart_id="demo_mart",
-        batch_id=batch_id,
-        call_id=r2.json()["call_id"],
-        status="completed",
-        outcome="declined",
-        flags=[],
-    ))
+    await store.finish_call(
+        r2.json()["call_id"],
+        CallResult(
+            mart_id="demo_mart",
+            batch_id=batch_id,
+            call_id=r2.json()["call_id"],
+            status="completed",
+            outcome="declined",
+            flags=[],
+        ),
+    )
 
     # 3. Next action should be next_step
     # Advance batch step
@@ -474,4 +516,3 @@ def test_static_and_demo_cache_control():
     r_js = client.get("/static/js/main.js")
     assert r_js.status_code == 200
     assert r_js.headers.get("Cache-Control") == "no-cache"
-

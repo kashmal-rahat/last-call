@@ -140,7 +140,9 @@ def build_router(
         except Exception as exc:
             reason = str(exc) if isinstance(exc, TwilioError) else type(exc).__name__
             logger.error("phone_demo_dial_failed", extra={"call_id": body.call_id, "error": reason})
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Could not ring the phone, please try again")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY, detail="Could not ring the phone, please try again"
+            )
 
         await store.add_flag(body.call_id, "phone_demo")
         logger.info("phone_demo_dialed", extra={"call_id": body.call_id})

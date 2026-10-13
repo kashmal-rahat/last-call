@@ -44,7 +44,9 @@ def photo_caption(call: CallRecord) -> str:
     return f"{call.brief.item.capitalize()} · {call.brief.condition} · {call.brief.mart.name}"
 
 
-def deal_confirmation_text(call: CallRecord, *, quantity: float, price_per_unit: int, pickup: datetime, now: datetime) -> str:
+def deal_confirmation_text(
+    call: CallRecord, *, quantity: float, price_per_unit: int, pickup: datetime, now: datetime
+) -> str:
     """The WhatsApp confirmation a buyer gets once the deal is agreed."""
     brief = call.brief
     mart_tz = brief.pickup_deadline.tzinfo  # the mart's local time

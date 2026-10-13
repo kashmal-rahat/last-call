@@ -140,10 +140,12 @@ async def test_inspect_photo_valid_single_pass():
 async def test_inspect_photo_retry_on_invalid_json_then_success():
     valid_out = _make_valid_output()
     # First response invalid text, second valid
-    fake_client = FakeGenAIClient([
-        FakeResponse(text="not valid json"),
-        FakeResponse(parsed=valid_out),
-    ])
+    fake_client = FakeGenAIClient(
+        [
+            FakeResponse(text="not valid json"),
+            FakeResponse(parsed=valid_out),
+        ]
+    )
 
     img_bytes = _make_dummy_image()
     now = datetime(2026, 10, 9, 12, 0, 0, tzinfo=timezone.utc)
@@ -161,11 +163,13 @@ async def test_inspect_photo_retry_on_invalid_json_then_success():
 
 @pytest.mark.asyncio
 async def test_inspect_photo_timeout_raises_inspector_error():
-    fake_client = FakeGenAIClient([
-        asyncio.TimeoutError("timeout 1"),
-        asyncio.TimeoutError("timeout 2"),
-        asyncio.TimeoutError("timeout 3"),
-    ])
+    fake_client = FakeGenAIClient(
+        [
+            asyncio.TimeoutError("timeout 1"),
+            asyncio.TimeoutError("timeout 2"),
+            asyncio.TimeoutError("timeout 3"),
+        ]
+    )
 
     img_bytes = _make_dummy_image()
     now = datetime(2026, 10, 9, 12, 0, 0, tzinfo=timezone.utc)
@@ -479,6 +483,3 @@ async def test_no_hedge_when_less_than_3s_left(monkeypatch):
     assert invocations == 1
     assert attempts == 1
     assert was_hedged is False
-
-
-
