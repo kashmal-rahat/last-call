@@ -1,5 +1,6 @@
 """Tests for inspector engine and D30 guard policy (Step 4)."""
 
+import ast
 import asyncio
 import io
 from datetime import datetime, timezone
@@ -91,22 +92,32 @@ def test_d30_guard_forbidden_config_keys():
 
 
 def test_d30_guard_source_code_scan():
-    """Scans all python files in lastcall_api/inspector to ensure forbidden keys are not present outside definition."""
+    """No inspector module uses a forbidden generation setting outside the FORBIDDEN_CONFIG_KEYS definition.
+
+    Reads the code structure (ast), so formatting can't hide or fake a violation.
+    """
     inspector_dir = Path(__file__).parent.parent / "lastcall_api" / "inspector"
     py_files = list(inspector_dir.glob("*.py"))
     assert len(py_files) >= 5
 
+    def is_forbidden_definition(node: ast.AST) -> bool:
+        targets = node.targets if isinstance(node, ast.Assign) else [getattr(node, "target", None)]
+        return any(isinstance(t, ast.Name) and t.id == "FORBIDDEN_CONFIG_KEYS" for t in targets)
+
     violations = []
     for f in py_files:
-        content = f.read_text(encoding="utf-8")
-        for line_no, line in enumerate(content.splitlines(), start=1):
-            # Exclude the explicit definition line: FORBIDDEN_CONFIG_KEYS = { ... }
-            if "FORBIDDEN_CONFIG_KEYS" in line:
+        tree = ast.parse(f.read_text(encoding="utf-8"))
+        skip = {id(n) for d in ast.walk(tree) if is_forbidden_definition(d) for n in ast.walk(d)}
+        for node in ast.walk(tree):
+            if id(node) in skip:
                 continue
-            for key in FORBIDDEN_CONFIG_KEYS:
-                # Check for word boundary match of forbidden key
-                if f'"{key}"' in line or f"'{key}'" in line or f"{key}=" in line or f"{key} :" in line:
-                    violations.append(f"{f.name}:{line_no} contains forbidden key '{key}': {line.strip()}")
+            used = None
+            if isinstance(node, ast.Constant) and node.value in FORBIDDEN_CONFIG_KEYS:
+                used = node.value
+            elif isinstance(node, ast.keyword) and node.arg in FORBIDDEN_CONFIG_KEYS:
+                used = node.arg
+            if used:
+                violations.append(f"{f.name}:{getattr(node, 'lineno', '?')} uses forbidden key '{used}'")
 
     assert not violations, "D30 guard violation detected:\n" + "\n".join(violations)
 
