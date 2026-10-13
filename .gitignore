@@ -23,5 +23,10 @@ data/shelf_photos/*.HEIC
 data/shelf_photos/*.heic
 data/shelf_photos/*.png
 data/inspector_runs/
-data/probe/
-data/sim_runs/
+data/probe/*
+data/sim_runs/*
+
+# Kept on purpose despite the rules above: evidence cited in plans/module-2/results
+# (negotiation simulation runs, and the voice samples used to choose the agent's voice).
+!data/sim_runs/*.jsonl
+!data/probe/*.wav
