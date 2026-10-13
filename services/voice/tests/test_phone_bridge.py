@@ -11,7 +11,6 @@ import pytest
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
-from lastcall_shared.config import get_settings
 from lastcall_shared.scenarios.loader import build_call
 from lastcall_shared.session_tokens import mint
 from lastcall_shared.store import InMemoryStore
@@ -123,17 +122,14 @@ async def test_adapter_ignores_lines_for_an_invalid_token():
 def voice_app(monkeypatch):
     monkeypatch.setenv("APP_SIGNING_KEY", KEY)
     monkeypatch.setenv("ALLOWED_ORIGINS", "https://demo.example.com")
-    get_settings.cache_clear()
     store = InMemoryStore()
     app.state.store = store
     app.state.semaphore = asyncio.Semaphore(4)
     yield store
-    get_settings.cache_clear()
 
 
 def test_stream_is_closed_when_switched_off(voice_app, monkeypatch):
     monkeypatch.delenv("PHONE_DEMO_ENABLED", raising=False)
-    get_settings.cache_clear()
     with pytest.raises(WebSocketDisconnect) as exc:
         with TestClient(app).websocket_connect("/phone/stream"):
             pass
@@ -142,7 +138,6 @@ def test_stream_is_closed_when_switched_off(voice_app, monkeypatch):
 
 def test_phone_call_runs_through_the_unchanged_handler(voice_app, monkeypatch):
     monkeypatch.setenv("PHONE_DEMO_ENABLED", "true")
-    get_settings.cache_clear()
     store = voice_app
     call, batch = build_call("easy_yes", now=NOW)
     asyncio.run(store.create_call(call, batch))
@@ -195,7 +190,6 @@ def test_phone_call_runs_through_the_unchanged_handler(voice_app, monkeypatch):
 def test_browser_route_still_checks_origin(voice_app, monkeypatch):
     """The phone demo turns the origin check off only for /phone/stream."""
     monkeypatch.setenv("PHONE_DEMO_ENABLED", "true")
-    get_settings.cache_clear()
     with pytest.raises(WebSocketDisconnect) as exc:
         with TestClient(app).websocket_connect("/ws/call", headers={"origin": "https://attacker.example.com"}):
             pass

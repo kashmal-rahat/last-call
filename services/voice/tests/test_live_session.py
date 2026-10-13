@@ -8,7 +8,6 @@ import pytest
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from lastcall_shared.config import get_settings
 from lastcall_shared.scenarios.loader import build_call
 from lastcall_shared.session_tokens import mint
 from lastcall_shared.store import InMemoryStore
@@ -22,7 +21,6 @@ KEY = "test-secret-key-12345-at-least-32-chars-long"
 @pytest.fixture(autouse=True)
 def setup_test_app(monkeypatch):
     monkeypatch.setenv("APP_SIGNING_KEY", KEY)
-    get_settings.cache_clear()
     store = InMemoryStore()
     app.state.store = store
     app.state.signing_key = KEY

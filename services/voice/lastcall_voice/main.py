@@ -4,7 +4,6 @@
 - `/phone/stream`: the phone demo's Twilio Media Stream (Module 9, D61), off unless switched on.
 """
 
-import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -17,7 +16,6 @@ from lastcall_voice.phone.bridge import handle_twilio_stream
 
 SERVICE_NAME = "voice"
 VERSION = "0.1.0"
-COMMIT = os.getenv("GIT_COMMIT", "dev")
 
 logger = setup_structured_logging(service_name=SERVICE_NAME)
 
@@ -36,7 +34,7 @@ app = FastAPI(title="Last Call Voice Agent", version=VERSION, lifespan=lifespan)
 @app.get("/health")
 @app.get("/healthz")
 async def healthz():
-    return {"service": SERVICE_NAME, "version": VERSION, "commit": COMMIT, "status": "healthy"}
+    return {"service": SERVICE_NAME, "version": VERSION, "commit": get_settings().GIT_COMMIT, "status": "healthy"}
 
 
 @app.websocket("/ws/call")
@@ -52,4 +50,4 @@ async def phone_stream_endpoint(websocket: WebSocket):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8080")))
+    uvicorn.run(app, host="0.0.0.0", port=get_settings().PORT)

@@ -25,7 +25,7 @@ from typing import Any, Awaitable, Callable, Mapping
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
 
 from lastcall_shared.config import get_settings
-from lastcall_shared.firestore_store import FirestoreStore
+from lastcall_shared.firestore_store import default_store
 from lastcall_shared.session_tokens import verify as verify_session_token
 from lastcall_shared.store import CallStore
 from lastcall_shared.twilio import TwilioClient, TwilioError, load_phone_demo_config
@@ -261,7 +261,7 @@ async def handle_twilio_stream(websocket: WebSocket) -> None:
     if not settings.PHONE_DEMO_ENABLED:
         await websocket.close(code=4404)
         return
-    store: CallStore = getattr(websocket.app.state, "store", None) or FirestoreStore()
+    store: CallStore = getattr(websocket.app.state, "store", None) or default_store()
     adapter = TwilioStreamAdapter(
         websocket,
         store=store,

@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime, timezone
+from functools import lru_cache
 from typing import Any
 
 from google.api_core.exceptions import AlreadyExists, NotFound
@@ -600,3 +601,9 @@ class FirestoreStore:
             col_ref = self._col(col_name)
             async for doc in col_ref.stream():
                 await doc.reference.delete()
+
+
+@lru_cache
+def default_store() -> FirestoreStore:
+    """One Firestore client per process, reused by every request and call."""
+    return FirestoreStore()

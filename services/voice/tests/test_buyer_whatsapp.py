@@ -6,7 +6,6 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from lastcall_shared.config import get_settings
 from lastcall_shared.item_photos import verify_item_photo_signature
 from lastcall_shared.models import BoundingBox, FreshnessResult, ItemAssessment, ObservedQuantity, QuantityEstimate
 from lastcall_shared.scenarios.loader import build_call
@@ -29,9 +28,7 @@ class FakeToolContext:
 def settings_env(monkeypatch):
     monkeypatch.setenv("APP_SIGNING_KEY", KEY)
     monkeypatch.setenv("API_PUBLIC_URL", "https://api.example.com")
-    get_settings.cache_clear()
     yield
-    get_settings.cache_clear()
 
 
 async def _call_with_context(*, photo_stored: bool):

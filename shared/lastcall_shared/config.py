@@ -36,7 +36,8 @@ class Settings(BaseSettings):
     AGENT_GENDER: Literal["male", "female"] = "male"
     MAX_CALL_SECONDS: int = 300
     MAX_SESSIONS_PER_INSTANCE: int = 4
-    ALLOWED_ORIGINS: str = "*"
+    ALLOWED_ORIGINS: str = ""  # comma-separated browser origins for /ws/call; empty or "*" = any (local dev)
+    CITY_STYLE: Literal["karachi", "lahore", "islamabad"] = "karachi"  # when a call record has none
 
     # Service & Security
     APP_SIGNING_KEY: SecretStr
@@ -71,6 +72,13 @@ class Settings(BaseSettings):
     # Service Defaults
     PORT: int = 8080
     ENVIRONMENT: str = "development"
+    GIT_COMMIT: str = "dev"  # set at image build time; shown by /health
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        """The browser origins allowed to open a call; empty means any."""
+        origins = [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
+        return [] if "*" in origins else origins
 
 
 @lru_cache

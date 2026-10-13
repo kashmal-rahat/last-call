@@ -11,7 +11,6 @@ from fastapi.testclient import TestClient
 
 from lastcall_api.main import _IP_REQUEST_HISTORY, app
 from lastcall_api.phone_demo import PhoneDemoConfig
-from lastcall_shared.config import get_settings
 from lastcall_shared.scenarios.loader import build_call
 from lastcall_shared.session_tokens import mint
 from lastcall_shared.store import InMemoryStore
@@ -37,7 +36,6 @@ def setup(monkeypatch):
     monkeypatch.setenv("VOICE_WS_URL", "wss://voice.example.com/ws/call")
     monkeypatch.setenv("PHONE_DEMO_CONFIG", json.dumps(CONFIG))
     monkeypatch.setenv("PHONE_DEMO_ENABLED", "true")
-    get_settings.cache_clear()
     _IP_REQUEST_HISTORY.clear()
     store = InMemoryStore()
     app.state.store = store
@@ -49,7 +47,6 @@ def setup(monkeypatch):
     app.state.phone_dialer = fake_dialer
     yield store, dialed
     del app.state.phone_dialer
-    get_settings.cache_clear()
 
 
 def _new_call(store: InMemoryStore):
@@ -71,7 +68,6 @@ def _dial(client, call_id, token, code=CODE):
 def test_everything_is_404_when_switched_off(monkeypatch, setup):
     store, dialed = setup
     monkeypatch.setenv("PHONE_DEMO_ENABLED", "false")
-    get_settings.cache_clear()
     call, token = _new_call(store)
     client = TestClient(app)
     assert client.get("/demo/phone/config").status_code == 404
@@ -126,11 +122,9 @@ def test_dial_reports_config_and_twilio_failures(monkeypatch, setup):
     client = TestClient(app)
 
     monkeypatch.setenv("PHONE_DEMO_CONFIG", json.dumps({**CONFIG, "to_number": "0300 1234567"}))
-    get_settings.cache_clear()
     assert _dial(client, call.call_id, token).status_code == 503
 
     monkeypatch.setenv("PHONE_DEMO_CONFIG", json.dumps(CONFIG))
-    get_settings.cache_clear()
 
     async def failing_dialer(cfg, twiml):
         raise RuntimeError("Twilio returned HTTP 400")
@@ -164,7 +158,6 @@ def test_config_errors_never_echo_numbers_or_secrets(monkeypatch, setup, caplog)
     call, token = _new_call(store)
     bad = {**CONFIG, "to_number": "923001234567", "api_key_secret": "very-secret-value", "extra": 1}
     monkeypatch.setenv("PHONE_DEMO_CONFIG", json.dumps(bad))
-    get_settings.cache_clear()
     resp = _dial(TestClient(app), call.call_id, token)
     assert resp.status_code == 503
     errors = " ".join(str(getattr(r, "error", "")) for r in caplog.records)

@@ -16,7 +16,6 @@ from lastcall_api.inspector.inspector import (
 from lastcall_api.inspector.prompt import PROMPT_VERSION
 from lastcall_api.inspector.schema import DetectedItem, InspectorOutput, ObservedOut
 from lastcall_api.main import _IP_REQUEST_HISTORY, app
-from lastcall_shared.config import get_settings
 from lastcall_shared.models import FreshnessResult
 from lastcall_shared.store import InMemoryStore
 
@@ -31,7 +30,6 @@ def setup_api_test(monkeypatch):
     monkeypatch.setenv("DEMO_ACCESS_CODE", CODE)
     monkeypatch.setenv("DEMO_DAILY_INSPECT_CAP", "100")
     monkeypatch.setenv("IP_RATE_LIMIT_PER_HOUR", "20")
-    get_settings.cache_clear()
     _IP_REQUEST_HISTORY.clear()
     store = InMemoryStore()
     app.state.store = store

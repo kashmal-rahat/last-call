@@ -4,7 +4,6 @@ import asyncio
 import hmac
 import inspect
 import json
-import os
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -43,7 +42,7 @@ from lastcall_api.scout.scout import (
 )
 from lastcall_shared import ids
 from lastcall_shared.clock import PKT
-from lastcall_shared.firestore_store import FirestoreStore
+from lastcall_shared.firestore_store import default_store
 from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.marts.loader import load_mart_rules
 from lastcall_shared.models import BatchAttempt, BatchRecord, MartRules
@@ -52,7 +51,6 @@ from lastcall_shared.store import CallStore
 
 SERVICE_NAME = "api"
 VERSION = "0.1.0"
-COMMIT = os.getenv("GIT_COMMIT", "dev")
 
 logger = setup_structured_logging(service_name=SERVICE_NAME)
 
@@ -105,7 +103,7 @@ async def lifespan(app: FastAPI):
     if len(key_val.strip()) < 32:
         raise RuntimeError("APP_SIGNING_KEY must be configured with at least 32 characters")
 
-    demo_code_present = bool(os.getenv("DEMO_ACCESS_CODE", "").strip())
+    demo_code_present = bool((settings.DEMO_ACCESS_CODE or "").strip())
     logger.info(
         "API service starting up",
         extra={
@@ -137,13 +135,8 @@ if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
-@lru_cache
-def _default_store() -> CallStore:
-    return FirestoreStore()
-
-
 def _get_store() -> CallStore:
-    return getattr(app.state, "store", None) or _default_store()
+    return getattr(app.state, "store", None) or default_store()
 
 
 @lru_cache
@@ -156,7 +149,7 @@ def _get_photo_store() -> PhotoStore | None:
 
 
 def _verify_access_code(provided_code: str | None) -> bool:
-    expected_code = os.getenv("DEMO_ACCESS_CODE", "")
+    expected_code = get_settings().DEMO_ACCESS_CODE or ""
     if not expected_code or not provided_code:
         return False
     return hmac.compare_digest(provided_code.strip(), expected_code.strip())
@@ -168,7 +161,7 @@ async def healthz():
     return {
         "service": SERVICE_NAME,
         "version": VERSION,
-        "commit": COMMIT,
+        "commit": get_settings().GIT_COMMIT,
         "status": "healthy",
     }
 
@@ -280,7 +273,10 @@ async def demo_create_call(
 
     # 3. IP bucket "call"
     settings = get_settings()
-    ip_limit = int(os.getenv("IP_RATE_LIMIT_PER_HOUR", str(settings.IP_RATE_LIMIT_PER_HOUR)))
+    if not settings.VOICE_WS_URL:  # checked before anything is created or counted
+        logger.error("voice_ws_url_not_configured")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Voice service is not configured")
+    ip_limit = settings.IP_RATE_LIMIT_PER_HOUR
     await _check_ip_limit(
         request,
         bucket="call",
@@ -396,7 +392,7 @@ async def demo_create_call(
 
     # 8. Daily session cap check
     date_str = now_pkt.strftime("%Y-%m-%d")
-    daily_cap = int(os.getenv("DEMO_DAILY_SESSION_CAP", "50"))
+    daily_cap = settings.DEMO_DAILY_SESSION_CAP
     allowed = await store.incr_daily_sessions(date_str, daily_cap)
     if not allowed:
         logger.warning("daily_demo_cap_exceeded", extra={"date": date_str, "cap": daily_cap})
@@ -430,7 +426,7 @@ async def demo_create_call(
 
     signing_key = settings.APP_SIGNING_KEY.get_secret_value() if settings.APP_SIGNING_KEY else ""
     token = mint(call_id=call_rec.call_id, nonce=call_rec.session_nonce, key=signing_key, ttl=120, now=now_pkt)
-    voice_ws_url = os.getenv("VOICE_WS_URL", "wss://lastcall-voice-dev.run.app/ws/call")
+    voice_ws_url = settings.VOICE_WS_URL
 
     outside = False
     if rules.calling_hours:
@@ -579,7 +575,7 @@ async def demo_inspect(
 
     # 3. IP limit
     settings = get_settings()
-    ip_limit = int(os.getenv("IP_RATE_LIMIT_PER_HOUR", str(settings.IP_RATE_LIMIT_PER_HOUR)))
+    ip_limit = settings.IP_RATE_LIMIT_PER_HOUR
     await _check_ip_limit(
         request,
         bucket="inspect",
@@ -606,7 +602,7 @@ async def demo_inspect(
     # 6. Daily cap check
     now_pkt = datetime.now(PKT)
     date_str = now_pkt.strftime("%Y-%m-%d")
-    daily_cap = int(os.getenv("DEMO_DAILY_INSPECT_CAP", str(settings.DEMO_DAILY_INSPECT_CAP)))
+    daily_cap = settings.DEMO_DAILY_INSPECT_CAP
     store = _get_store()
     allowed = await store.incr_daily_sessions(f"inspect-{date_str}", daily_cap)
     if not allowed:
@@ -710,7 +706,7 @@ async def demo_decide(
 
     # 3. IP limit bucket 'decide' and daily cap 'decide-{date}'
     settings = get_settings()
-    ip_limit = int(os.getenv("DECIDE_IP_LIMIT_PER_HOUR", str(settings.DECIDE_IP_LIMIT_PER_HOUR)))
+    ip_limit = settings.DECIDE_IP_LIMIT_PER_HOUR
     await _check_ip_limit(
         request,
         bucket="decide",
@@ -720,7 +716,7 @@ async def demo_decide(
 
     now_pkt = datetime.now(PKT)
     date_str = now_pkt.strftime("%Y-%m-%d")
-    daily_cap = int(os.getenv("DEMO_DAILY_DECIDE_CAP", str(settings.DEMO_DAILY_DECIDE_CAP)))
+    daily_cap = settings.DEMO_DAILY_DECIDE_CAP
     store = _get_store()
     allowed = await store.incr_daily_sessions(f"decide-{date_str}", daily_cap)
     if not allowed:
@@ -834,7 +830,7 @@ async def demo_scout(
 
     # 3. IP limit bucket 'scout'
     settings = get_settings()
-    ip_limit = int(os.getenv("SCOUT_IP_LIMIT_PER_HOUR", str(settings.SCOUT_IP_LIMIT_PER_HOUR)))
+    ip_limit = settings.SCOUT_IP_LIMIT_PER_HOUR
     await _check_ip_limit(
         request,
         bucket="scout",
@@ -905,7 +901,7 @@ async def demo_scout(
     now_utc = datetime.now(timezone.utc)
     pacific_tz = ZoneInfo("America/Los_Angeles")
     pacific_date = now_utc.astimezone(pacific_tz).strftime("%Y-%m-%d")
-    daily_cap = int(os.getenv("DEMO_DAILY_PLACES_CAP", str(settings.DEMO_DAILY_PLACES_CAP)))
+    daily_cap = settings.DEMO_DAILY_PLACES_CAP
 
     async def reserve_places(amount: int) -> bool:
         counter_key = f"places-{pacific_date}"
@@ -961,5 +957,5 @@ app.include_router(
 if __name__ == "__main__":
     import uvicorn
 
-    port = int(os.getenv("PORT", "8080"))
+    port = get_settings().PORT
     uvicorn.run(app, host="0.0.0.0", port=port)

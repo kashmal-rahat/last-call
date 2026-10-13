@@ -15,9 +15,9 @@ Manages the real-time audio bridge between the browser WebSocket and Gemini Live
 import asyncio
 import json
 import logging
-import os
 import time
 from datetime import datetime, timedelta
+from functools import lru_cache
 from typing import Any, Callable
 
 from google.adk import Runner
@@ -30,7 +30,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
 
 from lastcall_shared.clock import PKT
 from lastcall_shared.config import get_settings
-from lastcall_shared.firestore_store import FirestoreStore
+from lastcall_shared.firestore_store import default_store
 from lastcall_shared.genai_client import get_genai_client
 from lastcall_shared.models import CallResult, TranscriptEntry
 from lastcall_shared.session_tokens import verify as verify_session_token
@@ -87,13 +87,10 @@ def build_input_transcription_config(
         return types.AudioTranscriptionConfig()
 
 
-# Concurrency semaphore for the instance
-_MAX_SESSIONS_DEFAULT = int(os.getenv("MAX_SESSIONS_PER_INSTANCE", "4"))
-_INSTANCE_SEMAPHORE = asyncio.Semaphore(_MAX_SESSIONS_DEFAULT)
-
-
+@lru_cache
 def get_instance_semaphore() -> asyncio.Semaphore:
-    return _INSTANCE_SEMAPHORE
+    """Caps concurrent live calls on this instance (Cloud Run concurrency matches it)."""
+    return asyncio.Semaphore(get_settings().MAX_SESSIONS_PER_INSTANCE)
 
 
 async def run_call_summary(call_id: str, store: CallStore) -> None:
@@ -146,7 +143,7 @@ async def handle_live_call_websocket(
     stream), which send no Origin header; the single-use call token still authenticates them.
     """
     settings = get_settings()
-    actual_store: CallStore = store or getattr(websocket.app.state, "store", None) or FirestoreStore()
+    actual_store: CallStore = store or getattr(websocket.app.state, "store", None) or default_store()
     app_key = signing_key or (settings.APP_SIGNING_KEY.get_secret_value() if settings.APP_SIGNING_KEY else "")
     sem = semaphore or getattr(websocket.app.state, "semaphore", None) or get_instance_semaphore()
     now_fn = clock or (lambda: datetime.now(PKT))
@@ -159,15 +156,14 @@ async def handle_live_call_websocket(
     total_text_in_tokens = 0
     total_text_out_tokens = 0
 
-    max_call_seconds = int(os.getenv("MAX_CALL_SECONDS", "300"))
-    agent_voice = os.getenv("AGENT_VOICE", "Puck")
-    agent_gender = os.getenv("AGENT_GENDER", "male")
+    max_call_seconds = settings.MAX_CALL_SECONDS
+    agent_voice = settings.AGENT_VOICE
+    agent_gender = settings.AGENT_GENDER
 
     # 1. Origin verification
     origin = websocket.headers.get("origin")
-    allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "")
-    if check_origin and allowed_origins_raw:
-        allowed = [o.strip() for o in allowed_origins_raw.split(",") if o.strip()]
+    allowed = settings.allowed_origins
+    if check_origin and allowed:
         if origin not in allowed:
             logger.warning("ws_rejected_origin", extra={"origin": origin})
             await websocket.close(code=4403)
@@ -260,7 +256,7 @@ async def handle_live_call_websocket(
             state={"call_id": call_id, "mart_id": call.mart_id},
         )
 
-        city_style = call.city_style or os.getenv("CITY_STYLE", "karachi")
+        city_style = call.city_style or settings.CITY_STYLE
         agent = build_negotiator(
             model=settings.GEMINI_LIVE_MODEL,
             view=call.brief.agent_view(),

@@ -65,7 +65,6 @@ def setup_api_test(monkeypatch):
     monkeypatch.setenv("DEMO_ACCESS_CODE", CODE)
     monkeypatch.setenv("DEMO_DAILY_INSPECT_CAP", "100")
     monkeypatch.setenv("IP_RATE_LIMIT_PER_HOUR", "20")
-    get_settings.cache_clear()
     _IP_REQUEST_HISTORY.clear()
     store = InMemoryStore()
     app.state.store = store
