@@ -208,6 +208,11 @@ resource "google_storage_bucket" "shelf_photos" {
   public_access_prevention    = "enforced"
   force_destroy               = true
 
+  # Deleted means gone: no 7-day soft-delete copy, so "kept one day" is true.
+  soft_delete_policy {
+    retention_duration_seconds = 0
+  }
+
   lifecycle_rule {
     condition {
       age = 1
