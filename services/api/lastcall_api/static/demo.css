@@ -2114,3 +2114,30 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
 .phone-mode[hidden] { display: none; }
 .phone-mode strong { color: var(--indigo-dark); font-weight: 600; }
 .phone-mode input { width: 16px; height: 16px; accent-color: var(--indigo); flex: none; }
+
+/* WhatsApp messages the agent sends the buyer during a call (D62) */
+.msg-whatsapp .msg-speaker { display: inline-flex; align-items: center; gap: 6px; color: #4ADE80; }
+.msg-whatsapp .msg-speaker svg { width: 13px; height: 13px; }
+.wa-bubble {
+  max-width: 300px;
+  padding: 6px;
+  border-radius: 14px;
+  border-top-left-radius: 4px;
+  background: #0F2A20;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+}
+.wa-photo {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #0B1220;
+}
+.wa-text {
+  padding: 6px 8px 4px;
+  font-size: 13px;
+  line-height: 20px;
+  color: #D1FAE5;
+  white-space: pre-line;
+}

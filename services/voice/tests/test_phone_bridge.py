@@ -202,3 +202,44 @@ def test_browser_route_still_checks_origin(voice_app, monkeypatch):
         with TestClient(app).websocket_connect("/ws/call", headers={"origin": "https://attacker.example.com"}):
             pass
     assert exc.value.code == 4403
+
+
+async def test_adapter_shows_and_sends_whatsapp_messages():
+    """D62: on a phone call, the agent's WhatsApp events reach the page and the SIM."""
+    store = InMemoryStore()
+    call, batch = build_call("easy_yes", now=NOW)
+    await store.create_call(call, batch)
+    token = mint(call_id=call.call_id, nonce=call.session_nonce, key=KEY)
+    sent: list[tuple[str, str | None]] = []
+
+    async def fake_whatsapp(body: str, *, media_url: str | None = None) -> None:
+        sent.append((body, media_url))
+
+    ws = FakeTwilioSocket([_start(token)])
+    adapter = TwilioStreamAdapter(ws, store=store, signing_key=KEY, send_whatsapp=fake_whatsapp)
+    await adapter.receive_text()
+    photo = {"type": "whatsapp", "whatsapp": "photo", "text": "Banana · ripe", "media_url": "https://api.example.com/p.jpg"}
+    await adapter.send_json(photo)
+    await adapter.send_json({"type": "whatsapp", "whatsapp": "confirmation", "text": "Deal confirmed", "media_url": None})
+    await adapter.close()
+
+    assert sent == [("Banana · ripe", "https://api.example.com/p.jpg"), ("Deal confirmed", None)]
+    lines = await store.get_live_lines(call.call_id)
+    assert lines[0] == {"i": 0, "kind": "whatsapp", "whatsapp": "photo", "text": "Banana · ripe", "media_url": "https://api.example.com/p.jpg"}
+    assert lines[1]["whatsapp"] == "confirmation"
+
+
+async def test_adapter_still_shows_whatsapp_when_sending_fails():
+    store = InMemoryStore()
+    call, batch = build_call("easy_yes", now=NOW)
+    await store.create_call(call, batch)
+    token = mint(call_id=call.call_id, nonce=call.session_nonce, key=KEY)
+
+    async def failing_whatsapp(body: str, *, media_url: str | None = None) -> None:
+        raise RuntimeError("Twilio Messages.json returned HTTP 400")
+
+    adapter = TwilioStreamAdapter(FakeTwilioSocket([_start(token)]), store=store, signing_key=KEY, send_whatsapp=failing_whatsapp)
+    await adapter.receive_text()
+    await adapter.send_json({"type": "whatsapp", "whatsapp": "confirmation", "text": "Deal confirmed", "media_url": None})
+    await adapter.close()
+    assert (await store.get_live_lines(call.call_id))[0]["text"] == "Deal confirmed"

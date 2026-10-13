@@ -17,6 +17,7 @@ locals {
     "eventarc.googleapis.com",
     "cloudbilling.googleapis.com",
     "places.googleapis.com",
+    "storage.googleapis.com",
   ]
 
   runtime_roles = [
@@ -171,9 +172,9 @@ resource "google_secret_manager_secret_iam_member" "api_sa_demo_access_code" {
   member    = "serviceAccount:${google_service_account.api_sa.email}"
 }
 
-# Phone demo (Module 9, D61): Twilio account, API key and the two numbers as one JSON value.
+# Phone demo (Module 9, D61/D62): Twilio account, API key and numbers as one JSON value.
 # Container only: the value is added with `gcloud secrets versions add`, so Twilio
-# credentials never enter Terraform state. Only api-sa reads it; voice never sees it.
+# credentials never enter Terraform state. api dials the call; voice sends WhatsApp.
 resource "google_secret_manager_secret" "phone_demo_config" {
   project   = var.project_id
   secret_id = "phone-demo-config"
@@ -188,6 +189,46 @@ resource "google_secret_manager_secret_iam_member" "api_sa_phone_demo_config" {
   secret_id = google_secret_manager_secret.phone_demo_config.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.api_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "voice_sa_phone_demo_config" {
+  project   = var.project_id
+  secret_id = google_secret_manager_secret.phone_demo_config.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.voice_sa.email}"
+}
+
+# Item photos (D62): inspected shelf photos, kept one day so the agent can send the buyer a
+# crop of the item. Private; served only as signed, time-limited crops through the api.
+resource "google_storage_bucket" "shelf_photos" {
+  project                     = var.project_id
+  name                        = "${var.project_id}-shelf-photos"
+  location                    = var.region
+  uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
+  force_destroy               = true
+
+  lifecycle_rule {
+    condition {
+      age = 1
+    }
+    action {
+      type = "Delete"
+    }
+  }
+  depends_on = [google_project_service.services]
+}
+
+resource "google_storage_bucket_iam_member" "api_sa_shelf_photos_writer" {
+  bucket = google_storage_bucket.shelf_photos.name
+  role   = "roles/storage.objectCreator"
+  member = "serviceAccount:${google_service_account.api_sa.email}"
+}
+
+resource "google_storage_bucket_iam_member" "api_sa_shelf_photos_reader" {
+  bucket = google_storage_bucket.shelf_photos.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.api_sa.email}"
 }
 
 # 6. Firestore Database & TTL
@@ -337,6 +378,10 @@ resource "google_cloud_run_v2_service" "api" {
         value = "20"
       }
       env {
+        name  = "SHELF_PHOTO_BUCKET"
+        value = google_storage_bucket.shelf_photos.name
+      }
+      env {
         name  = "PHONE_DEMO_ENABLED"
         value = tostring(var.phone_demo_enabled)
       }
@@ -387,6 +432,8 @@ resource "google_cloud_run_v2_service" "api" {
     google_secret_manager_secret_iam_member.api_sa_secret_access,
     google_secret_manager_secret_iam_member.api_sa_demo_access_code,
     google_secret_manager_secret_iam_member.api_sa_phone_demo_config,
+    google_storage_bucket_iam_member.api_sa_shelf_photos_writer,
+    google_storage_bucket_iam_member.api_sa_shelf_photos_reader,
   ]
 }
 
@@ -471,8 +518,24 @@ resource "google_cloud_run_v2_service" "voice" {
         value = "male"
       }
       env {
+        name  = "API_PUBLIC_URL"
+        value = "https://${var.api_public_url}"
+      }
+      env {
         name  = "PHONE_DEMO_ENABLED"
         value = tostring(var.phone_demo_enabled)
+      }
+      dynamic "env" {
+        for_each = var.phone_demo_enabled ? [google_secret_manager_secret.phone_demo_config.secret_id] : []
+        content {
+          name = "PHONE_DEMO_CONFIG"
+          value_source {
+            secret_key_ref {
+              secret  = env.value
+              version = "latest"
+            }
+          }
+        }
       }
       env {
         name = "APP_SIGNING_KEY"
@@ -497,6 +560,7 @@ resource "google_cloud_run_v2_service" "voice" {
   depends_on = [
     google_project_service.services,
     google_secret_manager_secret_iam_member.voice_sa_secret_access,
+    google_secret_manager_secret_iam_member.voice_sa_phone_demo_config,
   ]
 }
 

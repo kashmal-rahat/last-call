@@ -9,6 +9,8 @@ handler runs the negotiation:
     Twilio `media`  -> 16 kHz PCM in        agent audio (24 kHz PCM) -> Twilio `media`
     Twilio `stop`   -> disconnect           `interrupted` -> Twilio `clear`
                                             `transcript`  -> live line on the call doc
+                                            `whatsapp`    -> live line + a real WhatsApp
+                                                             message to the SIM (D62)
 
 Privacy: never logs audio, transcript text or phone numbers.
 """
@@ -17,7 +19,7 @@ import asyncio
 import base64
 import json
 import logging
-from typing import Any, Mapping
+from typing import Any, Awaitable, Callable, Mapping
 
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
 
@@ -25,6 +27,7 @@ from lastcall_shared.config import get_settings
 from lastcall_shared.firestore_store import FirestoreStore
 from lastcall_shared.session_tokens import verify as verify_session_token
 from lastcall_shared.store import CallStore
+from lastcall_shared.twilio import TwilioClient, TwilioError, load_phone_demo_config
 from lastcall_voice.live_session import handle_live_call_websocket
 from lastcall_voice.phone.audio import InboundConverter, OutboundConverter
 
@@ -32,16 +35,27 @@ logger = logging.getLogger("lastcall_voice.phone")
 
 GOODBYE_WAIT_S = 5.0  # Twilio drops queued audio on close; let the goodbye finish playing
 LINE_DRAIN_S = 3.0
+WHATSAPP_DRAIN_S = 10.0
 _END_MARK = "end"
+
+WhatsAppSender = Callable[..., Awaitable[None]]  # (body, *, media_url) -> None
 
 
 class TwilioStreamAdapter:
     """A Twilio Media Stream presented as a `CallSocket`."""
 
-    def __init__(self, ws: WebSocket, *, store: CallStore, signing_key: str) -> None:
+    def __init__(
+        self,
+        ws: WebSocket,
+        *,
+        store: CallStore,
+        signing_key: str,
+        send_whatsapp: WhatsAppSender | None = None,
+    ) -> None:
         self._ws = ws
         self._store = store
         self._signing_key = signing_key
+        self._send_whatsapp = send_whatsapp
         self._inbound = InboundConverter()
         self._outbound = OutboundConverter()
         self._stream_sid: str | None = None
@@ -51,6 +65,7 @@ class TwilioStreamAdapter:
         self._next_line = 0
         self._lines: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
         self._line_writer: asyncio.Task | None = None
+        self._whatsapp_tasks: set[asyncio.Task] = set()
 
     # --- CallSocket ----------------------------------------------------------------
 
@@ -105,7 +120,9 @@ class TwilioStreamAdapter:
         if kind == "interrupted" and self._stream_sid:
             await self._send({"event": "clear"})  # the presenter talked over the agent
         elif kind == "transcript" and self._call_id:
-            self._queue_line(str(data.get("speaker")), str(data.get("text", "")))
+            self._queue_line({"speaker": str(data.get("speaker")), "text": str(data.get("text", ""))})
+        elif kind == "whatsapp" and self._call_id:
+            self._on_whatsapp(data)
         # "busy" and anything else: nothing a phone caller can be shown.
 
     async def close(self, code: int = 1000) -> None:
@@ -114,6 +131,7 @@ class TwilioStreamAdapter:
         self._closed = True
         await self._wait_for_goodbye()
         await self._drain_lines()
+        await self._drain_whatsapp()
         try:
             if self._ws.client_state == WebSocketState.CONNECTED:
                 await self._ws.close(code=code)
@@ -162,9 +180,9 @@ class TwilioStreamAdapter:
 
     # --- Live transcript lines -----------------------------------------------------
 
-    def _queue_line(self, speaker: str, text: str) -> None:
+    def _queue_line(self, fields: dict[str, Any]) -> None:
         """One background writer keeps lines in order without holding up the audio."""
-        self._lines.put_nowait({"i": self._next_line, "speaker": speaker, "text": text})
+        self._lines.put_nowait({"i": self._next_line, **fields})
         self._next_line += 1
         if self._line_writer is None:
             self._line_writer = asyncio.create_task(self._write_lines())
@@ -176,6 +194,28 @@ class TwilioStreamAdapter:
             except Exception as exc:
                 logger.warning("phone_live_line_write_failed", extra={"call_id": self._call_id, "error": str(exc)})
 
+    # --- WhatsApp (D62) --------------------------------------------------------------
+
+    def _on_whatsapp(self, event: dict[str, Any]) -> None:
+        """Shows the message on the page and, when configured, sends it to the SIM on WhatsApp."""
+        kind, text, media_url = event.get("whatsapp"), str(event.get("text", "")), event.get("media_url")
+        self._queue_line({"kind": "whatsapp", "whatsapp": kind, "text": text, "media_url": media_url})
+        if self._send_whatsapp is not None:
+            task = asyncio.create_task(self._deliver_whatsapp(kind, text, media_url))
+            self._whatsapp_tasks.add(task)
+            task.add_done_callback(self._whatsapp_tasks.discard)
+
+    async def _deliver_whatsapp(self, kind: Any, text: str, media_url: str | None) -> None:
+        try:
+            await self._send_whatsapp(text, media_url=media_url)
+            logger.info("phone_whatsapp_sent", extra={"call_id": self._call_id, "whatsapp": kind})
+        except Exception as exc:
+            logger.warning("phone_whatsapp_failed", extra={"call_id": self._call_id, "whatsapp": kind, "error": str(exc)})
+
+    async def _drain_whatsapp(self) -> None:
+        if self._whatsapp_tasks:
+            await asyncio.wait(set(self._whatsapp_tasks), timeout=WHATSAPP_DRAIN_S)
+
     async def _drain_lines(self) -> None:
         if self._line_writer is None:
             return
@@ -184,6 +224,16 @@ class TwilioStreamAdapter:
             await asyncio.wait_for(self._line_writer, timeout=LINE_DRAIN_S)
         except Exception:
             self._line_writer.cancel()
+
+
+def _whatsapp_sender(settings: Any) -> WhatsAppSender | None:
+    """Twilio WhatsApp to the presenter's SIM, or None (the page still shows the messages)."""
+    try:
+        client = TwilioClient(load_phone_demo_config(settings))
+    except TwilioError as exc:
+        logger.warning("phone_whatsapp_unavailable", extra={"error": str(exc)})
+        return None
+    return client.send_whatsapp if client.whatsapp_enabled else None
 
 
 async def handle_twilio_stream(websocket: WebSocket) -> None:
@@ -197,6 +247,7 @@ async def handle_twilio_stream(websocket: WebSocket) -> None:
         websocket,
         store=store,
         signing_key=settings.APP_SIGNING_KEY.get_secret_value(),
+        send_whatsapp=_whatsapp_sender(settings),
     )
     # Twilio sends no Origin header; the single-use call token is the check.
     await handle_live_call_websocket(adapter, store=store, check_origin=False)

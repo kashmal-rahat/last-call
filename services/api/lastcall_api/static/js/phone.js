@@ -12,6 +12,7 @@ import {
   setStatus,
   appendMessage,
   appendNotice,
+  appendWhatsApp,
   startCallTimer,
   stopCallTimer,
   triggerWaveformAnimation,
@@ -96,6 +97,10 @@ async function followPhoneCall(callId, batchId, code) {
       for (const line of d.lines || []) {
         if (shown.has(line.i)) continue;
         shown.add(line.i);
+        if (line.kind === 'whatsapp') {
+          appendWhatsApp(line);
+          continue;
+        }
         appendMessage(line.speaker, line.text);
         if (line.speaker === 'agent') triggerWaveformAnimation();
       }

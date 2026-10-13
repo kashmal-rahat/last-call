@@ -60,6 +60,9 @@ export function icon(name) {
     case 'check':
       appendPath('M20 6 9 17l-5-5');
       break;
+    case 'message':
+      appendPath('M7.9 20A9 9 0 1 0 4 16.1L2 22Z');
+      break;
     case 'leaf':
       appendPath('M11 20A7 7 0 0 1 4 13c0-4 3-7 7-7 4 0 9 2 9 7 0 4-3 7-9 7Z');
       appendPath('M11 6c0 6 2 9 9 11');

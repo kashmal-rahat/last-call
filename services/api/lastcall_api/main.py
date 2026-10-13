@@ -34,6 +34,12 @@ from lastcall_api.orchestration.handoff import (
     initial_quantity,
 )
 from lastcall_api.orchestration.loop import next_action
+from lastcall_api.item_photos import (
+    PhotoStore,
+    build_router as build_item_photo_router,
+    default_photo_store,
+    save_shelf_photo,
+)
 from lastcall_shared.firestore_store import FirestoreStore
 from lastcall_shared.logging_utils import setup_structured_logging
 from lastcall_shared.marts.loader import load_mart_rules
@@ -135,6 +141,15 @@ def _default_store() -> CallStore:
 
 def _get_store() -> CallStore:
     return getattr(app.state, "store", None) or _default_store()
+
+
+@lru_cache
+def _default_photo_store() -> PhotoStore | None:
+    return default_photo_store()
+
+
+def _get_photo_store() -> PhotoStore | None:
+    return getattr(app.state, "photo_store", None) or _default_photo_store()
 
 
 def _verify_access_code(provided_code: str | None) -> bool:
@@ -630,7 +645,9 @@ async def demo_inspect(
             detail="Inspection failed, please try again",
         )
 
-    # 9. Save and return result
+    # 9. Keep the shelf photo for item photos (D62, best effort), then save and return the result
+    if await save_shelf_photo(_get_photo_store(), result.inspection_id, contents):
+        result = result.model_copy(update={"photo_stored": True})
     await store.save_inspection(result)
     return result.model_dump(mode="json")
 
@@ -919,6 +936,9 @@ async def demo_scout(
     # 8. Return public view (run_scout already saved to store)
     return scout_result.public_view()
 
+
+# Item photos (D62): signed crops the agent sends to buyers.
+app.include_router(build_item_photo_router(get_store=_get_store, get_photo_store=_get_photo_store))
 
 # Phone demo (Module 9): separate router; every endpoint is 404 unless PHONE_DEMO_ENABLED=true.
 from lastcall_api.phone_demo import build_router as build_phone_router, dial_twilio

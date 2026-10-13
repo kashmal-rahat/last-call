@@ -1,7 +1,7 @@
 """In-process call context registry for tracking active call state."""
 
 from dataclasses import dataclass
-from typing import Callable, Literal
+from typing import Any, Awaitable, Callable, Literal
 from pydantic import AwareDatetime
 from lastcall_shared.models import NegotiationState
 from lastcall_shared.store import CallStore
@@ -24,6 +24,9 @@ class CallContext:
     flags: list[str] = None
     clock: Callable[[], AwareDatetime] | None = None
     negotiation: NegotiationState | None = None
+    # Sends an event to whoever plays the buyer (D62): the browser page, or the phone
+    # bridge, which forwards WhatsApp messages. None in text mode and the simulator.
+    notify: Callable[[dict[str, Any]], Awaitable[None]] | None = None
 
     def __post_init__(self):
         if self.flags is None:

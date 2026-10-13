@@ -50,10 +50,15 @@ class Settings(BaseSettings):
     IP_RATE_LIMIT_PER_HOUR: int = 20
     VOICE_WS_URL: str | None = None
 
+    # Item photos (D62): the shelf photo is kept for a day so the agent can send the buyer
+    # a crop of the item. Unset bucket = no photos (the agent says so honestly).
+    SHELF_PHOTO_BUCKET: str | None = None
+    API_PUBLIC_URL: str | None = None  # https://..., base for signed photo links
+
     # Phone demo (Module 9, D61): Twilio rings the presenter's SIM for the demo video.
     # Off by default; Terraform's `phone_demo_enabled` sets both values.
     PHONE_DEMO_ENABLED: bool = False
-    PHONE_DEMO_CONFIG: SecretStr | None = None  # JSON, see lastcall_api.phone_demo.PhoneDemoConfig
+    PHONE_DEMO_CONFIG: SecretStr | None = None  # JSON, see lastcall_shared.twilio.PhoneDemoConfig
 
     @field_validator("APP_SIGNING_KEY")
     @classmethod

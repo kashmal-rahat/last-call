@@ -64,6 +64,40 @@ export function appendNotice(text) {
   dom.transcript.scrollTop = dom.transcript.scrollHeight;
 }
 
+// A WhatsApp message the agent sent the buyer during the call (D62): an item photo or the deal confirmation
+const WHATSAPP_LABELS = { photo: 'WhatsApp to buyer · photo', confirmation: 'WhatsApp to buyer · confirmation' };
+
+export function appendWhatsApp(event) {
+  const msg = document.createElement('div');
+  msg.className = 'msg msg-agent msg-whatsapp';
+
+  const label = document.createElement('div');
+  label.className = 'msg-speaker';
+  label.appendChild(icon('message'));
+  label.append(WHATSAPP_LABELS[event.whatsapp] || 'WhatsApp to buyer');
+  msg.appendChild(label);
+
+  const bubble = document.createElement('div');
+  bubble.className = 'wa-bubble';
+  if (event.media_url && /^https?:\/\//.test(event.media_url)) {
+    const img = document.createElement('img');
+    img.className = 'wa-photo';
+    img.alt = event.text || 'Photo of the produce';
+    img.addEventListener('load', () => { dom.transcript.scrollTop = dom.transcript.scrollHeight; });
+    img.addEventListener('error', () => img.remove());
+    img.src = event.media_url;
+    bubble.appendChild(img);
+  }
+  const text = document.createElement('div');
+  text.className = 'wa-text';
+  text.textContent = event.text || '';
+  bubble.appendChild(text);
+  msg.appendChild(bubble);
+
+  dom.transcript.appendChild(msg);
+  dom.transcript.scrollTop = dom.transcript.scrollHeight;
+}
+
 export function renderCallerAvatar(name) {
   if (dom.callerAvatar) dom.callerAvatar.textContent = initials(name);
 }
@@ -275,6 +309,8 @@ export function connectWebSocket(wsUrl, token) {
             setStatus('Live Call', 'live');
           }
           appendMessage(data.speaker, data.text);
+        } else if (data.type === 'whatsapp') {
+          appendWhatsApp(data);
         } else if (data.type === 'interrupted') {
           state.playbackNode.port.postMessage({ type: 'clear' });
           appendNotice('Interrupted');

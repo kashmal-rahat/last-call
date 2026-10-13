@@ -441,6 +441,11 @@
         }
       ],
       "default": null
+    },
+    "photo_stored": {
+      "default": false,
+      "title": "Photo Stored",
+      "type": "boolean"
     }
   },
   "required": [

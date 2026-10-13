@@ -39,6 +39,32 @@ Built directly by Claude at the user's request on 2026-10-13 (the user said "imp
 - **A new service account:** `api-sa` reads the secret; `voice` needs no new permission.
 - **Scheduled calling, calling hours, calling real buyers:** production design, described in the deck.
 
+## WhatsApp: item photo and deal confirmation (D62)
+**What happens in a call:**
+- **The buyer asks to see the produce:** the agent calls `send_photo`. It finds the batch's inspection and item, and checks the shelf photo was kept (`FreshnessResult.photo_stored`). It signs a 1-hour link to `/demo/item-photos/{inspection}/{item}.jpg`, which the api serves as a crop of just that item. If no photo was kept, the tool returns `ok=false` and the agent says so honestly.
+- **A deal is confirmed:** `confirm_deal` also sends the buyer a WhatsApp confirmation (goods, price and total, pickup time in mart time, payment, address).
+- **How it reaches the buyer:** both tools emit one `whatsapp` event through `CallContext.notify`.
+  - **Browser call:** the page shows a "WhatsApp to buyer" message, so judges see it.
+  - **Phone demo:** the bridge saves a live line for the page **and** sends a real WhatsApp message to the SIM through Twilio (`TwilioClient.send_whatsapp`, shared with the dialler).
+- **Outbox:** both are recorded in the outbox with status `sent_in_call`. The browser's view of the photo and the WhatsApp delivery use the same signed link.
+
+| Part | Files |
+|---|---|
+| shared | `item_photos.py` (signed links), `twilio.py` (`PhoneDemoConfig`, `TwilioClient`: calls and WhatsApp), `Settings.SHELF_PHOTO_BUCKET` / `API_PUBLIC_URL`, `FreshnessResult.photo_stored` |
+| api | `item_photos.py` (`PhotoStore` on GCS or in memory, `save_shelf_photo`, `crop_item` reusing the Inspector's `crop_group`, the signed photo endpoint). `main.py`: saves the photo after each inspection (best effort) and mounts the router |
+| voice | `negotiator/buyer_messages.py` (event, signed link, confirmation text), `tools.py` (`send_photo`, `confirm_deal`), `call_context.notify`, `live_session.py` passes `notify`, `phone/bridge.py` forwards to WhatsApp, one prompt line for `ok=false` |
+| page | `call.js` `appendWhatsApp` (browser), `phone.js` (phone lines), `demo.css`, a `message` icon |
+| Terraform | bucket `<project>-shelf-photos` (private, uniform access, public access blocked, 1-day delete), `api-sa` object create and read, `voice-sa` read on `phone-demo-config`, `SHELF_PHOTO_BUCKET` on api, `API_PUBLIC_URL` on voice, `PHONE_DEMO_CONFIG` on voice while the phone demo is on |
+
+**WhatsApp setup for the phone demo (once):**
+1. Twilio console → Messaging → Try it out → **Send a WhatsApp message**. Note the sandbox number (`+14155238886`) and your join code.
+2. From your phone's WhatsApp, send `join <code>` to the sandbox number. The sandbox session lasts 3 days, and free-form messages need your message within the last 24 h, so **send any message to the sandbox shortly before recording**.
+3. Add `"whatsapp_from": "+14155238886"` to the JSON and add it as a new version:
+   ```bash
+   gcloud secrets versions add phone-demo-config --data-file="$HOME/phone-demo-config.json" --project=kayrox-last-call
+   ```
+   Then delete the file. Without `whatsapp_from`, the page still shows the messages and only the real WhatsApp send is skipped.
+
 ## Switching on and off: Terraform
 The secret value already exists (version 1+, created with `gcloud`). Once, bring the existing secret into Terraform state:
 ```bash

@@ -246,13 +246,18 @@ async def handle_live_call_websocket(
             await websocket.close(code=4423)
             return
 
-        # Register CallContext
+        # Register CallContext; tools reach the buyer's side through `notify` (D62)
+        async def notify_buyer(event: dict[str, Any]) -> None:
+            if websocket.client_state == WebSocketState.CONNECTED:
+                await websocket.send_json(event)
+
         ctx = CallContext(
             store=actual_store,
             call_id=call_id,
             mode="voice",
             clock=now_fn,
             negotiation=call.negotiation,
+            notify=notify_buyer,
         )
         register_context(ctx)
 

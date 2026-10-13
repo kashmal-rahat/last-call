@@ -212,6 +212,7 @@ class FreshnessResult(BaseModel):
     photo_issues: list[PhotoIssue] = Field(default_factory=list)
     items: list[ItemAssessment]
     inspector: InspectorMeta | None = None
+    photo_stored: bool = False  # D62: the shelf photo is kept (1 day) so the agent can send item crops
 
     @model_validator(mode="after")
     def validate_photo_status(self) -> "FreshnessResult":

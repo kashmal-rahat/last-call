@@ -1,5 +1,6 @@
 """BLOCKING tool declarations and handlers for the Negotiator Agent."""
 
+import logging
 import uuid
 from datetime import datetime, time, timedelta
 from typing import Any, Literal
@@ -9,12 +10,31 @@ from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 
 from lastcall_shared.models import DealRecord, OutboxMessage, StaffTask
-from lastcall_voice.call_context import get_context
+from lastcall_voice.call_context import CallContext, get_context
+from lastcall_voice.negotiator.buyer_messages import (
+    deal_confirmation_text,
+    item_photo_url,
+    photo_caption,
+    whatsapp_event,
+)
 from lastcall_voice.negotiator.deals import validate_deal_terms
 from lastcall_voice.negotiator.pricing import verify_offer as verify_offer_logic
 from lastcall_voice.negotiator.prompt import time_words
 
 PKT = ZoneInfo("Asia/Karachi")
+logger = logging.getLogger("lastcall_voice.tools")
+
+
+async def _notify_buyer(ctx: CallContext, event: dict[str, Any]) -> bool:
+    """Hands a WhatsApp event to the call's transport (D62). Never fails the tool."""
+    if ctx.notify is None:
+        return False
+    try:
+        await ctx.notify(event)
+        return True
+    except Exception as exc:
+        logger.warning("notify_buyer_failed", extra={"call_id": ctx.call_id, "error_class": type(exc).__name__})
+        return False
 
 
 async def verify_offer(
@@ -161,7 +181,9 @@ async def confirm_deal(
     if not ok:
         return {"ok": False, "reasons": [err or "Failed to lock and save deal transaction."]}
 
-    # 5. Outbox WhatsApp confirmation
+    # 5. WhatsApp confirmation to the buyer (D62), recorded in the outbox
+    confirmation = deal_confirmation_text(call, quantity=quantity, price_per_unit=price_per_unit, pickup=pickup_dt, now=now)
+    delivered = await _notify_buyer(ctx, whatsapp_event("confirmation", confirmation))
     msg = OutboxMessage(
         mart_id=call.mart_id,
         kind="whatsapp_confirmation",
@@ -173,7 +195,9 @@ async def confirm_deal(
             "unit": call.brief.quantity_unit,
             "price_per_unit": price_per_unit,
             "pickup_time": pickup_dt.isoformat(),
+            "text": confirmation,
         },
+        status="sent_in_call" if delivered else "stub_not_sent",
     )
     await ctx.store.add_outbox(msg)
 
@@ -245,22 +269,32 @@ async def schedule_callback(
 
 
 async def send_photo(tool_context: ToolContext = None) -> dict[str, Any]:
-    """Sends a photo of the produce over WhatsApp when requested by the buyer."""
+    """Sends the buyer a photo of the produce on WhatsApp, when they want to see it before agreeing."""
     call_id = tool_context.state.get("call_id") if tool_context else None
     ctx = get_context(call_id) if call_id else None
     if not ctx:
         return {"ok": False, "message": "Call context not found"}
 
     call = await ctx.store.get_call(call_id)
-    msg = OutboxMessage(
-        mart_id=call.mart_id,
-        kind="photo",
-        call_id=call_id,
-        to_buyer_id=call.brief.buyer.buyer_id,
-        payload={"item": call.brief.item, "status": "sent_to_whatsapp"},
+    media_url = await item_photo_url(ctx.store, call)
+    if media_url is None:
+        return {
+            "ok": False,
+            "message": "No photo is available for this item. Tell the buyer, and describe its condition honestly.",
+        }
+
+    delivered = await _notify_buyer(ctx, whatsapp_event("photo", photo_caption(call), media_url))
+    await ctx.store.add_outbox(
+        OutboxMessage(
+            mart_id=call.mart_id,
+            kind="photo",
+            call_id=call_id,
+            to_buyer_id=call.brief.buyer.buyer_id,
+            payload={"item": call.brief.item, "media_url": media_url},
+            status="sent_in_call" if delivered else "stub_not_sent",
+        )
     )
-    await ctx.store.add_outbox(msg)
-    return {"ok": True, "message": "photo sent on WhatsApp"}
+    return {"ok": True, "message": "Photo sent to the buyer on WhatsApp."}
 
 
 async def record_outcome(

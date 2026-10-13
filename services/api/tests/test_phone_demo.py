@@ -171,3 +171,13 @@ def test_config_errors_never_echo_numbers_or_secrets(monkeypatch, setup, caplog)
     logged = caplog.text + errors + resp.text
     assert "923001234567" not in logged and "very-secret-value" not in logged
     assert "to_number" in errors and "extra" in errors  # field names are enough to fix it
+
+
+def test_call_status_includes_whatsapp_messages(setup):
+    store, _ = setup
+    call, _ = _new_call(store)
+    line = {"i": 0, "kind": "whatsapp", "whatsapp": "photo", "text": "Banana", "media_url": "https://x/p.jpg"}
+    asyncio.run(store.append_live_line(call.call_id, line))
+    asyncio.run(store.append_live_line(call.call_id, {"i": 1, "kind": "whatsapp", "whatsapp": "other", "text": "?"}))
+    resp = TestClient(app).get(f"/demo/phone/calls/{call.call_id}", headers={"X-Demo-Access-Code": CODE})
+    assert resp.json()["lines"] == [line]  # unknown kinds are dropped
