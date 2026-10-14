@@ -62,7 +62,7 @@ Request-based CPU, scales to zero, many requests per instance, capped maximum in
 - **Neighbour merging (D34):** code merges neighbouring groups of the same produce (same name, boxes touching or within 30 on the 0–1000 scale) to guarantee one group per display.
 - **Zoom area rule (D35):** only doubtful groups whose box covers $\le 40\%$ of the photo are zoomed (`MAX_ZOOM_BOX_AREA = 0.40`), avoiding redundant crops on wide-angle crates.
 - **Hedging & budget (D36):** identical hedge request starts after 12 s; 30 s per attempt, 3 attempts, with a 60 s total deadline per inspection to absorb tail latency.
-- **Concurrency limit (D37):** at most 2 simultaneous inspections per `api` instance via `asyncio.Semaphore` and a shared cached Firestore store to stay safely within Cloud Run 512 MB RAM.
+- **Concurrency limit and memory (D37, D64):** at most 2 simultaneous inspections per `api` instance via `asyncio.Semaphore` and one shared Firestore store. `api` has 1 GiB: a 24 MP phone photo needs ~130 MB to inspect (each decoded copy replaces the previous one), and the stored shelf photo is decoded at reduced size.
 - **Same photo → same reading (D45):** the demo endpoint stores each complete reading under a hash of the exact photo plus model, prompt version and settings, and reuses it when the identical file comes again. Safety rules, keys and change notes are recomputed. New photos are unaffected (about 20–50 ms of Firestore time); the evaluation scripts never use it. A switch turns it off to re-test the same photos (`INSPECTOR_READING_CACHE`, Terraform `inspector_reading_cache`, D63); it stays on for judging.
 - Perception only
 

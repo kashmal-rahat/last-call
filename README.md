@@ -50,7 +50,7 @@ demo they appear on the page.
   through a separate add-on, switched on with a Terraform variable (D61). The number lives only in
   Secret Manager, so it can ring nothing else.
 
-Every decision, with its reason, is in the decision log: [`plans/README.md`](plans/README.md) (D1–D63).
+Every decision, with its reason, is in the decision log: [`plans/README.md`](plans/README.md) (D1–D64).
 The full design is in [`docs/last-call-architecture.md`](docs/last-call-architecture.md).
 
 ## Architecture

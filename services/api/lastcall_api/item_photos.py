@@ -81,7 +81,8 @@ async def save_shelf_photo(photo_store: PhotoStore | None, inspection_id: str, u
     if photo_store is None:
         return False
     try:
-        prepared = await asyncio.to_thread(prepare_image, upload)
+        # Only the 1600 px JPEG is kept, so decode at reduced size (a phone photo would need ~200 MB in full)
+        prepared = await asyncio.to_thread(prepare_image, upload, decode_max_side=1600)
         await photo_store.put_shelf_photo(inspection_id, prepared.jpeg)
         return True
     except Exception as exc:

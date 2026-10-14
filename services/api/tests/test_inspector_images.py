@@ -74,6 +74,31 @@ def test_prepare_image_removes_exif_gps():
     assert 0x8825 not in res_exif
 
 
+def test_prepare_image_reduced_decode_for_the_stored_photo():
+    # A 24 MP phone photo, rotated by EXIF: decoding at reduced size (for storing) gives the same
+    # 1600 px JPEG size and orientation as the Inspector's, from a much smaller decoded image.
+    img = Image.new("RGB", (5712, 4284), color="orange")
+    exif = Image.Exif()
+    exif[0x0112] = 6  # rotate 90
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", exif=exif)
+    raw = buf.getvalue()
+
+    inspector = prepare_image(raw)
+    stored = prepare_image(raw, decode_max_side=1600)
+
+    assert (inspector.width, inspector.height) == (stored.width, stored.height) == (1200, 1600)
+    assert inspector.full.size == (3072, 4096)
+    assert stored.full.size == (2142, 2856)  # decoded at 1/2 scale
+
+
+def test_prepare_image_is_rgb_for_greyscale_and_alpha():
+    for mode, fmt in (("L", "JPEG"), ("RGBA", "PNG")):
+        buf = io.BytesIO()
+        Image.new(mode, (300, 200)).save(buf, format=fmt)
+        assert prepare_image(buf.getvalue()).full.mode == "RGB"
+
+
 def test_crop_group_margin_and_clamping():
     full = Image.new("RGB", (1000, 1000), color="yellow")
     # Box at corner: [0, 0, 500, 500] (0-1000 scale)

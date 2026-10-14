@@ -346,6 +346,15 @@ resource "google_cloud_run_v2_service" "api" {
     }
     containers {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
+      # 1 GiB (D64): a 24 MP phone photo needs ~130 MB to inspect and the 512 MiB default ran out.
+      # cpu_idle must be stated once resources is set, or CPU would be billed between requests.
+      resources {
+        cpu_idle = true
+        limits = {
+          cpu    = "1"
+          memory = "1Gi"
+        }
+      }
       env {
         name  = "GOOGLE_GENAI_USE_VERTEXAI"
         value = "TRUE"

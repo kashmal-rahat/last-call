@@ -23,7 +23,7 @@ class PreparedImage(NamedTuple):
     sha256: str
 
 
-def prepare_image(raw: bytes) -> PreparedImage:
+def prepare_image(raw: bytes, *, decode_max_side: int | None = None) -> PreparedImage:
     """Decodes, validates, normalizes, and prepares shelf photo for inspection.
 
     1. Decompression bomb guard: Image.MAX_IMAGE_PIXELS = 40M.
@@ -31,19 +31,24 @@ def prepare_image(raw: bytes) -> PreparedImage:
     3. Handles EXIF orientation via ImageOps.exif_transpose and converts to RGB.
     4. full: kept in memory, downscaled only if long side > 4096 px.
     5. jpeg: downscaled so long side <= 1600 px (LANCZOS; never upscaled), quality 85, no EXIF.
+
+    A 24 MP phone photo is ~73 MB per decoded copy, so each step replaces the previous image
+    instead of keeping it (the api has 1 GiB). `decode_max_side` lets a JPEG decode at 1/2, 1/4
+    or 1/8 scale when only the small JPEG is needed (storing the shelf photo); the Inspector
+    decodes at full size.
     """
     try:
         img = Image.open(io.BytesIO(raw))
+        if decode_max_side:
+            img.draft("RGB", (decode_max_side, decode_max_side))  # JPEG only; others decode in full
         img.load()
     except Exception as exc:
         raise ImageError("not a readable image") from exc
 
-    # Handle EXIF orientation
-    transposed = ImageOps.exif_transpose(img)
-    if transposed is not None:
-        img = transposed
-
-    img = img.convert("RGB")
+    # Handle EXIF orientation (in place: no second copy when the photo is already upright)
+    ImageOps.exif_transpose(img, in_place=True)
+    if img.mode != "RGB":
+        img = img.convert("RGB")
 
     # full: downscale only if long side > 4096 px
     max_dim = max(img.width, img.height)
@@ -51,9 +56,9 @@ def prepare_image(raw: bytes) -> PreparedImage:
         scale = 4096.0 / max_dim
         full_w = int(round(img.width * scale))
         full_h = int(round(img.height * scale))
-        full = img.resize((full_w, full_h), Image.Resampling.LANCZOS)
-    else:
-        full = img
+        img = img.resize((full_w, full_h), Image.Resampling.LANCZOS)
+    full = img
+    del img
 
     # jpeg: downscaled so long side <= 1600 px (never upscale)
     full_max = max(full.width, full.height)
