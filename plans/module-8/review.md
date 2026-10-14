@@ -518,3 +518,17 @@ User feedback: the hero's dark chat card, and two replacements tried in this rou
 - **Verification:**
   - preview at 1280, 768 and 375 px; no sideways scroll
   - `ruff` clean; `pytest`: 418 passed, 20 skipped; `node --test`: 21 passed
+
+---
+
+# Round 15: New shelf bug and "Since last photo" wording, by Claude (2026-10-14)
+
+- **Bug (on live):** after **New shelf**, an inspection showed "N items detected" and the decision, but no photo and no items.
+  - Cause: the New shelf handler set `#inspectResultContainer` to `display: none`, and nothing showed it again. `renderResults` restores the section, banners and footer, but never that container.
+  - Fix: the line is removed (`main.js`). Hiding `#sectionAiReading` already hides the container.
+  - Checked in the preview: inspect, New shelf, inspect again; the photo and 3 items show.
+- **Wording (D26 matching unchanged):**
+  - An unmatched item shows "New on this shelf" when the inspection had a previous photo, and "First photo of this shelf" only when it had none (`reading.js`).
+  - The change note now reads "dropped 42 points since the last photo (today 10:14)" (`matching.py`). The time is when the last photo reached the app, which is when a shelf camera shot it. An uploaded old photo has no capture time (EXIF is stripped, D62), so the note no longer suggests one.
+  - A test pins the new wording.
+- **Checks:** `pytest` 421 passed, 20 skipped; `node --test` 22 passed.

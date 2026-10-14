@@ -50,7 +50,6 @@ if (dom.btnNewShelf) {
     dom.decideError.textContent = '';
     dom.inspectStatusBanner.style.display = 'none';
     dom.inspectInstructionBanner.style.display = 'none';
-    if (dom.inspectResultContainer) dom.inspectResultContainer.style.display = 'none';
     dom.sectionAiReading.style.display = 'none';
     dom.sectionDecision.style.display = 'none';
     dom.sectionBuyers.style.display = 'none';

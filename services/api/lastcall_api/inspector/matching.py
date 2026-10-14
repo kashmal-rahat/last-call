@@ -44,7 +44,11 @@ def format_change_note(
     prev_taken_at: AwareDatetime,
     now: datetime,
 ) -> tuple[float, str]:
-    """Computes score change and human-readable change note."""
+    """Computes score change and human-readable change note.
+
+    The time is when the last photo reached us (`taken_at`), which is when a shelf camera shot it;
+    an uploaded old photo has no capture time (EXIF is stripped), so the note names "the last photo".
+    """
     delta = round(score - prev_score, 1)
     prev_dt = prev_taken_at.astimezone(PKT)
     now_dt = now.astimezone(PKT)
@@ -60,11 +64,11 @@ def format_change_note(
     points_val = int(diff) if diff.is_integer() else diff
 
     if delta < -0.01:
-        phrase = f"dropped {points_val} points since {time_str}"
+        phrase = f"dropped {points_val} points since the last photo ({time_str})"
     elif delta > 0.01:
-        phrase = f"up {points_val} points since {time_str}"
+        phrase = f"up {points_val} points since the last photo ({time_str})"
     else:
-        phrase = f"no change since {time_str}"
+        phrase = f"no change since the last photo ({time_str})"
 
     if STAGE_ORDER.get(worst_stage, 0) > STAGE_ORDER.get(prev_worst_stage, 0):
         phrase += f"; worst pieces now {worst_stage}"

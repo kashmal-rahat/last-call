@@ -277,7 +277,8 @@ export function renderItemsList(data) {
         ? `${displayName(item.confidence_level.toLowerCase())} confidence`
         : '—';
       addGridItem('Confidence', confWord);
-      addGridItem('Since last photo', item.change_note ? displayName(item.change_note) : 'First photo of this shelf');
+      const noMatch = data.previous_inspection_id ? 'New on this shelf' : 'First photo of this shelf';
+      addGridItem('Since last photo', item.change_note ? displayName(item.change_note) : noMatch);
       details.appendChild(defGrid);
 
       if (item.needs_staff_check) {

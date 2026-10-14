@@ -78,6 +78,7 @@ def test_matching_same_name_overlapping_box_reuses_key_and_computes_delta():
     assert item.item_key == "banana_top_left"
     assert item.change_since_last == -7.0
     assert "dropped 7 points" in (item.change_note or "")
+    assert "since the last photo (" in (item.change_note or "")  # the upload time, not a capture time
 
 
 def test_same_name_far_box_gets_new_key():
