@@ -206,7 +206,7 @@ export function renderActiveBuyers() {
     wrap.className = 'stock-progress';
     const lbl = document.createElement('div');
     lbl.className = 'stock-progress-label';
-    lbl.textContent = `${placed} of ${total} ${batch.unit || 'kg'} placed`;
+    lbl.textContent = `${placed} of ${total}\u00A0${batch.unit || 'kg'} placed`;
     wrap.appendChild(lbl);
     const track = document.createElement('div');
     track.className = 'stock-progress-track';
@@ -334,13 +334,13 @@ export function renderActiveBuyers() {
     let timeStr = 'searched just now';
     if (scoutResult.searched_at) {
       const diffMins = Math.floor((Date.now() - new Date(scoutResult.searched_at).getTime()) / 60000);
-      if (diffMins >= 1) timeStr = `searched ${diffMins} min ago`;
+      if (diffMins >= 1) timeStr = `searched ${diffMins}\u00A0min ago`;
     }
     if (scoutResult.meta && scoutResult.meta.reused) timeStr += ', reused';
     const attr = document.createElement('span');
     attr.className = 'buyers-attribution';
     attr.textContent = 'Results from Google Maps';
-    meta.append(attr, document.createTextNode(` · within 10 km · ${timeStr}`));
+    meta.append(attr, document.createTextNode(` · within 10\u00A0km · ${timeStr}`));
     line.appendChild(meta);
 
     const btnRefresh = document.createElement('button');
@@ -376,7 +376,7 @@ export function renderActiveBuyers() {
         nm.dir = 'auto';
         nm.textContent = item.name;
         li.appendChild(nm);
-        li.appendChild(document.createTextNode(` · ${(item.buyer_type || '').replace(/_/g, ' ')} · ${item.distance_km} km: ${item.why}`));
+        li.appendChild(document.createTextNode(` · ${(item.buyer_type || '').replace(/_/g, ' ')} · ${item.distance_km}\u00A0km: ${item.why}`));
         ul.appendChild(li);
       });
       det.appendChild(ul);
@@ -480,7 +480,7 @@ function buyerItem(b, isNext, att, unit) {
     meta.appendChild(span);
   };
   addMeta(capitalise((b.buyer_type || '').replace(/_/g, ' ')));
-  addMeta(`${b.distance_km} km`);
+  addMeta(`${b.distance_km}\u00A0km`);
   addMeta(b.phone_masked || 'No phone');
   if (b.maps_uri && b.maps_uri.startsWith('https://')) {
     const link = document.createElement('a');
@@ -530,10 +530,10 @@ function buyerStatusChip(att, unit) {
   if (att.outcome === 'deal' || att.outcome === 'partial_deal') {
     chip.className = 'chip chip-emerald';
     if (att.step === 'donate' || att.agreed_price === 0) {
-      chip.textContent = `Donated ${att.agreed_quantity || 0} ${unit}`;
+      chip.textContent = `Donated ${att.agreed_quantity || 0}\u00A0${unit}`;
     } else {
       const priceStr = att.agreed_price == null ? '—' : att.agreed_price;
-      chip.textContent = `Deal ${att.agreed_quantity || 0} ${unit} @ Rs ${priceStr}`;
+      chip.textContent = `Deal ${att.agreed_quantity || 0}\u00A0${unit} @ Rs\u00A0${priceStr}`;
     }
   } else if (att.outcome === 'call_back') {
     chip.className = 'chip chip-amber';

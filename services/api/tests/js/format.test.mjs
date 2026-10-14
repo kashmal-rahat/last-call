@@ -176,16 +176,16 @@ test('getStageColor: returns expected hex string for known stages and fallback f
 });
 
 test('formatObserved: count vs weight vs pieces vs unknown branches', () => {
-  assert.equal(formatObserved({ method: 'count', min: 5, max: 10 }), 'about 5–10 pieces');
-  assert.equal(formatObserved({ method: 'count', min: 7, max: 7 }), 'about 7 pieces');
+  assert.equal(formatObserved({ method: 'count', min: 5, max: 10 }), 'about 5–10\u00A0pieces');
+  assert.equal(formatObserved({ method: 'count', min: 7, max: 7 }), 'about 7\u00A0pieces');
   assert.equal(formatObserved({ method: 'fill', min: 40, max: 60 }), 'about 40–60% full');
   assert.equal(formatObserved({ method: 'fill', min: 50, max: 50 }), 'about 50% full');
   assert.equal(formatObserved(null), '');
 });
 
 test('formatQuantity: formats min/max with unit or confidence', () => {
-  assert.equal(formatQuantity({ low: 10, high: 15, unit: 'kg' }), '10–15 kg');
-  assert.equal(formatQuantity({ low: 10, high: 10, unit: 'kg' }), '10 kg');
+  assert.equal(formatQuantity({ low: 10, high: 15, unit: 'kg' }), '10–15\u00A0kg');
+  assert.equal(formatQuantity({ low: 10, high: 10, unit: 'kg' }), '10\u00A0kg');
   assert.equal(formatQuantity(null), '');
 });
 
@@ -210,7 +210,7 @@ test('formatDecisionLine: formats keep, discount, and other steps accurately', (
       discount_pct: 20,
       unit: 'kg'
     }),
-    'Rs 150 → Rs 120 / kg (−20%)'
+    'Rs\u00A0150 → Rs\u00A0120 / kg (−20%)'
   );
   assert.equal(
     formatDecisionLine({
@@ -220,7 +220,7 @@ test('formatDecisionLine: formats keep, discount, and other steps accurately', (
       floor_price: 80,
       unit: 'kg'
     }),
-    'Juice shops · Opening Rs 100/kg · floor Rs 80/kg (never told to buyers)'
+    'Juice shops · Opening Rs\u00A0100/kg · floor Rs\u00A080/kg (never told to buyers)'
   );
   assert.equal(formatDecisionLine({ step: 'donate' }), 'Free to charities');
   assert.equal(formatDecisionLine({ step: 'compost' }), 'Needs manager approval');
@@ -291,8 +291,8 @@ test('formatChange: "Since last photo" as a value, a trend and a detail', () => 
 });
 
 test('formatStockBasis: how the stock estimate was made', () => {
-  assert.equal(formatStockBasis({ method: 'count', min: 25, max: 34 }), '25–34 pieces');
-  assert.equal(formatStockBasis({ method: 'count', min: 7, max: 7 }), '7 pieces');
+  assert.equal(formatStockBasis({ method: 'count', min: 25, max: 34 }), '25–34\u00A0pieces');
+  assert.equal(formatStockBasis({ method: 'count', min: 7, max: 7 }), '7\u00A0pieces');
   assert.equal(formatStockBasis({ method: 'fill_level', min: 60, max: 80 }), 'container 60–80% full');
   assert.equal(formatStockBasis(null), '');
 });
@@ -308,11 +308,11 @@ test('freshnessPosition: stage fifth plus early/mid/late, Fresh on the left', ()
 test('readingSummary: the reading footer in words', () => {
   assert.equal(
     readingSummary({ model: 'gemini-3.8-flash', latency_ms: 7412, calls: 2, zoomed_groups: 1, hedges: 0, from_cache: false }),
-    'Read by Gemini 3.8 Flash · 7.4 s · 2 calls · 1 zoomed in',
+    'Read by Gemini 3.8 Flash · 7.4\u00A0s · 2 calls · 1 zoomed in',
   );
   assert.equal(
     readingSummary({ model: 'gemini-3.8-flash', latency_ms: 60004, calls: 1, zoomed_groups: 0, hedges: 1, from_cache: false }),
-    'Read by Gemini 3.8 Flash · 60.0 s · 1 call · 1 hedged',
+    'Read by Gemini 3.8 Flash · 60.0\u00A0s · 1 call · 1 hedged',
   );
   assert.equal(
     readingSummary({ model: 'gemini-3.8-flash', latency_ms: 40, calls: 0, zoomed_groups: 0, hedges: 0, from_cache: true }),

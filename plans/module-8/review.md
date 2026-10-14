@@ -733,3 +733,23 @@ The Buyers list was the busiest section: about 20 indigo marks (an uppercase "NE
   - each file's old "SECTION N" line duplicated its new header.
   
   Each file's hidden-by-default states now open with the same one-line comment. With comments stripped, the rules are identical to before.
+
+# Round 25: a number and its unit never split across lines, by Claude (2026-10-15)
+
+- **Why:** the page writes quantities in the SI style, with a space between number and unit ("4 h", "0.4 km", "2.5 dozen", "Rs 180"). An ordinary space allows a line break, and on a phone the closing-time buttons can wrap, so "4 h left" could split as "4" / "h left".
+- **What:** a non-breaking space (U+00A0) between every displayed number and its unit (h, min, s, km, kg, dozen, days, pieces, MB), and between "Rs" and the amount. It renders exactly like a space. Places:
+  - `index.html`: the closing-time labels, the upload hint, Impact's initial "Rs 0", as `&nbsp;`;
+  - JS formatters and renderers in `format.js`, `decision.js`, `buyers.js`, `call.js`, `impact.js` and `reading.js`, written as the visible escape ` `. A first pass wrote invisible characters, which made the diff unreadable, so it was converted;
+  - the engine's `selling_time` ("about 34 h", "about 3 days"), the only server text with units that the page shows.
+  
+  Counts that are not measurements ("5 votes", "2 calls") keep ordinary spaces.
+- **Left alone on purpose:**
+  - the hidden closing-time `<select>`, which is never displayed;
+  - the Scout's internal `reason` line, which the page doesn't show;
+  - the Inspector prompt's "about 25 kg", which is text sent to Gemini.
+- **Edge cases checked:**
+  - a review sweep found five more places the first pass missed ("Donated 2 dozen" twice, "1.9 of 2.9 dozen left", the call screen's "Banana · 2.5 dozen", the upload error "8 MB");
+  - no code reads these strings back (the only text parsing splits branch names on "(");
+  - the masked phone keeps ordinary spaces but its element never wraps;
+  - in the preview, every place shows U+00A0, including the server reason after JSON.
+- **Tests:** the formatter and `selling_time` expectations now spell out the non-breaking space. pytest 427 passed, 20 skipped; `node --test` 26 passed; ruff clean.

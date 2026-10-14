@@ -127,7 +127,7 @@ export function renderActiveDecision() {
   // Hours to closing as used by the decision (real clock, or the closing-time choice)
   const hoursLeft = state.currentLadderResult.hours_until_closing;
   dom.decisionRunwayChip.textContent = hoursLeft != null
-    ? `${hoursLeft < 1 ? hoursLeft.toFixed(1) : Math.round(hoursLeft)} h to closing`
+    ? `${hoursLeft < 1 ? hoursLeft.toFixed(1) : Math.round(hoursLeft)}\u00A0h to closing`
     : '';
 
   // Stepper
@@ -147,7 +147,7 @@ export function renderActiveDecision() {
 
   // Price strip: the prices this step uses, all derived from the shelf price (D41)
   const unitStr = decision.unit || 'kg';
-  const rs = v => (v != null ? `Rs ${v}` : '—');
+  const rs = v => (v != null ? `Rs\u00A0${v}` : '—');
   const needsPrice = decision.shelf_price == null && ['keep', 'discount', 'bulk_sale', 'animal_feed'].includes(decision.step);
   let cells = [];
   if (needsPrice) {

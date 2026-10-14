@@ -7,11 +7,11 @@ export function renderImpact() {
 
   function formatQty(n, unit) {
     const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
-    return `${rounded} ${unit}`;
+    return `${rounded}\u00A0${unit}`;
   }
 
   if (dom.impactRevenue) {
-    dom.impactRevenue.textContent = `Rs ${revenue.toLocaleString()}`;
+    dom.impactRevenue.textContent = `Rs\u00A0${revenue.toLocaleString()}`;
   }
 
   if (dom.impactRescued) {

@@ -203,16 +203,16 @@ export async function startCallForItem(itemKey, buyerId) {
     const itmName = data.deal ? data.deal.item : 'Produce';
     const dealQ = data.deal ? data.deal.quantity : (qty || '—');
     const dealU = data.deal ? data.deal.unit : 'kg';
-    dom.callItemQty.textContent = `${itmName} · ${dealQ} ${dealU}`;
+    dom.callItemQty.textContent = `${itmName} · ${dealQ}\u00A0${dealU}`;
 
     if (data.deal && data.deal.opening != null) {
-      dom.callOpeningQuote.textContent = `Rs ${data.deal.opening} / ${dealU}`;
+      dom.callOpeningQuote.textContent = `Rs\u00A0${data.deal.opening} / ${dealU}`;
     } else {
       dom.callOpeningQuote.textContent = 'Free donation';
     }
 
     if (data.deal && data.deal.floor != null) {
-      dom.callFloorPrice.textContent = `Rs ${data.deal.floor} / ${dealU}`;
+      dom.callFloorPrice.textContent = `Rs\u00A0${data.deal.floor} / ${dealU}`;
     } else {
       dom.callFloorPrice.textContent = 'None (donation)';
     }
@@ -417,8 +417,8 @@ export function renderCallResult(batchData, callId) {
     let title;
     if (isDeal) {
       title = (attempt.step === 'donate' || attempt.agreed_price === 0)
-        ? `Donated ${attempt.agreed_quantity || 0} ${unit}`
-        : `Deal agreed · ${attempt.agreed_quantity || 0} ${unit} at Rs ${attempt.agreed_price == null ? '—' : attempt.agreed_price} / ${unit}`;
+        ? `Donated ${attempt.agreed_quantity || 0}\u00A0${unit}`
+        : `Deal agreed · ${attempt.agreed_quantity || 0}\u00A0${unit} at Rs\u00A0${attempt.agreed_price == null ? '—' : attempt.agreed_price} / ${unit}`;
     } else {
       const labels = {
         declined: 'Buyer declined',
@@ -445,7 +445,7 @@ export function renderCallResult(batchData, callId) {
     text.appendChild(t);
     const sub = document.createElement('div');
     sub.className = 'result-sub';
-    const parts = [`${batchData.remaining_quantity} of ${batchData.total_quantity} ${unit} left`];
+    const parts = [`${batchData.remaining_quantity} of ${batchData.total_quantity}\u00A0${unit} left`];
     if (isDeal && attempt.pickup_time) {
       parts.unshift(`Pickup ${new Date(attempt.pickup_time).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Karachi' })}`);
     }

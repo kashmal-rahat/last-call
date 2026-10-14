@@ -161,18 +161,19 @@ def test_descriptive_words_are_not_produce_names():
 
 
 def test_selling_time_is_a_rounded_duration():
-    """Reasons give how long produce sells, never a clock time: the same text whatever time the page simulates."""
+    """Reasons give how long produce sells, never a clock time: the same text whatever time the page simulates.
+    The number and unit are joined by a non-breaking space, so a line never ends between them."""
     assert selling_time(0.0) == "under an hour"
     assert selling_time(0.9) == "under an hour"
-    assert selling_time(1.0) == "about 1 h"
-    assert selling_time(1.6) == "about 1.5 h"
-    assert selling_time(2.75) == "about 3 h"  # halves round up
-    assert selling_time(9.9) == "about 10 h"
-    assert selling_time(33.6) == "about 34 h"  # 1–3 days band, mid stage: 48 h × 0.7
-    assert selling_time(47.4) == "about 47 h"
-    assert selling_time(47.6) == "about 2 days"  # never "about 48 h"
-    assert selling_time(48.0) == "about 2 days"
-    assert selling_time(67.2) == "about 3 days"  # over 3 days band, mid stage: 96 h × 0.7
+    assert selling_time(1.0) == "about 1\u00a0h"
+    assert selling_time(1.6) == "about 1.5\u00a0h"
+    assert selling_time(2.75) == "about 3\u00a0h"  # halves round up
+    assert selling_time(9.9) == "about 10\u00a0h"
+    assert selling_time(33.6) == "about 34\u00a0h"  # 1–3 days band, mid stage: 48 h × 0.7
+    assert selling_time(47.4) == "about 47\u00a0h"
+    assert selling_time(47.6) == "about 2\u00a0days"  # never "about 48 h"
+    assert selling_time(48.0) == "about 2\u00a0days"
+    assert selling_time(67.2) == "about 3\u00a0days"  # over 3 days band, mid stage: 96 h × 0.7
 
 
 def test_reason_does_not_depend_on_the_simulated_clock():

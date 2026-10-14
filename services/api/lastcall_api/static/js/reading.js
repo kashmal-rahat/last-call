@@ -93,7 +93,7 @@ export async function handleInspect() {
     } else if (res.status === 415) {
       throw new Error('Please upload a JPEG or PNG photo.');
     } else if (res.status === 413) {
-      throw new Error('Image exceeds maximum upload size (8 MB).');
+      throw new Error('Image exceeds maximum upload size (8\u00A0MB).');
     } else if (res.status === 429) {
       throw new Error(await errorMessage(res, 'Rate limit reached. Please try again later.'));
     } else if (res.status === 502) {

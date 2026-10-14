@@ -85,7 +85,7 @@ export function getStageColor(stage) {
 export function formatObserved(obs) {
   if (!obs) return '';
   if (obs.method === 'count') {
-    return obs.min === obs.max ? `about ${obs.min} pieces` : `about ${obs.min}–${obs.max} pieces`;
+    return obs.min === obs.max ? `about ${obs.min}\u00A0pieces` : `about ${obs.min}–${obs.max}\u00A0pieces`;
   }
   return obs.min === obs.max ? `about ${obs.min}% full` : `about ${obs.min}–${obs.max}% full`;
 }
@@ -94,7 +94,7 @@ export function formatObserved(obs) {
 export function formatQuantity(qty) {
   if (!qty) return '';
   const unit = qty.unit || '';
-  return qty.low === qty.high ? `${qty.low} ${unit}` : `${qty.low}–${qty.high} ${unit}`;
+  return qty.low === qty.high ? `${qty.low}\u00A0${unit}` : `${qty.low}–${qty.high}\u00A0${unit}`;
 }
 
 // Profile fields the 5 Gemini votes disagreed on, in plain words: "spoiled as cattle feed", "overripe for juice shops"
@@ -117,7 +117,7 @@ export function formatDecisionLine(decision) {
   }
   if (decision.step === 'discount') {
     if (decision.shelf_price != null && decision.discounted_price != null) {
-      return `Rs ${decision.shelf_price} → Rs ${decision.discounted_price} / ${decision.unit} (−${decision.discount_pct}%)`;
+      return `Rs\u00A0${decision.shelf_price} → Rs\u00A0${decision.discounted_price} / ${decision.unit} (−${decision.discount_pct}%)`;
     }
     return `Needs shelf price (−${decision.discount_pct || 0}%)`;
   }
@@ -135,7 +135,7 @@ export function formatDecisionLine(decision) {
 
     let pricePart = '';
     if (decision.opening_price != null && decision.floor_price != null) {
-      pricePart = `Opening Rs ${decision.opening_price}/${decision.unit} · floor Rs ${decision.floor_price}/${decision.unit} (never told to buyers)`;
+      pricePart = `Opening Rs\u00A0${decision.opening_price}/${decision.unit} · floor Rs\u00A0${decision.floor_price}/${decision.unit} (never told to buyers)`;
     } else {
       pricePart = 'Needs shelf price';
     }
@@ -265,7 +265,7 @@ export function formatChange(item, hadPreviousPhoto) {
 export function formatStockBasis(obs) {
   if (!obs) return '';
   const range = obs.min === obs.max ? `${obs.min}` : `${obs.min}–${obs.max}`;
-  return obs.method === 'count' ? `${range} pieces` : `container ${range}% full`;
+  return obs.method === 'count' ? `${range}\u00A0pieces` : `container ${range}% full`;
 }
 
 // Where an item sits on the Fresh → Unsafe scale (0 to 1): its stage's fifth, and early/mid/late inside it.
@@ -285,7 +285,7 @@ export function readingSummary(meta) {
     .map(w => (/^[a-z]/.test(w) ? w.charAt(0).toUpperCase() + w.slice(1) : w))
     .join(' ');
   if (meta.from_cache) return `Read by ${model} · same photo as before, stored reading reused`;
-  const parts = [`Read by ${model}`, `${(meta.latency_ms / 1000).toFixed(1)} s`];
+  const parts = [`Read by ${model}`, `${(meta.latency_ms / 1000).toFixed(1)}\u00A0s`];
   parts.push(`${meta.calls} ${meta.calls === 1 ? 'call' : 'calls'}`);
   if (meta.zoomed_groups) parts.push(`${meta.zoomed_groups} zoomed in`);
   if (meta.hedges) parts.push(`${meta.hedges} hedged`);
