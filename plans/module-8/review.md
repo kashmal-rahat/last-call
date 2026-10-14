@@ -695,3 +695,25 @@ The Decision section still used the older style: three heavy white cards with up
 - **Kept:** the stepper, the "4 h to closing" chip, the Re-decide flow and the lock once calls start (D58). The lock code is unchanged, and the elements it disables are the same.
 - **Removed styles:** `.price-cards-grid`, `.price-card*`, `.decision-meta-box`, `.profile-line`, `.price-override-input` (no element used it).
 - **Checks:** pytest 427 passed, 20 skipped; `node --test` 26 passed (one project test caught an inline CSS variable; replaced by CSS auto columns); ruff clean. In the preview, real Gemini readings of Day 4 showed tomato on keep and banana on bulk sale. Discount, "Price not set", compost and donate were rendered from edited decision data; at 1280 and 375 px there was no sideways scroll, and the phone price input is 185 px wide.
+
+# Round 23: Buyers section, in the page's design language, by Claude (2026-10-15)
+
+The Buyers list was the busiest section: about 20 indigo marks (an uppercase "NEXT TO CALL", a left bar, avatars, the call button, 5 "Likely fit" chips, 5 Maps links), the same labels on every row ("Open now", "Likely fit", "Google Maps", "Play this buyer"), initials avatars that said nothing (two "JH"), a third "selected" style, and a three-line footer that counted the same nine businesses twice.
+
+- **Rows:** one card per buyer, 8 px apart, like the reading's items and the photo picker. Each card has:
+  - the rank number on its own (the order is the information);
+  - the name;
+  - Gemini's reason with the AI sparkle (the row's most useful line);
+  - one quiet facts line: type · km · masked phone · Google Maps ↗.
+  
+  On a phone the facts wrap, so they are spaced apart rather than dotted (a dot would start a line).
+- **Only exceptions are labelled:** "Closed now" (red), "Hours unknown" (grey) and "Possible fit" (before the reason). An open, likely buyer needs neither label; the subtitle and the footer already say Gemini screened them.
+- **Next buyer:** the page's mint ring (the same "selected" style as the open item and the selected photo), a small sentence-case "Next to call" in emerald, and the page's green **Start call** button. The other rows get a quiet **Call** (same action, `startCallForItem`), with an aria-label naming the buyer. As before, the next buyer always gets the button, even after an earlier "call back", and its name is never dimmed like a finished row.
+- **Indigo** now marks only Gemini (the sparkle). The shared `.btn-ai` style is unchanged, because the call result screen uses it for "Next buyer · #2…" (`call.js` → `renderNextActionRow`); that screen is for the live call round.
+- **Footer:** one quiet line, "**Results from Google Maps** · within 10 km · searched just now", with Refresh. The Google Maps attribution stays visible. The branch is no longer repeated (the header chip names it). The Skipped line and the screened-out list are merged into one disclosure: "26 not shown: 16 without a phone, 1 closed for good and 9 screened out by Gemini ▸", which opens Gemini's reasons. It counts the listed screened-out businesses even if the skip counts were to miss them; it says "Showing the nearest 10." when not all are listed; and it is a plain line when Gemini gave no reasons.
+- **Unchanged:** the call flow, next actions, outcome chips, the stock progress, the quantity input, the staff-check hold, the hours banner and the lock while a call runs.
+- **Removed:** initials avatars, `.ai-tag`, the uppercase eyebrow, `.buyers-skipped`, "Open now", and four unused rules (`.buyer-head`, `.buyer-row-title`, `.buyer-heading-name`, `.buyer-remaining`). `initials()` stays in `ui.js` for the call screen.
+- **Checks:**
+  - pytest and `node --test` pass; ruff is clean.
+  - The preview used fictional sample buyers (a fake Scout, no Google Maps calls). It covered the next buyer, closed, hours unknown, possible fit, a deal, a "call back" buyer who is next again (Start call shown) and a declined one.
+  - At 1280 and 375 px there was no sideways scroll.

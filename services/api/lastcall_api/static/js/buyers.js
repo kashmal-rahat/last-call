@@ -4,7 +4,7 @@ import { state } from './state.js';
 import * as dom from './dom.js';
 import { apiFetch, errorMessage, requireAccessCode } from './api.js';
 import { getFindBuyersLabel, getNextStepTargetLabel } from './format.js';
-import { icon, showToast, initials } from './ui.js';
+import { icon, showToast } from './ui.js';
 import { batchIdFor, loadBatchesForBranch } from './lock.js';
 import { renderResults } from './reading.js';
 import { startCallForItem } from './call.js';
@@ -323,7 +323,7 @@ export function renderActiveBuyers() {
     dom.buyersListContainer.appendChild(list);
   }
 
-  // Footer: attribution + Refresh, skipped counts, screened-out list
+  // Footer: one quiet line (the Google Maps attribution stays visible), then what was left out and why
   if (scoutResult) {
     dom.buyersFooter.replaceChildren();
 
@@ -331,17 +331,16 @@ export function renderActiveBuyers() {
     line.className = 'buyers-footer';
     const meta = document.createElement('div');
     meta.className = 'buyers-footer-text';
-    let timeStr = 'Searched just now';
+    let timeStr = 'searched just now';
     if (scoutResult.searched_at) {
       const diffMins = Math.floor((Date.now() - new Date(scoutResult.searched_at).getTime()) / 60000);
-      if (diffMins >= 1) timeStr = `Searched ${diffMins} min ago`;
+      if (diffMins >= 1) timeStr = `searched ${diffMins} min ago`;
     }
-    if (scoutResult.meta && scoutResult.meta.reused) timeStr += ' · reused';
+    if (scoutResult.meta && scoutResult.meta.reused) timeStr += ', reused';
     const attr = document.createElement('span');
     attr.className = 'buyers-attribution';
     attr.textContent = 'Results from Google Maps';
-    meta.appendChild(attr);
-    meta.appendChild(document.createTextNode(` · Near ${scoutResult.branch_name} · within 10 km · ${timeStr}`));
+    meta.append(attr, document.createTextNode(` · within 10 km · ${timeStr}`));
     line.appendChild(meta);
 
     const btnRefresh = document.createElement('button');
@@ -354,25 +353,20 @@ export function renderActiveBuyers() {
     });
     line.appendChild(btnRefresh);
     dom.buyersFooter.appendChild(line);
-
-    const skipped = Object.entries(scoutResult.skipped || {})
-      .filter(([, count]) => count > 0)
-      .map(([k, count]) => `${count} ${SKIP_LABELS[k] || k.replace(/_/g, ' ')}`);
-    if (skipped.length > 0) {
-      const skipLine = document.createElement('div');
-      skipLine.className = 'buyers-skipped';
-      skipLine.textContent = `Skipped: ${skipped.join(' · ')}`;
-      dom.buyersFooter.appendChild(skipLine);
-    }
     dom.buyersFooter.style.display = 'block';
 
     dom.buyersScreenedOutContainer.replaceChildren();
     const screenedOut = scoutResult.screened_out || [];
-    if (screenedOut.length > 0) {
+    // The listed screened-out businesses always count, even if the skip counts were to miss them
+    const skipped = { ...(scoutResult.skipped || {}) };
+    skipped.unlikely_fit = Math.max(skipped.unlikely_fit || 0, screenedOut.length);
+    const notShown = notShownSummary(skipped);
+    if (notShown && screenedOut.length > 0) {
+      // Gemini's reasons open from the summary line
       const det = document.createElement('details');
       det.className = 'screened-out';
       const sum = document.createElement('summary');
-      sum.textContent = `Screened out by Gemini (${screenedOut.length})`;
+      sum.textContent = notShown;
       det.appendChild(sum);
       const ul = document.createElement('ul');
       screenedOut.forEach(item => {
@@ -382,11 +376,22 @@ export function renderActiveBuyers() {
         nm.dir = 'auto';
         nm.textContent = item.name;
         li.appendChild(nm);
-        li.appendChild(document.createTextNode(` · ${(item.buyer_type || '').replace(/_/g, ' ')} · ${item.distance_km} km — ${item.why}`));
+        li.appendChild(document.createTextNode(` · ${(item.buyer_type || '').replace(/_/g, ' ')} · ${item.distance_km} km: ${item.why}`));
         ul.appendChild(li);
       });
       det.appendChild(ul);
+      if (skipped.unlikely_fit > screenedOut.length) {
+        const more = document.createElement('p');
+        more.className = 'screened-more';
+        more.textContent = `Showing the nearest ${screenedOut.length}.`;
+        det.appendChild(more);
+      }
       dom.buyersScreenedOutContainer.appendChild(det);
+    } else if (notShown) {
+      const p = document.createElement('p');
+      p.className = 'screened-out';
+      p.textContent = notShown;
+      dom.buyersScreenedOutContainer.appendChild(p);
     }
   } else {
     dom.buyersFooter.style.display = 'none';
@@ -396,33 +401,40 @@ export function renderActiveBuyers() {
 
 // Plain words for the Scout's skip reasons (server SkipReason values)
 const SKIP_LABELS = {
+  no_phone: 'without a phone',
   not_operational: 'closed for good',
   too_far: 'too far',
-  no_phone: 'no phone',
-  do_not_call: 'do not call',
+  do_not_call: 'asked not to be called',
   cooldown: 'called recently',
-  duplicate_phone: 'duplicate phone',
+  duplicate_phone: 'duplicates',
   not_screened: 'not screened',
-  unlikely_fit: 'unlikely fit'
+  unlikely_fit: 'screened out by Gemini',
 };
+
+// "26 not shown: 16 without a phone, 1 closed for good and 9 screened out by Gemini" ('' when none)
+function notShownSummary(skipped) {
+  const parts = Object.entries(skipped || {}).filter(([, n]) => n > 0);
+  if (parts.length === 0) return '';
+  const total = parts.reduce((sum, [, n]) => sum + n, 0);
+  const words = parts.map(([k, n]) => `${n} ${SKIP_LABELS[k] || k.replace(/_/g, ' ')}`);
+  const list = words.length > 1 ? `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}` : words[0];
+  return `${total} not shown: ${list}`;
+}
 
 function capitalise(text) {
   return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
 }
 
-// One buyer in the list: avatar with rank, name and hours, icon meta line, Gemini's reasoning, action or outcome
+// One buyer: rank, name (with hours only when not open), Gemini's reason, one quiet facts line, the action.
+// Labels that every row would repeat ("Open now", "Likely fit") are left out; only the exceptions show.
 function buyerItem(b, isNext, att, unit) {
   const item = document.createElement('div');
   item.className = 'buyer-item' + (isNext ? ' is-next' : '') + (att ? ' is-called' : '');
 
-  const avatar = document.createElement('div');
-  avatar.className = 'buyer-avatar';
-  avatar.textContent = initials(b.name);
-  const rank = document.createElement('span');
+  const rank = document.createElement('div');
   rank.className = 'buyer-rank';
   rank.textContent = String(b.rank);
-  avatar.appendChild(rank);
-  item.appendChild(avatar);
+  item.appendChild(rank);
 
   const body = document.createElement('div');
   body.className = 'buyer-body';
@@ -441,24 +453,35 @@ function buyerItem(b, isNext, att, unit) {
   name.dir = 'auto';
   name.textContent = b.name;
   line1.appendChild(name);
-  const hours = document.createElement('span');
-  hours.className = 'buyer-hours' + (b.open_now === true ? ' is-open' : (b.open_now === false ? ' is-closed' : ''));
-  hours.textContent = b.open_now === true ? 'Open now' : (b.open_now === false ? 'Closed now' : 'Hours unknown');
-  line1.appendChild(hours);
+  if (b.open_now !== true) {
+    const hours = document.createElement('span');
+    hours.className = 'buyer-hours' + (b.open_now === false ? ' is-closed' : '');
+    hours.textContent = b.open_now === false ? 'Closed now' : 'Hours unknown';
+    line1.appendChild(hours);
+  }
   body.appendChild(line1);
+
+  if (b.fit_why || b.fit === 'possible') {
+    const ai = document.createElement('p');
+    ai.className = 'buyer-ai';
+    ai.appendChild(icon('sparkle'));
+    const text = document.createElement('span');
+    text.textContent = [b.fit === 'possible' ? 'Possible fit' : '', b.fit_why].filter(Boolean).join(' · ');
+    ai.appendChild(text);
+    body.appendChild(ai);
+  }
 
   const meta = document.createElement('div');
   meta.className = 'buyer-line2';
-  const addMeta = (iconName, text) => {
+  const addMeta = text => {
     const span = document.createElement('span');
     span.className = 'buyer-meta-item';
-    if (iconName) span.appendChild(icon(iconName));
-    span.appendChild(document.createTextNode(text));
+    span.textContent = text;
     meta.appendChild(span);
   };
-  addMeta(null, capitalise((b.buyer_type || '').replace(/_/g, ' ')));
-  addMeta('pin', `${b.distance_km} km`);
-  addMeta('phone', b.phone_masked || 'No phone');
+  addMeta(capitalise((b.buyer_type || '').replace(/_/g, ' ')));
+  addMeta(`${b.distance_km} km`);
+  addMeta(b.phone_masked || 'No phone');
   if (b.maps_uri && b.maps_uri.startsWith('https://')) {
     const link = document.createElement('a');
     link.className = 'buyer-maps-link';
@@ -470,50 +493,27 @@ function buyerItem(b, isNext, att, unit) {
     meta.appendChild(link);
   }
   body.appendChild(meta);
-
-  if (b.fit_why || b.fit) {
-    const ai = document.createElement('div');
-    ai.className = 'buyer-ai';
-    const tag = document.createElement('span');
-    tag.className = 'ai-tag';
-    tag.appendChild(icon('sparkle'));
-    tag.appendChild(document.createTextNode(b.fit === 'likely' ? 'Likely fit' : 'Possible fit'));
-    ai.appendChild(tag);
-    if (b.fit_why) {
-      const why = document.createElement('span');
-      why.className = 'ai-why';
-      why.textContent = b.fit_why;
-      ai.appendChild(why);
-    }
-    body.appendChild(ai);
-  }
   item.appendChild(body);
 
   const side = document.createElement('div');
   side.className = 'buyer-side';
-  if (isNext) {
+  if (att && !isNext) {
+    // A finished call shows its outcome. The next buyer always gets the button, even after an earlier
+    // "call back", as before
+    side.appendChild(buyerStatusChip(att, unit));
+  } else {
+    // The next buyer gets the page's main button; any other buyer can still be called (you play the buyer)
     const callBtn = document.createElement('button');
     callBtn.type = 'button';
-    callBtn.className = 'btn-ai';
-    callBtn.appendChild(icon('phone'));
-    callBtn.appendChild(document.createTextNode('Start call'));
+    callBtn.className = isNext ? 'btn-primary' : 'btn-ghost btn-sm';
+    if (isNext) callBtn.appendChild(icon('phone'));
+    callBtn.appendChild(document.createTextNode(isNext ? 'Start call' : 'Call'));
+    callBtn.setAttribute('aria-label', `${isNext ? 'Start call' : 'Call'}: ${b.name}`);
     callBtn.disabled = state.isCallInProgress;
     callBtn.addEventListener('click', () => {
       startCallForItem(state.activeItemKey, b.buyer_id);
     });
     side.appendChild(callBtn);
-  } else if (att) {
-    side.appendChild(buyerStatusChip(att, unit));
-  } else {
-    const playBtn = document.createElement('button');
-    playBtn.type = 'button';
-    playBtn.className = 'btn-ghost btn-sm';
-    playBtn.textContent = 'Play this buyer';
-    playBtn.disabled = state.isCallInProgress;
-    playBtn.addEventListener('click', () => {
-      startCallForItem(state.activeItemKey, b.buyer_id);
-    });
-    side.appendChild(playBtn);
   }
   item.appendChild(side);
   return item;
