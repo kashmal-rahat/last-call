@@ -1260,6 +1260,11 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   margin-top: 0.25rem;
 }
 
+/* No shelf price yet: a dashed "to fill in" card, quieter than a real price */
+.price-card.card-needs-price { border-style: dashed; border-color: #CBD5E1; justify-content: flex-start; }
+.price-card.card-needs-price .price-card-value { font-size: 20px; line-height: 28px; color: var(--text-secondary); }
+.price-card-hint { margin: 0; font-size: 13px; line-height: 18px; color: var(--text-secondary); }
+
 .price-card.card-indigo {
   background-color: #FFFFFF;
   border-color: #E5E7EB;

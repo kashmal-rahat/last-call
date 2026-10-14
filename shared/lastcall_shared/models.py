@@ -637,7 +637,7 @@ class ProduceProfile(BaseModel):
 
 
 class PriceEntry(BaseModel):
-    names: list[str]  # aliases, e.g. ["okra", "bhindi"]
+    names: list[str]  # the English names the Inspector may use for this produce, e.g. ["okra", "lady finger"]
     prices: dict[Unit, int]  # PKR per unit, each > 0
 
     @field_validator("prices")
@@ -715,6 +715,23 @@ class MartRules(BaseModel):
         close_m = self.closing_time.hour * 60 + self.closing_time.minute
         open_m = self.opening_time.hour * 60 + self.opening_time.minute
         return ((open_m - close_m) % (24 * 60)) / 60.0
+
+    @field_validator("prices")
+    @classmethod
+    def validate_unique_price_names(cls, v: list[PriceEntry]) -> list[PriceEntry]:
+        """A name may appear under one entry only, or its price would depend on the file's order.
+
+        Compared the way the price lookup matches names: ignoring case, spaces and a plural "s" or "es".
+        """
+        seen: set[str] = set()
+        for entry in v:
+            for name in entry.names:
+                key = "".join(ch for ch in name.lower() if ch.isalnum())
+                forms = {key, key.removesuffix("s"), key.removesuffix("es")} - {""}
+                if not forms or forms & seen:
+                    raise ValueError(f"Price name '{name}' is empty or listed more than once")
+                seen |= forms
+        return v
 
     @model_validator(mode="after")
     def validate_rules(self) -> "MartRules":

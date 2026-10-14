@@ -4,7 +4,9 @@ from datetime import datetime, timezone
 
 import pytest
 
+from lastcall_api.inspector.guardrails import names_match
 from lastcall_api.ladder.engine import (
+    DESCRIPTIVE_WORDS,
     allowed_steps,
     decide_item,
     find_price,
@@ -101,9 +103,10 @@ def test_allowed_steps_table():
 def test_find_price():
     rules = load_mart_rules("demo_mart")
 
-    # Match alias
-    assert find_price(rules, "bhindi", "kg") == 120
+    # Match an English alternative name
+    assert find_price(rules, "lady finger", "kg") == 120
     assert find_price(rules, "okra", "kg") == 120
+    assert find_price(rules, "lime", "kg") == 220  # sold as lemon
     # Plural match
     assert find_price(rules, "tomatoes", "kg") == 120
     assert find_price(rules, "bananas", "dozen") == 180
@@ -119,6 +122,55 @@ def test_find_price():
     assert find_price(rules, "tomato", "dozen") is None
     # Unknown produce
     assert find_price(rules, "dragonfruit", "kg") is None
+
+
+def test_find_price_descriptive_words_fallback():
+    """D66: a name with only descriptive extra words is priced as its produce; any other word stays unpriced."""
+    rules = load_mart_rules("demo_mart")
+    radish, onion, tomato = (find_price(rules, n, "kg") for n in ("radish", "onion", "tomato"))
+
+    # Descriptive words removed (any number, hyphens, plurals)
+    assert find_price(rules, "white radish", "kg") == radish
+    assert find_price(rules, "small red onion", "kg") == onion
+    assert find_price(rules, "baby-spinach", "kg") == find_price(rules, "spinach", "kg")
+    assert find_price(rules, "desi tomatoes", "kg") == tomato
+    assert find_price(rules, "green banana", "dozen") == find_price(rules, "banana", "dozen")
+
+    # A listed full name always wins over its shortened form
+    assert find_price(rules, "green onion", "kg") == find_price(rules, "spring onion", "kg") != onion
+    assert find_price(rules, "red apple", "kg") == find_price(rules, "apple", "kg")
+    assert find_price(rules, "sweet potato", "kg") != find_price(rules, "potato", "kg")
+    assert find_price(rules, "bitter melon", "kg") == find_price(rules, "bitter gourd", "kg")
+
+    # Other extra words: unpriced, never a different produce's price
+    for name in ("black plum", "custard apple", "winter melon", "roma tomato", "dragon fruit", "unknown produce"):
+        assert find_price(rules, name, "kg") is None, name
+    # Only descriptive words: no fallback
+    assert find_price(rules, "green", "kg") is None
+    # The unit must still match (tomato is priced per kg only)
+    assert find_price(rules, "red tomato", "dozen") is None
+
+
+def test_descriptive_words_are_not_produce_names():
+    """Removing a descriptive word must never remove the produce itself (D66)."""
+    rules = load_mart_rules("demo_mart")
+    for word in DESCRIPTIVE_WORDS:
+        for entry in rules.prices:
+            assert not any(names_match(word, alias) for alias in entry.names), (word, entry.names)
+
+
+def test_demo_samples_produce_has_prices():
+    """Every produce in the page's sample photos (static/samples) is on the demo price list in its sale unit."""
+    rules = load_mart_rules("demo_mart")
+    for name, unit in [
+        ("banana", "dozen"),
+        ("tomato", "kg"),
+        ("lemon", "kg"),
+        ("radish", "kg"),
+        ("turnip", "kg"),
+        ("green bean", "kg"),
+    ]:
+        assert find_price(rules, name, unit) is not None, name
 
 
 def test_i4_keep_decision_next_steps_starts_with_discount():

@@ -56,84 +56,228 @@
   "note": "Demo prices, not live market rates",
   "prices": [
     {
-      "names": ["tomato", "tamatar"],
+      "names": ["tomato"],
       "prices": { "kg": 120 }
     },
     {
-      "names": ["onion", "pyaz"],
+      "names": ["onion"],
       "prices": { "kg": 100 }
     },
     {
-      "names": ["potato", "aloo"],
+      "names": ["potato"],
       "prices": { "kg": 80 }
     },
     {
-      "names": ["banana", "kela"],
+      "names": ["banana"],
       "prices": { "dozen": 180, "kg": 150 }
     },
     {
-      "names": ["apple", "seb", "green apple", "red apple"],
+      "names": ["apple", "green apple", "red apple"],
       "prices": { "kg": 250 }
     },
     {
-      "names": ["guava", "amrood"],
+      "names": ["guava"],
       "prices": { "kg": 140, "dozen": 210 }
     },
     {
-      "names": ["kinnow", "orange", "malta"],
+      "names": ["kinnow", "orange", "malta", "mandarin"],
       "prices": { "dozen": 280, "kg": 140 }
     },
     {
-      "names": ["cucumber", "kheera"],
+      "names": ["cucumber"],
       "prices": { "kg": 90 }
     },
     {
-      "names": ["okra", "bhindi"],
+      "names": ["okra", "lady finger"],
       "prices": { "kg": 120 }
     },
     {
-      "names": ["bottle gourd", "lauki", "ghia"],
+      "names": ["bottle gourd"],
       "prices": { "kg": 80 }
     },
     {
-      "names": ["spinach", "palak"],
+      "names": ["spinach"],
       "prices": { "kg": 70 }
     },
     {
-      "names": ["coriander", "dhania"],
+      "names": ["coriander", "cilantro"],
       "prices": { "kg": 150 }
     },
     {
-      "names": ["mint", "podina"],
+      "names": ["mint"],
       "prices": { "kg": 120 }
     },
     {
-      "names": ["green chilli", "hari mirch", "chilli"],
+      "names": ["green chilli", "chilli", "green chili", "chili"],
       "prices": { "kg": 160 }
     },
     {
-      "names": ["carrot", "gajar"],
+      "names": ["carrot"],
       "prices": { "kg": 90 }
     },
     {
-      "names": ["cauliflower", "gobhi", "phool gobhi"],
+      "names": ["cauliflower"],
       "prices": { "kg": 100 }
     },
     {
-      "names": ["lemon", "leemo", "limu"],
+      "names": ["lemon", "lime"],
       "prices": { "kg": 220, "dozen": 120 }
     },
     {
-      "names": ["papaya", "papeeta"],
+      "names": ["papaya"],
       "prices": { "kg": 180 }
     },
     {
-      "names": ["pomegranate", "anar"],
+      "names": ["pomegranate"],
       "prices": { "kg": 350 }
     },
     {
-      "names": ["grapes", "angoor"],
+      "names": ["grapes"],
       "prices": { "kg": 300 }
+    },
+    {
+      "names": ["radish"],
+      "prices": { "kg": 80 }
+    },
+    {
+      "names": ["turnip"],
+      "prices": { "kg": 90 }
+    },
+    {
+      "names": ["green bean", "french bean", "string bean"],
+      "prices": { "kg": 260 }
+    },
+    {
+      "names": ["peas"],
+      "prices": { "kg": 200 }
+    },
+    {
+      "names": ["garlic"],
+      "prices": { "kg": 500 }
+    },
+    {
+      "names": ["ginger"],
+      "prices": { "kg": 600 }
+    },
+    {
+      "names": ["aubergine", "brinjal", "eggplant"],
+      "prices": { "kg": 100 }
+    },
+    {
+      "names": ["capsicum", "bell pepper"],
+      "prices": { "kg": 220 }
+    },
+    {
+      "names": ["cabbage"],
+      "prices": { "kg": 80 }
+    },
+    {
+      "names": ["bitter gourd", "bitter melon"],
+      "prices": { "kg": 140 }
+    },
+    {
+      "names": ["round gourd", "apple gourd"],
+      "prices": { "kg": 120 }
+    },
+    {
+      "names": ["ridge gourd", "luffa"],
+      "prices": { "kg": 120 }
+    },
+    {
+      "names": ["pumpkin"],
+      "prices": { "kg": 80 }
+    },
+    {
+      "names": ["sweet potato"],
+      "prices": { "kg": 120 }
+    },
+    {
+      "names": ["beetroot", "beet"],
+      "prices": { "kg": 100 }
+    },
+    {
+      "names": ["taro", "taro root"],
+      "prices": { "kg": 140 }
+    },
+    {
+      "names": ["lotus root", "lotus stem"],
+      "prices": { "kg": 300 }
+    },
+    {
+      "names": ["mustard greens"],
+      "prices": { "kg": 80 }
+    },
+    {
+      "names": ["fenugreek"],
+      "prices": { "kg": 120 }
+    },
+    {
+      "names": ["lettuce"],
+      "prices": { "kg": 200 }
+    },
+    {
+      "names": ["spring onion", "green onion", "scallion"],
+      "prices": { "kg": 120 }
+    },
+    {
+      "names": ["mushroom"],
+      "prices": { "kg": 600 }
+    },
+    {
+      "names": ["mango"],
+      "prices": { "kg": 250 }
+    },
+    {
+      "names": ["watermelon"],
+      "prices": { "kg": 70 }
+    },
+    {
+      "names": ["melon", "muskmelon", "cantaloupe"],
+      "prices": { "kg": 120 }
+    },
+    {
+      "names": ["peach"],
+      "prices": { "kg": 250 }
+    },
+    {
+      "names": ["plum"],
+      "prices": { "kg": 300 }
+    },
+    {
+      "names": ["apricot"],
+      "prices": { "kg": 350 }
+    },
+    {
+      "names": ["pear"],
+      "prices": { "kg": 200 }
+    },
+    {
+      "names": ["persimmon"],
+      "prices": { "kg": 250 }
+    },
+    {
+      "names": ["sapodilla", "chikoo"],
+      "prices": { "kg": 250 }
+    },
+    {
+      "names": ["loquat"],
+      "prices": { "kg": 300 }
+    },
+    {
+      "names": ["pineapple"],
+      "prices": { "kg": 400 }
+    },
+    {
+      "names": ["strawberry"],
+      "prices": { "kg": 500 }
+    },
+    {
+      "names": ["cherry"],
+      "prices": { "kg": 800 }
+    },
+    {
+      "names": ["sweet lime", "mosambi"],
+      "prices": { "dozen": 250, "kg": 150 }
     }
   ]
 }

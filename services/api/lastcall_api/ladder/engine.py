@@ -8,6 +8,7 @@ Gemini knows, code decides:
 """
 
 import math
+import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -101,14 +102,39 @@ def step_prices(step: str, shelf_price: int, rules: MartRules) -> tuple[int, int
     return 0, 0
 
 
-def find_price(rules: MartRules, name: str, unit: Unit) -> int | None:
-    """Finds shelf price in rules.prices matching aliases using names_match."""
+# Words that describe produce without changing what it is: "white radish" is radish, "small red onion" is onion.
+# Only these are removed, so a name with any other extra word stays unpriced rather than priced as the wrong
+# produce (D66). Deliberately absent: "sweet" (sweet potato, sweet lime) and "black" (black plum is jamun).
+DESCRIPTIVE_WORDS = frozenset(
+    ("white", "red", "green", "yellow", "purple")  # colour
+    + ("baby", "small", "large", "desi", "local", "hybrid", "organic", "fresh", "raw")  # size, origin, kind
+)
+
+
+def base_name(name: str) -> str:
+    """The name without descriptive words ("baby-spinach" -> "spinach"); empty if nothing else is left."""
+    return " ".join(w for w in re.split(r"[\s-]+", name.lower()) if w and w not in DESCRIPTIVE_WORDS)
+
+
+def _listed_price(rules: MartRules, name: str, unit: Unit) -> int | None:
     for entry in rules.prices:
-        for alias in entry.names:
-            if names_match(name, alias):
-                if unit in entry.prices:
-                    return entry.prices[unit]
+        if unit in entry.prices and any(names_match(name, alias) for alias in entry.names):
+            return entry.prices[unit]
     return None
+
+
+def find_price(rules: MartRules, name: str, unit: Unit) -> int | None:
+    """The shelf price from the mart's list, in the item's unit (never converted, D4).
+
+    The full name is tried against the whole list first, so a listed name ("green onion", "sweet potato")
+    always wins; only then the name without descriptive words (D66).
+    """
+    price = _listed_price(rules, name, unit)
+    if price is None:
+        base = base_name(name)
+        if base:
+            price = _listed_price(rules, base, unit)
+    return price
 
 
 def hours_until_closing(rules: MartRules, now: datetime, override: float | None = None) -> float:

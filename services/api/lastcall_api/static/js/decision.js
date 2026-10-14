@@ -135,7 +135,16 @@ export function renderActiveDecision() {
   dom.decisionPriceCards.replaceChildren();
   const unitStr = decision.unit || 'kg';
 
-  if (decision.step === 'discount') {
+  if (decision.shelf_price == null && ['keep', 'discount', 'bulk_sale', 'animal_feed'].includes(decision.step)) {
+    // Every price on this card comes from the shelf price, so without one there is nothing to show but the ask
+    const c1 = createPriceCard('Shelf price', 'Price not set', '', 'card-needs-price');
+    const hint = document.createElement('p');
+    hint.className = 'price-card-hint';
+    // Also covers an item that is on the list in the other unit (kg vs dozen): prices are never converted (D4)
+    hint.textContent = `No price per ${unitStr} on the mart's list yet. Enter it below to set this item's prices.`;
+    c1.appendChild(hint);
+    dom.decisionPriceCards.appendChild(c1);
+  } else if (decision.step === 'discount') {
     const c1 = createPriceCard('Shelf price', 'Rs ' + (decision.shelf_price != null ? decision.shelf_price : '—'), unitStr);
     const discPct = decision.discount_pct != null ? decision.discount_pct : 0;
     const discPrice = decision.discounted_price != null ? decision.discounted_price : '—';

@@ -731,3 +731,24 @@ def test_loader_unknown_mart_raises_key_error():
 
     with pytest.raises(KeyError, match="Unknown mart"):
         load_mart_rules("non_existent_mart_999")
+
+
+def test_mart_rules_price_names_unique():
+    """A produce name may appear under only one price entry (ignoring case, spacing and plurals)."""
+    from datetime import time
+
+    from lastcall_shared.models import MartRules, PriceEntry
+
+    mart = MartInfo(name="Test Mart", location="Lahore")
+    lemon = PriceEntry(names=["lemon", "lime"], prices={"kg": 220})
+
+    MartRules(mart_id="test", mart=mart, closing_time=time(23, 0), prices=[lemon])  # valid
+
+    for clash in (["Lime"], ["sweet lime", "LE MON"], ["limes"], [""]):
+        with pytest.raises(ValidationError, match="empty or listed more than once"):
+            MartRules(
+                mart_id="test",
+                mart=mart,
+                closing_time=time(23, 0),
+                prices=[lemon, PriceEntry(names=clash, prices={"kg": 150})],
+            )
