@@ -170,6 +170,7 @@ def test_selling_time_is_a_rounded_duration():
     assert selling_time(9.9) == "about 10 h"
     assert selling_time(33.6) == "about 34 h"  # 1–3 days band, mid stage: 48 h × 0.7
     assert selling_time(47.4) == "about 47 h"
+    assert selling_time(47.6) == "about 2 days"  # never "about 48 h"
     assert selling_time(48.0) == "about 2 days"
     assert selling_time(67.2) == "about 3 days"  # over 3 days band, mid stage: 96 h × 0.7
 

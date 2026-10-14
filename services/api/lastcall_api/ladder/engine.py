@@ -181,8 +181,9 @@ def selling_time(hours: float) -> str:
     if hours < 10:
         half_hours = math.floor(hours * 2 + 0.5) / 2  # nearest half hour, halves rounded up
         return f"about {half_hours:g} h"
-    if hours < 48:
-        return f"about {math.floor(hours + 0.5)} h"
+    whole_hours = math.floor(hours + 0.5)
+    if whole_hours < 48:  # decided on the rounded value, so 47.6 h reads "about 2 days", not "about 48 h"
+        return f"about {whole_hours} h"
     return f"about {math.floor(hours / 24 + 0.5)} days"
 
 
