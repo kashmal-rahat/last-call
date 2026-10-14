@@ -22,6 +22,7 @@ export const decideError = document.getElementById('decideError');
 
 // Section 2: AI Reading elements
 export const sectionAiReading = document.getElementById('sectionAiReading');
+export const readingHeading = document.getElementById('readingHeading');
 export const inspectResultContainer = document.getElementById('inspectResultContainer');
 export const inspectedImage = document.getElementById('inspectedImage');
 export const bboxOverlay = document.getElementById('bboxOverlay');

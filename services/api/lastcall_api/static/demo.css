@@ -2092,6 +2092,7 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
 /* Hero and "How it works" (static, no JS)                            */
 /* ------------------------------------------------------------------ */
 .main-layout > section { scroll-margin-top: 80px; }
+#readingHeading:focus { outline: none; } /* a focus target after inspecting, not a control */
 
 /* First screen: the hero band and the steps panel fill the viewport below the 64 px header,
    so the demo starts just past the fold at any screen size; extra height goes above the title. */

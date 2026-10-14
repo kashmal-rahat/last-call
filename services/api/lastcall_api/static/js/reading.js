@@ -77,6 +77,9 @@ export async function handleInspect() {
   state.currentActiveCall = null;
   updateShelfLock();
 
+  const scrollYAtStart = window.scrollY;
+  let readingShown = false;
+
   const shelfId = getOrCreateShelfId();
   const formData = new FormData();
   formData.append('photo', photoFile, 'shelf_photo.jpg');
@@ -102,6 +105,7 @@ export async function handleInspect() {
     const data = await res.json();
     state.currentInspection = data;
     renderResults(data, displayUrl);
+    readingShown = true;
     if (data.photo_status === 'ok' && data.items && data.items.length > 0) {
       triggerDecide();
     }
@@ -115,6 +119,20 @@ export async function handleInspect() {
     dom.btnInspect.disabled = false;
     updateShelfLock();
   }
+  // After the loading box is gone, so the layout above the reading no longer shifts
+  if (readingShown) revealReading(scrollYAtStart);
+}
+
+// Takes the judge to the new reading by focusing its heading (the usual pattern after new content:
+// keyboard and screen-reader users land there too). Left alone if they scrolled elsewhere while waiting.
+function revealReading(scrollYAtStart) {
+  if (Math.abs(window.scrollY - scrollYAtStart) > 40) return;
+  const top = dom.sectionAiReading.getBoundingClientRect().top;
+  if (top < 0 || top > 120) {  // 120: already just under the sticky header (scroll-margin-top 80 px)
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    dom.sectionAiReading.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  }
+  dom.readingHeading.focus({ preventScroll: true });
 }
 
 export function setActiveItem(itemKey) {

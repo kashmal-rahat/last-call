@@ -193,7 +193,8 @@
         <div class="section-head-left">
           <div class="section-circle">2</div>
           <div class="section-title-group">
-            <h2>AI shelf reading</h2>
+            <!-- Focused when a reading arrives (not a control: tabindex -1 keeps it out of the Tab order) -->
+            <h2 id="readingHeading" tabindex="-1">AI shelf reading</h2>
             <p class="section-subtitle">Gemini judges the freshness of every item on the shelf.</p>
           </div>
         </div>

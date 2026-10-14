@@ -643,3 +643,16 @@ Round 17 noted that the muted grey #94A3B8 (from the Module 8 spec) was used for
 - **Footer:** "✦ Read by Gemini 3.8 Flash · 4.2 s · 2 calls · 1 zoomed in" (or "same photo as before, stored reading reused") in the body font. It replaces the monospace `Model: … Latency: 60004 ms calls: 4 Hedges: 1 Zoomed: 0`. `readingSummary` is in `format.js` with unit tests; the raw numbers stay in the API response. On a phone, where it wraps, the sparkle stays on the first line.
 - **Code:** `formatChange`, `formatStockBasis` and `freshnessPosition` are pure functions in `format.js`, with 13 unit-test cases. The renderer changes are in `renderItemsList` and the new `renderFreshnessScale`. Unused styles (`issues-chips`, `issue-tag`, `item-stage-level`) are removed.
 - **Checks:** `pytest` 421 passed, 20 skipped; `node --test` 26 passed; `node --check` on every module; no sideways scroll at 1280 and 375 px.
+
+# Round 20: take the judge to the reading after Inspect, by Claude (2026-10-14)
+
+The reading appeared below the fold on a laptop, so pressing Inspect could look as if nothing happened.
+
+- **How:** when a reading has rendered, the page focuses the "AI shelf reading" heading (`tabindex="-1"`, no focus ring since it is not a control). This is the usual pattern after new content, so keyboard and screen-reader users land on the result too. The section scrolls to just under the sticky header (the existing `scroll-margin-top`). The scroll is smooth, or instant when the visitor has reduced motion turned on. Only this one scroll changes; there is no page-wide `scroll-behavior`.
+- **When it does nothing:**
+  - the judge scrolled more than 40 px while waiting (they are reading something else, so they stay there);
+  - the section is already just under the header;
+  - the inspection failed (the error stays by the button).
+- **Order:** it runs after the loading box is hidden, so the layout above the reading doesn't shift after the scroll.
+- **Not touched:** the inspection, the API and the cache. If this step fails, the page is simply as it was before.
+- **Checks:** in the preview, a normal reading (smooth scroll, focus on the heading), scrolling away while waiting (no scroll, focus unchanged), reduced motion (instant) and an error (no scroll, error shown). The browser pane was hidden, so these were checked by recording the scroll and focus calls, not by watching the page move.
