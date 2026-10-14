@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     IP_RATE_LIMIT_PER_HOUR: int = 20
     VOICE_WS_URL: str | None = None
 
+    # Inspector reading cache (D45): the same photo returns its stored reading with no Gemini call.
+    # Terraform's `inspector_reading_cache` turns it off to re-test photos (D63); keep it on for judging.
+    INSPECTOR_READING_CACHE: bool = True
+
     # Item photos (D62): the shelf photo is kept for a day so the agent can send the buyer
     # a crop of the item. Unset bucket = no photos (the agent says so honestly).
     SHELF_PHOTO_BUCKET: str | None = None

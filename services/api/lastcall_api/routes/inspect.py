@@ -81,7 +81,7 @@ async def demo_inspect(
                 previous=previous,
                 now=now,
                 bin_capacity_kg=bin_capacity_kg,
-                reading_cache=store,
+                reading_cache=store if settings.INSPECTOR_READING_CACHE else None,
             )
     except ImageError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not a readable image") from None

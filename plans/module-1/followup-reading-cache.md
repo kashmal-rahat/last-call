@@ -91,3 +91,8 @@ def reading_key(image_sha256: str, *, model: str, prompt_version: str, thinking_
 ## Not in this follow-up
 - Voting on the Inspector's stage (several readings per photo). Deferred until the Module 1 consistency eval shows it's needed.
 - An expiry time for readings. They are small, contain no photo, and a prompt or code change creates new keys anyway.
+
+## Switch (D63, 2026-10-14)
+- `INSPECTOR_READING_CACHE` (default `true`) turns the cache off for `/demo/inspect`, so the same photo is read fresh each time. It is set by the Terraform variable `inspector_reading_cache` on `api`.
+- Off only while re-testing photos; **on for judging**, so a repeated sample gives the same answer.
+- Test: `test_10_demo_inspect_without_cache_when_switched_off`.

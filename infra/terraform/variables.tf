@@ -72,3 +72,9 @@ variable "phone_demo_enabled" {
   type        = bool
   default     = false
 }
+
+variable "inspector_reading_cache" {
+  description = "Inspector reading cache (D45, D63): the same photo returns its stored reading. Set false only to re-test photos; keep true for judging."
+  type        = bool
+  default     = true
+}

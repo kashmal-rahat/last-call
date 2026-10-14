@@ -387,6 +387,10 @@ resource "google_cloud_run_v2_service" "api" {
         value = google_storage_bucket.shelf_photos.name
       }
       env {
+        name  = "INSPECTOR_READING_CACHE"
+        value = tostring(var.inspector_reading_cache)
+      }
+      env {
         name  = "PHONE_DEMO_ENABLED"
         value = tostring(var.phone_demo_enabled)
       }

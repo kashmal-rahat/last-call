@@ -476,3 +476,31 @@ async def test_9_demo_inspect_passes_store_as_reading_cache(setup_api_test):
 
     assert "reading_cache" in captured_kwargs
     assert captured_kwargs["reading_cache"] is store
+
+
+@pytest.mark.asyncio
+async def test_10_demo_inspect_without_cache_when_switched_off(setup_api_test, monkeypatch):
+    """10. INSPECTOR_READING_CACHE=false (D63): /demo/inspect reads every photo fresh."""
+    monkeypatch.setenv("INSPECTOR_READING_CACHE", "false")
+    client = TestClient(app)
+    captured_kwargs = {}
+
+    async def fake_inspect_fn(image, **kwargs):
+        captured_kwargs.update(kwargs)
+        return FreshnessResult(
+            mart_id="demo_mart",
+            shelf_id="shelf_test",
+            inspection_id="insp_test",
+            photo_uri="memory://test.jpg",
+            taken_at=NOW,
+            items=[],
+        )
+
+    app.state.inspect_fn = fake_inspect_fn
+
+    files = {"photo": ("photo.jpg", b"jpeg-bytes-data", "image/jpeg")}
+    resp = client.post(
+        "/demo/inspect", headers={"X-Demo-Access-Code": CODE}, files=files, data={"shelf_id": "shelf_test"}
+    )
+    assert resp.status_code == 200
+    assert captured_kwargs["reading_cache"] is None
