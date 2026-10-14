@@ -1,0 +1,246 @@
+/* Section 5: live call (dark call screen, transcript, WhatsApp messages, result) */
+
+/* A call screen, not a dashboard */
+.call-dark-panel {
+  background: #0B1220;
+  border: 1px solid #1E293B;
+  border-radius: 20px;
+  padding: 28px;
+  color: #E2E8F0;
+  box-shadow: 0 24px 48px -24px rgba(15, 23, 42, 0.45);
+}
+.call-dark-panel > * + * { margin-top: 24px; }
+
+.call-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.caller { display: flex; align-items: center; gap: 16px; min-width: 0; }
+
+.caller-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1E1B4B;
+  color: #C7D2FE;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+}
+
+.caller-text { min-width: 0; }
+.caller-kicker {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #818CF8;
+}
+.caller-name {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  line-height: 30px;
+  font-weight: 700;
+  color: #F8FAFC;
+  margin: 2px 0;
+}
+.caller-sub { font-size: 13px; line-height: 20px; color: #94A3B8; }
+
+.call-controls { display: flex; align-items: center; gap: 12px; }
+
+.call-dark-panel .status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #E2E8F0;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.call-dark-panel .status-dot { width: 8px; height: 8px; border-radius: 999px; background: #64748B; }
+.call-dark-panel .status-badge.live .status-dot { background: #34D399; box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.2); }
+.call-dark-panel .status-badge.busy .status-dot { background: #FBBF24; }
+.call-dark-panel .status-badge.error .status-dot { background: #F87171; }
+.status-sep { color: #475569; }
+
+.call-dark-panel .btn-danger { height: 36px; padding: 0 16px; border-radius: 999px; white-space: nowrap; }
+.call-dark-panel .btn-danger:disabled {
+  opacity: 1;
+  background: transparent;
+  border: 1px solid #334155;
+  color: #64748B;
+}
+
+/* Small waveform next to the status; moves while the AI speaks */
+.waveform-mini { display: flex; align-items: center; gap: 3px; height: 20px; }
+.waveform-mini span { width: 3px; height: 6px; border-radius: 2px; background: #334155; transition: background 0.2s; }
+.waveform-mini.waveform-active span { background: #818CF8; animation: wave 0.9s ease-in-out infinite; }
+.waveform-mini.waveform-active span:nth-child(2) { animation-delay: 0.1s; }
+.waveform-mini.waveform-active span:nth-child(3) { animation-delay: 0.2s; }
+.waveform-mini.waveform-active span:nth-child(4) { animation-delay: 0.3s; }
+.waveform-mini.waveform-active span:nth-child(5) { animation-delay: 0.4s; }
+@keyframes wave { 0%, 100% { height: 6px; } 50% { height: 18px; } }
+
+.call-body {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+/* Deal sheet: a quiet list, not boxes */
+.deal-sheet {
+  margin: 0;
+  padding: 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #1E293B;
+  display: flex;
+  flex-direction: column;
+}
+.deal-row { padding: 12px 0; border-bottom: 1px solid #1E293B; }
+.deal-row:first-child { padding-top: 0; }
+.deal-row dt {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--call-muted);
+  margin-bottom: 4px;
+}
+.deal-row dd { margin: 0; font-size: 14px; line-height: 20px; font-weight: 500; color: #F1F5F9; font-variant-numeric: tabular-nums; }
+.deal-note { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--call-muted); }
+.call-hint { margin: 14px 0 0; font-size: 12px; line-height: 18px; color: var(--call-muted); }
+
+/* Conversation */
+.transcript-box {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+  min-height: 300px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid #1E293B;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scroll-behavior: smooth;
+}
+.msg { display: flex; flex-direction: column; gap: 4px; max-width: 78%; }
+.msg-agent { align-self: flex-start; }
+.msg-buyer { align-self: flex-end; align-items: flex-end; }
+.msg-speaker { font-size: 11px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--call-muted); padding: 0 4px; }
+.msg-bubble { padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 22px; }
+.msg-agent .msg-bubble { background: #1E293B; color: #F1F5F9; border-top-left-radius: 4px; }
+.msg-buyer .msg-bubble { background: #4338CA; color: #FFFFFF; border-top-right-radius: 4px; }
+.msg-bubble.urdu { font-size: 16px; line-height: 2; }
+.transcript-notice {
+  align-self: center;
+  font-size: 12px;
+  color: var(--call-muted);
+  padding: 2px 10px;
+}
+.transcript-notice.is-tool {
+  color: #A5B4FC;
+  background: rgba(99, 102, 241, 0.12);
+  border-radius: 999px;
+}
+
+/* Call result: a closing banner */
+.call-result {
+  display: none;
+  padding: 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #1E293B;
+}
+.result-row { display: flex; align-items: center; gap: 14px; }
+.result-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.result-icon svg { width: 18px; height: 18px; stroke-width: 2.25; }
+.result-icon.is-deal { background: rgba(16, 185, 129, 0.15); color: #34D399; }
+.result-icon.is-other { background: rgba(148, 163, 184, 0.12); color: #94A3B8; }
+.result-title { font-family: var(--font-heading); font-size: 17px; line-height: 24px; font-weight: 600; color: #F8FAFC; }
+.result-sub { font-size: 13px; line-height: 20px; color: #94A3B8; font-variant-numeric: tabular-nums; }
+#resultNextAction:not(:empty) { margin: 16px 0 0 52px; display: flex; gap: 10px; flex-wrap: wrap; }
+#resultContent:empty + #resultNextAction { margin-left: 0; }
+
+@media (max-width: 760px) {
+  .call-dark-panel { padding: 20px; }
+  .call-dark-panel > * + * { margin-top: 20px; }
+  .call-body { grid-template-columns: 1fr; }
+  .call-controls { width: 100%; justify-content: space-between; }
+  .msg { max-width: 92%; }
+  #resultNextAction:not(:empty) { margin-left: 0; }
+}
+
+/* Hidden until the page's JS shows them */
+#voiceSection {
+  display: none;
+}
+
+/* Dark-panel details */
+.transcript-box::-webkit-scrollbar { width: 8px; }
+.transcript-box::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+.call-result .chip-emerald { background: rgba(16, 185, 129, 0.15); color: #6EE7B7; }
+.call-result .chip-rose { background: rgba(239, 68, 68, 0.15); color: #FCA5A5; }
+.call-result .chip, .call-result .chip-slate { background: rgba(255, 255, 255, 0.06); color: #CBD5E1; }
+.call-result .chip-amber { background: rgba(245, 158, 11, 0.15); color: #FCD34D; }
+.call-result .btn-ghost, .call-result .btn-secondary { background: transparent; color: #E2E8F0; border-color: #334155; }
+@media (max-width: 760px) {
+  .deal-sheet { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; padding: 16px; }
+  .deal-row, .deal-row:first-child { padding: 10px 0; }
+  .call-hint { grid-column: 1 / -1; margin-top: 8px; }
+  .transcript-box { min-height: 240px; padding: 16px; }
+}
+
+/* WhatsApp messages the agent sends the buyer during a call (D62) */
+.msg-whatsapp .msg-speaker { display: inline-flex; align-items: center; gap: 6px; color: #4ADE80; }
+.msg-whatsapp .msg-speaker svg { width: 13px; height: 13px; }
+.wa-bubble {
+  max-width: 300px;
+  padding: 6px;
+  border-radius: 14px;
+  border-top-left-radius: 4px;
+  background: #0F2A20;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+}
+.wa-photo {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #0B1220;
+}
+.wa-text {
+  padding: 6px 8px 4px;
+  font-size: 13px;
+  line-height: 20px;
+  color: #D1FAE5;
+  white-space: pre-line;
+}

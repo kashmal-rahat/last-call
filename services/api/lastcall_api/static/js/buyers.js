@@ -226,7 +226,7 @@ export function renderActiveBuyers() {
     input.type = 'number';
     input.min = '0.1';
     input.step = 'any';
-    input.className = 'input-number qty-input';
+    input.className = 'input-number';
 
     const itemObj = state.currentInspection.items.find(i => i.item_key === state.activeItemKey);
     const low = (itemObj && itemObj.quantity && itemObj.quantity.low > 0) ? itemObj.quantity.low : 0;

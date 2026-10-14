@@ -717,3 +717,19 @@ The Buyers list was the busiest section: about 20 indigo marks (an uppercase "NE
   - pytest and `node --test` pass; ruff is clean.
   - The preview used fictional sample buyers (a fake Scout, no Google Maps calls). It covered the next buyer, closed, hours unknown, possible fit, a deal, a "call back" buyer who is next again (Start call shown) and a declined one.
   - At 1280 and 375 px there was no sideways scroll.
+
+# Round 24: one stylesheet per part of the page (D67), by Claude (2026-10-15)
+
+- **Why:** `demo.css` was 2,150 lines. The sections were in order up to Impact, but the last 300 lines were a catch-all: hidden-by-default states for every section, "replacements for removed inline styles", button sizes apart from the buttons, and a phone block mixing the header, section heads, the step row and the price row. Unused rules collected there.
+- **How:** a script parsed the file into its 410 top-level blocks (exact round trip) and gave each one to a file by index. The one mixed `@media` block was split rule by rule into the matching files under the same query. A check confirmed the nine files hold exactly the original 456 rules. The files are in `static/css/`, linked in cascade order: base, layout, hero, setup, reading, decision, buyers, call, impact.
+- **Proof that nothing changed:** in the preview, with the page holding a reading, a decision, fictional buyers, transcript lines and a toast, the computed style of every element and its `::before`/`::after` (1,479) was compared between the nine files and the original `demo.css`, on the same page. A control run (new files off) showed 1,482 differences, so the check works.
+  - **First result:** one difference, the quantity input (`input-number qty-input`). Originally `.qty-input` came before `.input-number` and lost on every property, so it did nothing; after the split it came later and won. It was removed (and the class in `buyers.js`), which restores the original exactly.
+  - **Final result:** 0 differences at 1280, 800, 600 and 375 px (each breakpoint combination), both before and after removing the unused rules.
+- **Removed (no markup or JS uses them; checked against class names built in JS, like `fill-${stage}`):** `.metrics-summary-grid`, `.metric-item-group/-label/-value`, `.evidence-box/-text/-title/-list`, `.item-expanded-details`, `.staff-check-notice`, `.text-emerald/-indigo/-amber`, `.btn-block`, `.call-stock-info`, `[data-mono]`, `.qty-input`.
+- **Deploy:** the Dockerfile copies `services/api/` whole, so `css/` ships. `test_static_and_demo_cache_control` now checks all nine linked stylesheets are served with `no-cache`.
+- **Review pass (comments only):** comments travel with the block after them, so a few no longer fit after the move. Fixed:
+  - the hero banner comment sat above the section scroll offset in `layout.css`;
+  - stale or historical headings ("Price Cards Grid", "Replacements for removed inline styles", "Section Footer Telemetry", "Phone layout" above a rule for every width);
+  - each file's old "SECTION N" line duplicated its new header.
+  
+  Each file's hidden-by-default states now open with the same one-line comment. With comments stripped, the rules are identical to before.

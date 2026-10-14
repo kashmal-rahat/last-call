@@ -1,5 +1,6 @@
 """Tests for API demo endpoints (/demo, /demo/calls, /demo/batches) per Step 6."""
 
+import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -508,9 +509,14 @@ def test_static_and_demo_cache_control():
     assert r_demo.status_code == 200
     assert r_demo.headers.get("Cache-Control") == "no-cache"
 
-    r_css = client.get("/static/demo.css")
-    assert r_css.status_code == 200
-    assert r_css.headers.get("Cache-Control") == "no-cache"
+    # Every stylesheet the page links (one per part of the page) is served and revalidated
+    page = r_demo.text
+    sheets = re.findall(r'href="(/static/css/[a-z]+\.css)"', page)
+    assert len(sheets) == 9
+    for href in sheets:
+        r_css = client.get(href)
+        assert r_css.status_code == 200, href
+        assert r_css.headers.get("Cache-Control") == "no-cache", href
 
     r_js = client.get("/static/js/main.js")
     assert r_js.status_code == 200

@@ -1,0 +1,159 @@
+/* Section 3: decision (steps, reason, price strip, shelf price row) */
+
+.stepper-trail {
+  position: relative; /* the steps' offsetLeft is measured from the row, for centring the chosen one */
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow-x: auto;
+  scrollbar-width: none; /* swipe to scroll; the edge fade shows there is more */
+  padding: 8px 0;
+  background: transparent;
+  border-radius: 0;
+}
+
+.stepper-wrap { border-bottom: 1px solid #F1F5F9; margin-bottom: 24px; }
+.stepper-trail::-webkit-scrollbar { display: none; }
+/* Set by updateStepperFade: fade the edge(s) with more steps beyond them */
+.stepper-trail.fade-end { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+.stepper-trail.fade-start { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent); }
+.stepper-trail.fade-start.fade-end {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+}
+
+.stepper-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+  color: #475569;
+  white-space: nowrap;
+  padding-bottom: 6px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease;
+  background: transparent;
+  border-radius: 0;
+}
+
+.stepper-item::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #94A3B8;
+  flex-shrink: 0;
+}
+
+.stepper-arrow {
+  color: #CBD5E1;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.stepper-item.step-active {
+  background: transparent;
+  color: #047857;
+  font-weight: 600;
+  border-bottom-color: #047857;
+  box-shadow: none;
+}
+
+.stepper-item.step-active::before {
+  background-color: #047857;
+}
+
+.stepper-item.step-next {
+  background: transparent;
+  color: #475569;
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+
+.stepper-item.step-next::before {
+  background-color: #475569;
+}
+
+.stepper-item.step-disabled {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.stepper-item.step-disabled::before { /* hollow dot: not allowed for this item */
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1.5px #94A3B8;
+}
+
+/* Decision: why → prices → actions → where the knowledge came from (same rhythm as the AI reading card) */
+.decision-reason-line { margin: 0 0 16px; font-size: 15px; line-height: 24px; color: var(--text-primary); }
+
+/* Price strip: the step's prices in one soft box, like the reading's facts; money is the section's headline */
+.price-strip {
+  display: grid;
+  grid-auto-flow: column; /* one equal column per price, however many the step has */
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 16px 24px;
+  padding: 20px 16px;
+  margin-bottom: 16px;
+  background-color: #F8FAFC;
+  border-radius: 10px;
+}
+.price-strip:empty { display: none; } /* compost: no prices */
+.price-cell { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; min-width: 0; }
+.price-cell-label { display: flex; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--text-muted); }
+.price-cell-label .inline-icon { width: 13px; height: 13px; flex: none; }
+.price-cell-value {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.price-cell-unit { margin-left: 2px; font-family: var(--font-body); font-size: 12px; font-weight: 500; color: var(--text-muted); }
+/* No shelf price yet: quieter than a real price, with the ask beneath */
+.price-cell.is-unset .price-cell-value { font-size: 17px; line-height: 24px; color: var(--text-secondary); }
+.price-cell-hint { margin: 0; font-size: 13px; line-height: 18px; color: var(--text-secondary); }
+
+@media (max-width: 560px) {
+  .price-strip { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); }
+  .price-cell { align-items: flex-start; text-align: left; } /* stacked: read down the left edge */
+}
+
+.badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.badges-row:empty { display: none; }
+
+/* The footer line below carries the divider, so this row has none */
+.price-override-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+/* Hidden until the page's JS shows them */
+#sectionDecision {
+  display: none;
+}
+#decideLoading {
+  display: none;
+}
+.price-override-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 640px) {
+  .stepper-trail { gap: 10px; } /* about four steps in view on a phone */
+  .price-override-label { flex-basis: 100%; } /* its own line, so the input keeps a usable width */
+  .price-override-row .input-number { flex: 1; min-width: 0; }
+}

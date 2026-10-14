@@ -1,0 +1,215 @@
+/* Section 4: buyers (controls, buyer cards, footer, phone demo switch) */
+
+.buyers-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.buyer-qty-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.buyer-hours {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.buyer-hours::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background-color: #CBD5E1;
+}
+.buyer-hours.is-closed { color: #B91C1C; }
+.buyer-hours.is-closed::before { background-color: #EF4444; }
+
+.buyers-empty {
+  padding: 24px 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* Buyer list: one card per buyer, like the reading's items; the next buyer has the page's mint "selected" ring */
+.buyer-list { display: flex; flex-direction: column; gap: 8px; }
+.buyer-item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.buyer-item:hover { border-color: #CBD5E1; }
+.buyer-item.is-next { border-color: #A7F3D0; box-shadow: 0 0 0 3px #ECFDF5; }
+.buyer-item.is-called:not(.is-next) .buyer-name { color: var(--text-secondary); } /* the next buyer never looks finished */
+
+/* The rank alone: the order is the information (initials avatars said nothing) */
+.buyer-rank {
+  align-self: start;
+  padding-top: 2px; /* on the name's line */
+  font-family: var(--font-heading);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.is-next .buyer-rank { padding-top: 22px; color: #047857; } /* below the "Next to call" line */
+
+.buyer-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.buyer-eyebrow { font-size: 12px; line-height: 16px; font-weight: 600; color: #047857; margin-bottom: 2px; }
+.buyer-line1 { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.buyer-name { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--text-primary); }
+
+/* Gemini's reason: the row's most useful line, marked with the page's AI sparkle */
+.buyer-ai { margin: 0; display: flex; align-items: flex-start; gap: 6px; font-size: 14px; line-height: 22px; color: var(--text-secondary); }
+.buyer-ai .inline-icon { width: 13px; height: 13px; margin-top: 4px; flex: none; color: var(--indigo); }
+
+/* Facts in one quiet line, separated by dots */
+.buyer-line2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.buyer-meta-item { white-space: nowrap; }
+.buyer-line2 > * + *::before { content: "·"; display: inline-block; margin: 0 8px; color: #CBD5E1; } /* inline-block: outside the Maps link's hover underline */
+.buyer-maps-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  color: #047857;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.buyer-maps-link:hover { text-decoration: underline; }
+.buyer-maps-link .inline-icon { width: 12px; height: 12px; }
+
+.buyer-side { display: flex; align-items: center; justify-content: flex-end; }
+.buyer-side .btn-primary { height: 40px; padding: 0 18px; gap: 8px; }
+.buyer-side .btn-primary .inline-icon { width: 15px; height: 15px; }
+
+/* Footer: one quiet line (the Google Maps attribution stays visible), then what was left out */
+.buyers-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-muted);
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-muted);
+}
+.buyers-attribution { font-weight: 500; color: var(--text-secondary); }
+.screened-out { margin: 8px 0 0; font-size: 12px; line-height: 18px; color: var(--text-muted); }
+.screened-out summary { cursor: pointer; width: fit-content; }
+.screened-out summary:hover { color: var(--text-secondary); }
+.screened-out ul { margin: 10px 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 20px; color: var(--text-secondary); }
+.screened-name { font-weight: 500; color: var(--text-primary); }
+.screened-more { margin: 8px 0 0 18px; }
+
+/* Stock progress (replaces "Remaining x of y") */
+.stock-progress { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 180px; }
+.stock-progress-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.stock-progress-track { width: 180px; height: 6px; border-radius: 999px; background: #E2E8F0; overflow: hidden; }
+.stock-progress-fill { height: 100%; border-radius: 999px; background: #10B981; transition: width 0.3s ease; }
+
+@media (max-width: 640px) {
+  .buyer-item { grid-template-columns: 20px minmax(0, 1fr); padding: 16px; gap: 12px; }
+  .buyer-line2 { gap: 2px 14px; } /* the facts wrap here, so spacing separates them, not dots */
+  .buyer-line2 > * + *::before { content: none; }
+  .buyer-side { grid-column: 1 / -1; }
+  .buyer-side > * { width: 100%; }
+  .buyer-side .btn-primary, .buyer-side .btn-ghost { height: 44px; justify-content: center; }
+  .buyer-side .chip { justify-content: center; height: 32px; }
+  .buyers-footer { flex-direction: column; align-items: flex-start; }
+  .stock-progress { align-items: flex-start; min-width: 0; width: 100%; }
+  .stock-progress-track { width: 100%; }
+}
+/* Hidden until the page's JS shows them */
+#sectionBuyers {
+  display: none;
+}
+#buyerStaffCheckRow {
+  display: none;
+  margin-bottom: 0.75rem;
+}
+#buyerHoursBanner {
+  display: none;
+  margin-bottom: 1rem;
+}
+#buyerErrorBanner {
+  display: none;
+  margin-bottom: 1rem;
+}
+#buyersFooter {
+  display: none;
+}
+.buyer-qty-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+.buyer-staff-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.buyer-next-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.buyers-screened-out {
+  margin-top: 1rem;
+}
+
+/* Quiet notes in the Buyers section (instead of stacked banners) */
+.buyer-note {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text-secondary);
+}
+.buyer-note-warn { color: #B45309; }
+
+/* Phone demo switch (Module 9): hidden unless ?phone=1 and the server has it on */
+.phone-mode {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px dashed var(--indigo-border);
+  border-radius: 12px;
+  background: var(--indigo-light);
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.phone-mode[hidden] { display: none; }
+.phone-mode strong { color: var(--indigo-dark); font-weight: 600; }
+.phone-mode input { width: 16px; height: 16px; accent-color: var(--indigo); flex: none; }
