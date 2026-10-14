@@ -10,6 +10,7 @@ from lastcall_api.deps import _IP_REQUEST_HISTORY
 from lastcall_api.inspector.images import ImageError
 from lastcall_api.inspector.inspector import InspectorError
 from lastcall_api.main import app
+from lastcall_api.routes.pages import STATIC_DIR
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import (
     BoundingBox,
@@ -79,13 +80,16 @@ def test_get_demo_samples_public():
     samples = resp.json()
     assert isinstance(samples, list)
     assert len(samples) >= 2
-    ids = [s["id"] for s in samples]
-    assert "smoke2" in ids
-    assert "smoke3" in ids
     for s in samples:
-        assert "label" in s
-        assert "url" in s
-        assert "series" in s
+        assert s["label"]
+        # every listed photo and preview is a real file the page can load
+        for key in ("url", "thumb"):
+            assert s[key].startswith("/static/samples/")
+            assert (STATIC_DIR / s[key].removeprefix("/static/")).is_file()
+        # an AI-generated photo says so in its label
+        assert s["ai_generated"] == s["label"].endswith("AI")
+    # one photo is selected when the page opens (D65: Day 4, the start of the 10-day sequence)
+    assert [s["id"] for s in samples if s.get("default")] == ["day4_banana_tomato"]
 
 
 def test_post_demo_inspect_auth():

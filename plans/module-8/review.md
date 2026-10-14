@@ -532,3 +532,90 @@ User feedback: the hero's dark chat card, and two replacements tried in this rou
   - The change note now reads "dropped 42 points since the last photo (today 10:14)" (`matching.py`). The time is when the last photo reached the app, which is when a shelf camera shot it. An uploaded old photo has no capture time (EXIF is stripped, D62), so the note no longer suggests one.
   - A test pins the new wording.
 - **Checks:** `pytest` 421 passed, 20 skipped; `node --test` 22 passed.
+
+---
+
+# Round 16: Shelf setup photo picker and the user's sample photos, by Claude (2026-10-14)
+
+- **New samples** (the user's photos, replacing Shelf B, Shelf C and the simulated banana tray):
+  - Day 2 · Mixed
+  - Day 4 · Banana Tomato
+  - Day 7 · Banana Tomato
+  - Day 7 · Lemon
+  - Day 10 · Banana Tomato · AI
+
+  Day 4, 7 and 10 are the same two trays over time, so inspecting them in order on one shelf shows the change notes and the decision moving down the ladder.
+- **How the files were made:**
+  - EXIF orientation applied, **all metadata dropped** (camera model and dates; there was no GPS), long side ≤ 3072 px, JPEG q90 (0.8–2.2 MB)
+  - a 720 px preview in `samples/thumbs/` for the large preview and the list thumbnails
+  - file names kept as the user's, with `-AI` added for the AI-generated Day 10
+  - `samples.json` gains `thumb` and `ai_generated` and drops the unused `series`
+- **Honesty about Day 10:** the Module 3 review said not to pair an AI-generated photo with real ones as a time-lapse. The user chose to include it, so it is labelled "· AI" in the list with a visible "AI-generated image" line under it, and the test checks that `ai_generated` matches the label.
+- **Photo picker** (replaces the 3-card grid and the raw "Choose file" input):
+  - **left:** one large preview of the selected photo (280 × 372 px, a whole-pixel height so the five 68 px rows and their gaps end exactly with it; the hairline edge is drawn inside so it doesn't stick out), with its name on a soft gradient and a 200 ms crossfade (none with reduced motion)
+  - **right:** the five samples as a list whose rows share the preview's height exactly (top and bottom edges aligned), each with a 3:4 thumbnail (40 × 54 px, the photos' own shape, so both trays show) (`role="radiogroup"`, each option `role="radio"` with `aria-checked`), the selected one tinted with a check
+  - **upload:** an outlined "Upload your own photo" pill beside **Inspect Shelf Photo**, a styled label for the visually hidden file input; once a file is chosen it reads "<file name> · Change", the preview shows "Your photo" and the sample rows lose their check
+  - **on a phone,** the large preview is hidden (the thumbnail rows are enough), and Upload sits above Inspect, both full width
+  - a first version showed a fanned stack of photo cards; the user found it old-fashioned, so it was replaced
+- **Logic touched (deliberate):**
+  - `setup.js`: `loadSamples` rewritten with `selectSample`, `showUploadedPhoto` and `renderPhotoPreview`. The sample blob is now kept only if that sample is still selected, which fixes a race when clicking quickly.
+  - `main.js`: the file-input handler calls `showUploadedPhoto`.
+- **Bin capacity removed from the page:** the field, its `dom.js` lookup and the 4 lines in `reading.js` that sent it. The API still accepts `bin_capacity_kg`.
+- **Closing window** now has its own full-width row, which fixes the overflow at 1280 px (contents were 26 px wider than the control).
+- **Checks:**
+  - preview: select a sample, upload a file, inspect a sample (photo and items show), at 1280 and 375 px with no sideways scroll
+  - `pytest` 421 passed, 20 skipped; `node --test` 22 passed; `node --check` on every module
+
+---
+
+# Round 17: field help (toggletips) and clearer time pills, by Claude (2026-10-14)
+
+The user wanted the three setup fields explained without adding visible text. The pattern was checked against design-system practice (Primer, Atlassian, Polaris "info icon"; the "toggletip" in Inclusive Components) and WCAG 2.2 AA.
+
+- **Labels:** sentence case ("Access code", "Branch", "Time until closing"), each followed by a small ⓘ.
+- **The ⓘ button:** a 14 px glyph in a 24 × 24 px target (WCAG 2.5.8), named "About …", with `aria-describedby` pointing at the text and `aria-expanded` when pinned.
+- **How the text shows:**
+  - **hover or keyboard focus** shows it (CSS)
+  - **a tap or click** pins it open (`ui.js` `initInfoTips`, about 30 lines)
+  - **Esc** dismisses it, and a **click elsewhere** closes it; only one is open at a time
+  - the icon and the text share one hover area, with a bridge across the gap, so the pointer can move onto the text (WCAG 1.4.13: dismissible, hoverable, persistent)
+  - the browser's Popover API was not used: it only became Baseline in 2025, and hover-to-open (`interestfor`) is still experimental (MDN)
+- **Placement:** above the label, anchored to the label row and capped at the field's width. A first version anchored it to the icon; on a phone the hidden "Time until closing" text then reached past the screen (scrollWidth 417 on 375), so it was moved.
+- **Wording:**
+  - Access code: "The code is in our submission deck."
+  - Branch: "Which branch's neighbourhood the AI searches for buyers. Prices and decisions don't change."
+  - Time until closing: "The mart closes at 23:00. Pick an earlier time to see how the AI's decision changes as closing nears. Pickup times stay real." (D56: the selector only simulates the decision)
+- **Essential information is not only in a tooltip:**
+  - the access-code placeholder reads "From our submission deck"
+  - a wrong code says "Invalid access code. You'll find it in our submission deck." (`reading.js`, `call.js`)
+- **Time pills:** two lines each, "Now / real time", "12 h left / morning", "4 h left / evening", "1 h left / last hour" (was "Morning (12 h)" etc.). Values and logic are unchanged.
+- **Branch dropdown:** the branch name only ("Demo Mart Johar Town"). The two places that read the option text split on "(", which still works.
+- **Checks:**
+  - preview at 1280 and 375 px: hover, tap, Esc and click-outside all work; no sideways scroll
+  - `pytest` 421 passed, 20 skipped; `node --test` 22 passed; `node --check` on every module
+- **Defaults (D65, same round):** the page opens with **4 h left** selected (the hidden select's `selected` option and the active pill moved from "Now") and on **Day 4 · Banana Tomato** (`"default": true` in `samples.json`; `loadSamples` selects it, else the first). Checked in the preview: the first `/demo/decide` request sends `hours_until_closing: 4`, and the chip reads "4 h to closing". A test pins the single default sample.
+- **Select chevron (same round):** the browser's own arrow sat against the right edge (about 10 px) while the text is inset 14 px, so it looked off. `.field select` now uses `appearance: none` with an inline SVG chevron at `right 0.875rem center` (the same 14 px) and 40 px right padding. The dropdown list stays native, so keyboard and screen readers behave as before.
+- **Senior review fixes (same round):**
+  - **Keyboard:** the photo list used `<button role="radio">`, so every row was a Tab stop and the arrow keys did nothing, short of the WAI-ARIA APG radio-group pattern. Each row is now a `<label>` with a native, visually hidden `<input type="radio" name="shelfSample">`, so there is one Tab stop and the arrow keys move between photos, with native screen-reader semantics. Focus ring: `.photo-option:has(input:focus-visible)`. If a call or inspection is running, a change is reverted to the current photo.
+  - **Contrast (WCAG 1.4.3 / 1.4.11):**
+    - the pills' small "morning / evening" text was #94A3B8 (2.3:1); it is now #475569 (6.9:1)
+    - the ⓘ icon was #94A3B8 (2.6:1 against the 3:1 that icons need); it is now #64748B (4.8:1)
+  - **Checked:** arrow keys, mouse, upload (unchecks all radios) and inspect; no sideways scroll at 375 px.
+- **Known and left as it was:** the existing 12 px uppercase labels elsewhere on the page use #94A3B8 (from the Module 8 spec). That is below 4.5:1 and worth a separate pass.
+
+---
+
+# Round 18: page-wide text contrast (WCAG 2.2 AA), by Claude (2026-10-14)
+
+Round 17 noted that the muted grey #94A3B8 (from the Module 8 spec) was used for small text across the page at about 2.5:1, below AA's 4.5:1.
+
+- **Method:** a browser audit of every visible text node. It compares the computed colour with the first opaque background behind it, using WCAG relative luminance and 4.5:1 (3:1 for large text). It covered the full flow (reading, decision, buyers, impact) and the call panel, which was shown for the check. The hero (dark band) was checked separately.
+- **Before:** 11 failing styles, all #94A3B8 on white or #F8FAFC (2.45–2.56:1): the header clock, the reading footer, the stage level, item facts and impact labels, price-card labels and units, profile line, buyer hours, skipped counts, the impact note.
+- **Fixes:**
+  - **`--text-muted` is now #5B6B80:** 4.9–5.4:1 on every light background used (white, #F8FAFC, #F1F5F9, the emerald and indigo tints) and still lighter than secondary text (#475569). #64748B was rejected because it fails on #F1F5F9 (4.34) and the indigo tint (4.26).
+  - **Hard-coded #94A3B8 text on light backgrounds** now uses the token: evidence title, item and metric labels, the three price-card label variants, skipped counts, impact labels and note, and the buyer meta icons. The buyers footer and the ⓘ icon (#64748B) use it too.
+  - **"Not allowed" ladder steps:** legible muted text with a hollow dot, instead of #94A3B8 at 60% opacity (about 1.6:1). These are text, not disabled controls, so they need contrast.
+  - **Call panel:** five labels used #64748B, which fails on the dark panel (3.1–3.9:1): deal-sheet labels, "Never told to the AI", the headphones hint, speaker labels and transcript notices. They now use `--call-muted` (#94A3B8, 5.7–7.3:1 on dark). The status pill's "·" separator is marked `aria-hidden` as decoration.
+  - **Left as they are, and allowed:** decorative dots, the disabled Hang up and disabled inputs (WCAG exempts inactive controls), and #94A3B8 texts on the dark panel that already pass.
+- **After:** 204 visible text nodes, 0 failing.
+- **Checks:** `pytest` 421 passed, 20 skipped; `node --test` 22 passed; no sideways scroll at 1280 or 375 px.

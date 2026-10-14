@@ -3,11 +3,12 @@
 import * as dom from './dom.js';
 import { state } from './state.js';
 import { getStoredItem, setStoredItem, getOrCreateShelfId, resetShelfId } from './storage.js';
-import { showToast } from './ui.js';
+import { showToast, initInfoTips } from './ui.js';
 import {
   updateClock,
   syncClosingTimeButtons,
   loadSamples,
+  showUploadedPhoto,
   loadBranches,
   updateHeaderBranch
 } from './setup.js';
@@ -120,9 +121,7 @@ if (dom.branchSelect) {
 if (dom.shelfPhotoInput) {
   dom.shelfPhotoInput.addEventListener('change', () => {
     if (dom.shelfPhotoInput.files.length > 0) {
-      state.activeSampleBlob = null;
-      state.activeSampleUrl = null;
-      document.querySelectorAll('.sample-thumbnail-card').forEach(c => c.classList.remove('active'));
+      showUploadedPhoto(dom.shelfPhotoInput.files[0]);
     }
   });
 }
@@ -176,6 +175,7 @@ async function init() {
   setInterval(updateClock, 60000);
 
   loadSamples();
+  initInfoTips();
   initPhoneDemo();
   await loadBranches();
   const branchId = dom.branchSelect ? dom.branchSelect.value : null;

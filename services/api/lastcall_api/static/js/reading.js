@@ -79,16 +79,11 @@ export async function handleInspect() {
   formData.append('photo', photoFile, 'shelf_photo.jpg');
   formData.append('shelf_id', shelfId);
 
-  const binKg = dom.binCapacityEl.value.trim();
-  if (binKg) {
-    formData.append('bin_capacity_kg', binKg);
-  }
-
   try {
     const res = await apiFetch('/demo/inspect', { method: 'POST', form: formData });
 
     if (res.status === 401) {
-      throw new Error('Invalid access code.');
+      throw new Error("Invalid access code. You'll find it in our submission deck.");
     } else if (res.status === 415) {
       throw new Error('Please upload a JPEG or PNG photo.');
     } else if (res.status === 413) {

@@ -2,12 +2,14 @@
 
 // Section 1 / Header / Shelf elements
 export const inspectAccessCodeEl = document.getElementById('inspectAccessCode');
-export const binCapacityEl = document.getElementById('binCapacity');
 export const shelfPhotoInput = document.getElementById('shelfPhotoInput');
 export const btnInspect = document.getElementById('btnInspect');
 export const shelfIdDisplay = document.getElementById('shelfIdDisplay');
 export const btnNewShelf = document.getElementById('btnNewShelf');
 export const samplesList = document.getElementById('samplesList');
+export const photoPreview = document.getElementById('photoPreview');
+export const uploadOption = document.getElementById('uploadOption');
+export const uploadFileName = document.getElementById('uploadFileName');
 export const inspectLoading = document.getElementById('inspectLoading');
 export const inspectError = document.getElementById('inspectError');
 export const inspectStatusBanner = document.getElementById('inspectStatusBanner');

@@ -122,3 +122,42 @@ export function initials(name) {
   const letters = words.slice(0, 2).map(w => w.replace(/[^A-Za-z]/g, '').charAt(0).toUpperCase()).join('');
   return letters || (name || '?').trim().charAt(0).toUpperCase() || '?';
 }
+
+// Field help (toggletips). Hover or keyboard focus shows the text (CSS); a tap or click pins it
+// open (aria-expanded); Esc dismisses it and a click elsewhere closes it (WCAG 1.4.13). One open at a time.
+export function initInfoTips() {
+  const tips = [...document.querySelectorAll('.info-tip')];
+  const close = (tip) => {
+    tip.classList.remove('open');
+    tip.querySelector('.info-tip-btn').setAttribute('aria-expanded', 'false');
+  };
+
+  tips.forEach(tip => {
+    const btn = tip.querySelector('.info-tip-btn');
+    btn.addEventListener('click', () => {
+      const opening = !tip.classList.contains('open');
+      tips.forEach(close);
+      tip.classList.remove('dismissed');
+      if (opening) {
+        tip.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    });
+    // A dismissed tip shows again once the pointer or focus has left it
+    tip.addEventListener('mouseleave', () => tip.classList.remove('dismissed'));
+    btn.addEventListener('blur', () => tip.classList.remove('dismissed'));
+  });
+
+  document.addEventListener('click', (e) => {
+    tips.forEach(tip => { if (!tip.contains(e.target)) close(tip); });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    tips.forEach(tip => {
+      if (tip.classList.contains('open') || tip.matches(':hover, :focus-within')) {
+        close(tip);
+        tip.classList.add('dismissed');
+      }
+    });
+  });
+}

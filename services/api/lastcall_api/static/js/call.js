@@ -182,7 +182,7 @@ export async function startCallForItem(itemKey, buyerId) {
     const res = await apiFetch('/demo/calls', { method: 'POST', json: payload });
 
     if (res.status === 401) {
-      throw new Error('Invalid access code.');
+      throw new Error("Invalid access code. You'll find it in our submission deck.");
     } else if (!res.ok) {
       throw new Error(await errorMessage(res, `Failed to create call (${res.status})`));
     }

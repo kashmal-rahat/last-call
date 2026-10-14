@@ -1,20 +1,42 @@
 [
   {
-    "id": "smoke2",
-    "label": "Bananas & Apples (Shelf B)",
-    "url": "/static/samples/sample_smoke2.jpg",
-    "series": false
+    "id": "day2_mixed",
+    "label": "Day 2 · Mixed",
+    "url": "/static/samples/Day-2-Mixed.jpg",
+    "thumb": "/static/samples/thumbs/Day-2-Mixed.jpg",
+    "ai_generated": false,
+    "default": false
   },
   {
-    "id": "smoke3",
-    "label": "Tomatoes, Cucumbers & Guavas (Shelf C)",
-    "url": "/static/samples/sample_smoke3.jpg",
-    "series": false
+    "id": "day4_banana_tomato",
+    "label": "Day 4 · Banana Tomato",
+    "url": "/static/samples/Day-4-Banana-Tomato.jpg",
+    "thumb": "/static/samples/thumbs/Day-4-Banana-Tomato.jpg",
+    "ai_generated": false,
+    "default": true
   },
   {
-    "id": "simulated_banana",
-    "label": "Simulated overripe tray (AI-generated)",
-    "url": "/static/samples/sample_overripe_banana_simulated.jpg",
-    "series": false
+    "id": "day7_banana_tomato",
+    "label": "Day 7 · Banana Tomato",
+    "url": "/static/samples/Day-7-Banana-Tomato.jpg",
+    "thumb": "/static/samples/thumbs/Day-7-Banana-Tomato.jpg",
+    "ai_generated": false,
+    "default": false
+  },
+  {
+    "id": "day7_lemon",
+    "label": "Day 7 · Lemon",
+    "url": "/static/samples/Day-7-Lemon.jpg",
+    "thumb": "/static/samples/thumbs/Day-7-Lemon.jpg",
+    "ai_generated": false,
+    "default": false
+  },
+  {
+    "id": "day10_banana_tomato_ai",
+    "label": "Day 10 · Banana Tomato · AI",
+    "url": "/static/samples/Day-10-Banana-Tomato-AI.jpg",
+    "thumb": "/static/samples/thumbs/Day-10-Banana-Tomato-AI.jpg",
+    "ai_generated": true,
+    "default": false
   }
 ]
