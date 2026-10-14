@@ -97,30 +97,17 @@ export function formatQuantity(qty) {
   return qty.low === qty.high ? `${qty.low} ${unit}` : `${qty.low}–${qty.high} ${unit}`;
 }
 
-// formatUncertainFields (from 63109cf verbatim)
+// Profile fields the 5 Gemini votes disagreed on, in plain words: "spoiled as cattle feed", "overripe for juice shops"
 export function formatUncertainFields(fields) {
-  if (!fields || fields.length === 0) return 'all fields agreed';
-  const labelMap = {
-    'fresh.sellable_for': 'fresh shelf life',
-    'ripening.sellable_for': 'ripening shelf life',
-    'overripe.sellable_for': 'overripe shelf life',
-    'fresh.juice_shop': 'fresh juice shop',
-    'ripening.juice_shop': 'ripening juice shop',
-    'overripe.juice_shop': 'overripe juice shop',
-    'fresh.restaurant': 'fresh restaurant',
-    'ripening.restaurant': 'ripening restaurant',
-    'overripe.restaurant': 'overripe restaurant',
-    'fresh.bakery': 'fresh bakery',
-    'ripening.bakery': 'ripening bakery',
-    'overripe.bakery': 'overripe bakery',
-    'fresh.charity': 'fresh charity',
-    'ripening.charity': 'ripening charity',
-    'overripe.charity': 'overripe charity',
-    'overripe_ok_for_cattle': 'cattle overripe',
-    'spoiled_ok_for_cattle': 'cattle spoiled',
-  };
-  const words = fields.map(f => labelMap[f] || f.replace('.', ' ').replace(/_/g, ' '));
-  return 'uncertain: ' + words.join(', ');
+  if (!fields || fields.length === 0) return '';
+  const uses = { sellable_for: 'shelf life', juice_shop: 'for juice shops', restaurant: 'for restaurants', bakery: 'for bakeries', charity: 'for charities' };
+  const words = fields.map(f => {
+    const cattle = f.match(/^(\w+)_ok_for_cattle$/);
+    if (cattle) return `${cattle[1]} as cattle feed`;
+    const [stage, use] = f.split('.');
+    return use && uses[use] ? `${stage} ${uses[use]}` : f.replace(/[._]/g, ' ');
+  });
+  return words.length > 1 ? `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}` : words[0];
 }
 
 // formatDecisionLine (from 63109cf verbatim, uses discounted_price and discount_pct)
@@ -172,18 +159,15 @@ export function formatDecisionLine(decision) {
   return decision.step;
 }
 
-// formatProfileLine (from 63109cf verbatim)
+// The Decision footer: where the produce knowledge behind the step came from
 export function formatProfileLine(decision) {
-  const pName = decision.name || 'produce';
-  if (decision.profile_source === 'manager') {
-    return `Produce profile: ${pName} · Manager profile`;
-  }
-  if (decision.profile_source === 'fallback') {
-    return `Produce profile: ${pName} · Generic fallback`;
-  }
+  const raw = decision.name || 'produce';
+  const name = raw.charAt(0).toUpperCase() + raw.slice(1);
+  if (decision.profile_source === 'manager') return `${name} profile set by the store manager`;
+  if (decision.profile_source === 'fallback') return `${name}: general profile, as Gemini's wasn't available`;
   const votes = decision.profile_votes || 5;
-  const uncText = formatUncertainFields(decision.profile_uncertain_fields);
-  return `Produce profile: ${pName} · Gemini, ${votes} votes · ${uncText}`;
+  const split = formatUncertainFields(decision.profile_uncertain_fields);
+  return `${name} profile by Gemini · ${votes} votes, ${split ? `agreed except on ${split}` : 'all agreed'}`;
 }
 
 export function getFindBuyersLabel(step) {

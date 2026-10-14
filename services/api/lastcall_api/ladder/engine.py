@@ -228,27 +228,29 @@ def decide_item(
         days_ahead = (sells_until_dt.date() - photo_dt.date()).days
         sells_until_str = f"{sells_until_dt.strftime('%H:%M')} in {days_ahead} days"
 
-    # Step 4 v2 (D44) decision branches
+    # Step 4 v2 (D44) decision branches. Reasons are read under the item's name and the chosen step on the page,
+    # so they start with the stage and never repeat the name or the step
+    stage = item.stage.capitalize()
     if item.stage in ("fresh", "ripening"):
         recheck_next_photo = True
         if life >= H + overnight_h:
             chosen_step = "keep"
-            reason = f"{item.name.capitalize()}, {item.stage}: sells until {sells_until_str}; still fine at tomorrow's {open_str} opening → keep"
+            reason = f"{stage}: sells until {sells_until_str}, still fine at tomorrow's {open_str} opening."
         elif H > window_h:
             chosen_step = "keep"
-            reason = f"{item.name.capitalize()}, {item.stage}: sells until {sells_until_str}; discount decided in the evening window from {window_start_str} → keep for now"
+            reason = f"{stage}: sells until {sells_until_str}. Any discount is decided in the evening, from {window_start_str}."
         else:
             chosen_step = "discount"
             if life < H:
                 discount_pct = rules.max_discount_pct
-                reason = f"{item.name.capitalize()}, {item.stage}: sells until {sells_until_str}; stops selling before {close_str} closing → {discount_pct}% off"
+                reason = f"{stage}: sells until {sells_until_str}, so it stops selling before the {close_str} closing."
             else:
                 raw_pct = rules.min_discount_pct + (rules.max_discount_pct - rules.min_discount_pct) * (
                     1.0 - H / window_h
                 )
                 discount_pct = round_to(raw_pct, 5)
                 discount_pct = max(rules.min_discount_pct, min(rules.max_discount_pct, discount_pct))
-                reason = f"{item.name.capitalize()}, {item.stage} ({item.stage_level}): about {life:.0f} h of selling left, sells until {sells_until_str}; closes {close_str}, not fine at tomorrow's {open_str} opening → {discount_pct}% off"
+                reason = f"{stage} ({item.stage_level}): about {life:.0f} h of selling left, until {sells_until_str}; not fine at tomorrow's {open_str} opening."
 
     elif item.stage == "overripe":
         has_business_buyer = bool(uses and (uses.juice_shop or uses.restaurant or uses.bakery))
@@ -262,32 +264,34 @@ def decide_item(
             if uses and uses.bakery:
                 buyer_kinds.append("bakeries")
             desc = " and ".join(buyer_kinds) if buyer_kinds else "commercial buyers"
-            reason = f"{item.name.capitalize()}, {item.stage}: {desc} can use it → bulk sale"
+            reason = f"{stage}: {desc} can use it."
         else:
             chosen_step = "discount"
             discount_pct = rules.max_discount_pct
             recheck_next_photo = True
             if not has_business_buyer:
-                reason = f"{item.name.capitalize()}, {item.stage}: no commercial buyer fits → {discount_pct}% off"
+                reason = (
+                    f"{stage}: no juice shop, restaurant or bakery can use it, so it stays on the shelf at a discount."
+                )
             else:
-                reason = f"{item.name.capitalize()}, {item.stage}: too late for pickup before {close_str} closing → {discount_pct}% off"
+                reason = f"{stage}: too late for pickup before the {close_str} closing, so it stays on the shelf at a discount."
 
     elif item.stage == "spoiled":
         if "animal_feed" in allowed and cattle_ok:
             chosen_step = "animal_feed"
-            reason = f"{item.name.capitalize()}, {item.stage}: safe for cattle feed → animal feed"
+            reason = f"{stage}: still safe as cattle feed."
         else:
             chosen_step = "compost"
             if "mould" in item.issues:
-                reason = f"{item.name.capitalize()}, {item.stage}: mould present → compost"
+                reason = f"{stage}: mould present, not fit for food or feed."
             elif "slime" in item.issues:
-                reason = f"{item.name.capitalize()}, {item.stage}: slime present → compost"
+                reason = f"{stage}: slime present, not fit for food or feed."
             else:
-                reason = f"{item.name.capitalize()}, {item.stage}: not suitable for food or feed → compost"
+                reason = f"{stage}: not fit for food or feed."
 
     else:  # unsafe
         chosen_step = "compost"
-        reason = f"{item.name.capitalize()}, {item.stage}: unsafe for consumption or feed → compost"
+        reason = f"{stage}: not safe for food or feed."
 
     # Step 6: next_steps = remaining fitting allowed steps after chosen_step, in ladder order
     next_steps: list[LadderStep] = []

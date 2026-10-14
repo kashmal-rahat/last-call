@@ -483,6 +483,10 @@ def test_twenty_four_scenarios_table_driven(
     dec = decide_item(item, prof, rules, H=H, price=price)
 
     assert dec.step == expected_step, f"Scenario {scenario_id} expected step {expected_step}, got {dec.step}"
+    # The page shows the reason under the item's name and the chosen step, so it starts with the stage
+    # and repeats neither the name nor the step
+    assert dec.reason.startswith(item.stage.capitalize()), dec.reason
+    assert item.name not in dec.reason.lower() and "→" not in dec.reason, dec.reason
     if expected_discount is not None:
         assert dec.discount_pct == expected_discount, (
             f"Scenario {scenario_id} expected discount {expected_discount}%, got {dec.discount_pct}%"

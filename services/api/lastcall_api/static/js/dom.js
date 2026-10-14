@@ -41,6 +41,8 @@ export const decisionPriceCards = document.getElementById('decisionPriceCards');
 export const decisionReasonLine = document.getElementById('decisionReasonLine');
 export const decisionProfileLine = document.getElementById('decisionProfileLine');
 export const decisionBadgesRow = document.getElementById('decisionBadgesRow');
+export const decisionPriceOverrideRow = document.getElementById('decisionPriceOverrideRow');
+export const activeItemShelfPriceLabel = document.getElementById('activeItemShelfPriceLabel');
 export const activeItemShelfPriceInput = document.getElementById('activeItemShelfPriceInput');
 export const btnActiveItemRedecide = document.getElementById('btnActiveItemRedecide');
 

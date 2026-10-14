@@ -167,7 +167,7 @@ Plan: [plans/module-8/plan.md](../plans/module-8/plan.md) (D59). Design: [design
 
 - One responsive, light, premium page in six sections: Shelf setup → AI reading → Decision → Buyers → Live call → Impact, with a progress bar
 - Sections 3–5 follow the **active item** chosen from the AI reading (click a row or a photo box)
-- Decision shown as a ladder stepper (Keep → Discount → Bulk sale → Donate → Animal feed → Compost) with price cards (shelf · AI opening · floor never told to the AI)
+- Decision shown as a ladder stepper (Keep → Discount → Bulk sale → Donate → Animal feed → Compost) with a one-line reason and a price strip (shelf · AI opening · floor never told to the AI)
 - Buyers: the next buyer as a highlighted card, the rest as rows; Google Maps attribution and Gemini's screened-out list kept
 - Live call as a dark panel: info tiles, an agent-audio waveform, the Urdu transcript, the result and the next action
 - Impact: this shelf's real call outcomes only (money recovered, stock placed, donated, animal feed, calls, deals), labelled as demo role-play

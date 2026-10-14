@@ -189,10 +189,15 @@ test('formatQuantity: formats min/max with unit or confidence', () => {
   assert.equal(formatQuantity(null), '');
 });
 
-test('formatUncertainFields: returns all fields agreed when array empty, uncertain: ... when present', () => {
-  assert.equal(formatUncertainFields([]), 'all fields agreed');
-  assert.equal(formatUncertainFields(null), 'all fields agreed');
-  assert.equal(formatUncertainFields(['fresh.sellable_for']), 'uncertain: fresh shelf life');
+test('formatUncertainFields: the fields the votes disagreed on, in plain words', () => {
+  assert.equal(formatUncertainFields([]), '');
+  assert.equal(formatUncertainFields(null), '');
+  assert.equal(formatUncertainFields(['fresh.sellable_for']), 'fresh shelf life');
+  assert.equal(formatUncertainFields(['spoiled_ok_for_cattle']), 'spoiled as cattle feed');
+  assert.equal(
+    formatUncertainFields(['fresh.sellable_for', 'overripe.juice_shop', 'overripe_ok_for_cattle']),
+    'fresh shelf life, overripe for juice shops and overripe as cattle feed'
+  );
 });
 
 test('formatDecisionLine: formats keep, discount, and other steps accurately', () => {
@@ -221,18 +226,19 @@ test('formatDecisionLine: formats keep, discount, and other steps accurately', (
   assert.equal(formatDecisionLine({ step: 'compost' }), 'Needs manager approval');
 });
 
-test('formatProfileLine: formats shelf life, batch, and sensitivity', () => {
-  assert.equal(
-    formatProfileLine({ name: 'banana', profile_source: 'manager' }),
-    'Produce profile: banana · Manager profile'
-  );
+test('formatProfileLine: the source of the produce profile, as one plain sentence', () => {
+  assert.equal(formatProfileLine({ name: 'banana', profile_source: 'manager' }), 'Banana profile set by the store manager');
   assert.equal(
     formatProfileLine({ name: 'banana', profile_source: 'fallback' }),
-    'Produce profile: banana · Generic fallback'
+    "Banana: general profile, as Gemini's wasn't available"
   );
   assert.equal(
     formatProfileLine({ name: 'banana', profile_source: 'gemini', profile_votes: 5, profile_uncertain_fields: [] }),
-    'Produce profile: banana · Gemini, 5 votes · all fields agreed'
+    'Banana profile by Gemini · 5 votes, all agreed'
+  );
+  assert.equal(
+    formatProfileLine({ name: 'banana', profile_source: 'gemini', profile_votes: 5, profile_uncertain_fields: ['spoiled_ok_for_cattle'] }),
+    'Banana profile by Gemini · 5 votes, agreed except on spoiled as cattle feed'
   );
 });
 

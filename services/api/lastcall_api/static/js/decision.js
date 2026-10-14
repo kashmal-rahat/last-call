@@ -7,33 +7,28 @@ import { formatDecisionLine, formatProfileLine, STAFF_ACTION_LABELS } from './fo
 import { icon } from './ui.js';
 import { renderResults } from './reading.js';
 
-export function createPriceCard(label, valText, unitText, extraClass = '', iconName = null) {
-  const card = document.createElement('div');
-  card.className = 'price-card' + (extraClass ? ' ' + extraClass : '');
+// One cell of the price strip: a quiet label over the price, "Rs 180 /dozen"
+function priceCell(label, value, unit = '', iconName = null) {
+  const cell = document.createElement('div');
+  cell.className = 'price-cell';
 
   const lbl = document.createElement('div');
-  lbl.className = 'price-card-label';
-  if (iconName) {
-    lbl.appendChild(icon(iconName));
-    lbl.appendChild(document.createTextNode(' ' + label));
-  } else {
-    lbl.textContent = label;
-  }
-  card.appendChild(lbl);
+  lbl.className = 'price-cell-label';
+  if (iconName) lbl.appendChild(icon(iconName));
+  lbl.appendChild(document.createTextNode(label));
 
   const val = document.createElement('div');
-  val.className = 'price-card-value';
-  val.textContent = valText;
-
-  if (unitText) {
-    const unitSpan = document.createElement('span');
-    unitSpan.className = 'price-card-unit';
-    unitSpan.textContent = ' /' + unitText;
-    val.appendChild(document.createTextNode(' '));
-    val.appendChild(unitSpan);
+  val.className = 'price-cell-value';
+  val.textContent = value;
+  if (unit) {
+    const u = document.createElement('span');
+    u.className = 'price-cell-unit';
+    u.textContent = '/' + unit;
+    val.appendChild(u);
   }
-  card.appendChild(val);
-  return card;
+
+  cell.append(lbl, val);
+  return cell;
 }
 
 export async function triggerDecide() {
@@ -131,46 +126,41 @@ export function renderActiveDecision() {
     }
   });
 
-  // Price Cards
-  dom.decisionPriceCards.replaceChildren();
+  // Price strip: the prices this step uses, all derived from the shelf price (D41)
   const unitStr = decision.unit || 'kg';
-
-  if (decision.shelf_price == null && ['keep', 'discount', 'bulk_sale', 'animal_feed'].includes(decision.step)) {
-    // Every price on this card comes from the shelf price, so without one there is nothing to show but the ask
-    const c1 = createPriceCard('Shelf price', 'Price not set', '', 'card-needs-price');
+  const rs = v => (v != null ? `Rs ${v}` : '—');
+  const needsPrice = decision.shelf_price == null && ['keep', 'discount', 'bulk_sale', 'animal_feed'].includes(decision.step);
+  let cells = [];
+  if (needsPrice) {
+    const cell = priceCell('Shelf price', 'Price not set');
+    cell.classList.add('is-unset');
     const hint = document.createElement('p');
-    hint.className = 'price-card-hint';
+    hint.className = 'price-cell-hint';
     // Also covers an item that is on the list in the other unit (kg vs dozen): prices are never converted (D4)
-    hint.textContent = `No price per ${unitStr} on the mart's list yet. Enter it below to set this item's prices.`;
-    c1.appendChild(hint);
-    dom.decisionPriceCards.appendChild(c1);
-  } else if (decision.step === 'discount') {
-    const c1 = createPriceCard('Shelf price', 'Rs ' + (decision.shelf_price != null ? decision.shelf_price : '—'), unitStr);
-    const discPct = decision.discount_pct != null ? decision.discount_pct : 0;
-    const discPrice = decision.discounted_price != null ? decision.discounted_price : '—';
-    const c2 = createPriceCard(`Discounted (−${discPct}%)`, 'Rs ' + discPrice, unitStr, 'card-emerald');
-    dom.decisionPriceCards.appendChild(c1);
-    dom.decisionPriceCards.appendChild(c2);
-  } else if (['bulk_sale', 'animal_feed'].includes(decision.step)) {
-    const c1 = createPriceCard('Shelf price', 'Rs ' + (decision.shelf_price != null ? decision.shelf_price : '—'), unitStr);
-    const c2 = createPriceCard('AI opening offer', 'Rs ' + (decision.opening_price != null ? decision.opening_price : '—'), unitStr, 'card-indigo');
-    const c3 = createPriceCard('Floor · never told to the AI', 'Rs ' + (decision.floor_price != null ? decision.floor_price : '—'), unitStr, 'card-emerald', 'lock');
-    dom.decisionPriceCards.appendChild(c1);
-    dom.decisionPriceCards.appendChild(c2);
-    dom.decisionPriceCards.appendChild(c3);
-  } else if (decision.step === 'donate') {
-    const c1 = createPriceCard('Donation', 'Free to charities', '', 'card-indigo');
-    dom.decisionPriceCards.appendChild(c1);
+    hint.textContent = `No price per ${unitStr} on the mart's list yet. Enter it below.`;
+    cell.appendChild(hint);
+    cells = [cell];
   } else if (decision.step === 'keep') {
-    const c1 = createPriceCard('Stays at full price', 'Rs ' + (decision.shelf_price != null ? decision.shelf_price : '—'), unitStr, 'card-emerald');
-    dom.decisionPriceCards.appendChild(c1);
-  } else {
-    const c1 = createPriceCard(decision.step || 'Status', decision.reason || '—', '');
-    dom.decisionPriceCards.appendChild(c1);
+    cells = [priceCell('Stays at full price', rs(decision.shelf_price), unitStr)];
+  } else if (decision.step === 'discount') {
+    cells = [
+      priceCell('Shelf price', rs(decision.shelf_price), unitStr),
+      priceCell(`Discounted · ${decision.discount_pct ?? 0}% off`, rs(decision.discounted_price), unitStr),
+    ];
+  } else if (['bulk_sale', 'animal_feed'].includes(decision.step)) {
+    cells = [
+      priceCell('Shelf price', rs(decision.shelf_price), unitStr),
+      priceCell('AI opening offer', rs(decision.opening_price), unitStr),
+      priceCell('Floor · never told to the AI', rs(decision.floor_price), unitStr, 'lock'),
+    ];
+  } else if (decision.step === 'donate') {
+    cells = [priceCell('Donation', 'Free to charities')];
   }
+  // Compost has no price: the sentence above says why, and the strip stays hidden (:empty)
+  dom.decisionPriceCards.replaceChildren(...cells);
 
   dom.decisionReasonLine.textContent = decision.reason || formatDecisionLine(decision);
-  dom.decisionProfileLine.textContent = formatProfileLine(decision);
+  dom.decisionProfileLine.replaceChildren(icon('sparkle'), document.createTextNode(formatProfileLine(decision)));
 
   dom.decisionBadgesRow.replaceChildren();
   if (decision.on_hold) {
@@ -189,7 +179,13 @@ export function renderActiveDecision() {
   }
 
   if (decision.staff_actions && decision.staff_actions.length > 0) {
-    decision.staff_actions.forEach(act => {
+    // Skip actions the page already says: the status chips above and the strip's "Price not set"
+    const shown = new Set([
+      ...(decision.on_hold ? ['check_before_off_shelf'] : []),
+      ...(decision.needs_approval ? ['approve_compost'] : []),
+      ...(needsPrice ? ['enter_shelf_price'] : []),
+    ]);
+    decision.staff_actions.filter(act => !shown.has(act)).forEach(act => {
       const b = document.createElement('span');
       b.className = 'chip';
       b.textContent = STAFF_ACTION_LABELS[act] || act.replace(/_/g, ' ');
@@ -197,8 +193,12 @@ export function renderActiveDecision() {
     });
   }
 
-  // Shelf price override input
-  dom.activeItemShelfPriceInput.placeholder = decision.shelf_price ? String(decision.shelf_price) : 'Enter price';
+  // Shelf price override: the current price is shown in the strip, so the row only offers a change.
+  // Compost has no price to change (donate keeps it: the market value goes into Impact)
+  dom.decisionPriceOverrideRow.style.display = decision.step === 'compost' ? 'none' : '';
+  const hasPrice = decision.shelf_price != null;
+  dom.activeItemShelfPriceLabel.textContent = hasPrice ? 'Change shelf price (Rs)' : 'Shelf price (Rs)';
+  dom.activeItemShelfPriceInput.placeholder = hasPrice ? 'New price' : 'Enter price';
   if (state.priceOverrides[decision.item_key]) {
     dom.activeItemShelfPriceInput.value = String(state.priceOverrides[decision.item_key]);
   } else {

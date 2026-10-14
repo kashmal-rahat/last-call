@@ -265,26 +265,22 @@
           <div class="stepper-item ladder-step" data-step="compost">Compost</div>
         </div>
 
-        <!-- Price Cards Grid -->
-        <div class="price-cards-grid" id="decisionPriceCards">
-          <!-- Populated dynamically based on active step -->
+        <!-- Why this step: the section's main sentence (the stepper already names the step) -->
+        <p id="decisionReasonLine" class="decision-reason-line">—</p>
+
+        <!-- The prices for this step, in one soft strip like the reading's facts; empty for compost -->
+        <div class="price-strip" id="decisionPriceCards"></div>
+
+        <div id="decisionBadgesRow" class="badges-row"></div>
+
+        <div class="price-override-row" id="decisionPriceOverrideRow">
+          <label for="activeItemShelfPriceInput" class="price-override-label" id="activeItemShelfPriceLabel">Shelf price (Rs)</label>
+          <input type="number" id="activeItemShelfPriceInput" class="input-number" min="1" max="100000" placeholder="Price">
+          <button type="button" id="btnActiveItemRedecide" class="btn-ghost">Re-decide</button>
         </div>
 
-        <!-- Meta and Explanations -->
-        <div class="decision-meta-box">
-          <div id="decisionReasonLine" class="decision-reason-line">—</div>
-          <div id="decisionProfileLine" class="profile-line">—</div>
-
-          <div id="decisionBadgesRow" class="badges-row"></div>
-
-          <div class="price-override-row" id="decisionPriceOverrideRow">
-            <label for="activeItemShelfPriceInput" class="price-override-label">
-              Shelf price (Rs)
-            </label>
-            <input type="number" id="activeItemShelfPriceInput" class="input-number" min="1" max="100000" placeholder="Price">
-            <button type="button" id="btnActiveItemRedecide" class="btn-ghost">Re-decide</button>
-          </div>
-        </div>
+        <!-- Where the produce knowledge came from, as one quiet line (like the reading's footer) -->
+        <p id="decisionProfileLine" class="section-meta-footer">—</p>
       </div>
     </section>
 
