@@ -781,12 +781,20 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   justify-content: center;
 }
 
+/* The stage shrinks to the picture (no letterbox inside it), so the overlay's inset: 0 is the picture;
+   the dark frame around it is unchanged */
+.photo-stage {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
+}
 .photo-wrapper img {
-  width: 100%;
-  height: auto;
   display: block;
-  object-fit: contain;
+  max-width: 100%;
   max-height: 480px;
+  width: auto;
+  height: auto;
 }
 
 .bbox-overlay {
@@ -879,12 +887,21 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   background-color: var(--surface);
 }
 
-.item-row-header {
+.item-row-header { /* a <button>, reset so it looks exactly like the row's header */
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
+.item-row-header:focus-visible { outline: 2px solid var(--emerald); outline-offset: 4px; border-radius: 6px; }
 
 .item-head {
   display: flex;
@@ -902,16 +919,27 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   color: var(--text-primary);
 }
 
-.item-stage-level {
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--text-muted);
-}
+/* "● Overripe · mid": the level reads as part of the stage */
+.chip-stage-level { color: var(--text-muted); font-weight: 500; }
 
+/* "Zoomed in for a closer look": a quiet note right under the sentence it qualifies */
+.item-zoom-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -8px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--indigo);
+}
+.item-zoom-note .inline-icon { width: 14px; height: 14px; flex: none; }
+
+/* The AI's judgement is the card's main sentence */
 .item-evidence {
-  font-size: 14px;
-  line-height: 22px;
-  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--text-primary);
 }
 
 /* Item Score block & Bar */
@@ -924,11 +952,14 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
 }
 
 .item-score-num {
-  font-size: 14px;
-  font-weight: 600;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  line-height: 22px;
+  font-weight: 700;
   color: #0F172A;
   font-variant-numeric: tabular-nums;
 }
+.item-score-outof { margin-left: 1px; font-family: var(--font-body); font-size: 12px; font-weight: 500; color: var(--text-muted); }
 
 .item-score-bar-track {
   width: 64px;
@@ -943,6 +974,9 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   border-radius: 2px;
   transition: width 0.3s ease;
 }
+
+/* On the open card the freshness scale shows this, so the small bar steps aside */
+.item-row.active .item-score-bar-track { display: none; }
 
 .fill-fresh { background-color: #10B981; }
 .fill-ripening { background-color: #84CC16; }
@@ -982,45 +1016,92 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   color: #475569;
 }
 
-.issues-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
 
-/* 2-Column Definition Grid */
+/* Freshness scale: Fresh → Unsafe in the stage colours; the item's stage solid, a marker where it sits */
+.freshness-scale { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; } /* 24 px below the AI sentence */
+.freshness-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+  height: 6px;
+}
+.freshness-seg { border-radius: 999px; opacity: 0.22; }
+.freshness-seg.is-current { opacity: 1; }
+.seg-fresh { background: #10B981; }
+.seg-ripening { background: #84CC16; }
+.seg-overripe { background: #F59E0B; }
+.seg-spoiled { background: #F97316; }
+.seg-unsafe { background: #EF4444; }
+.freshness-marker {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #FFFFFF;
+  border: 3px solid currentColor;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+  transform: translate(-50%, -50%);
+}
+.marker-fresh { color: #10B981; }
+.marker-ripening { color: #84CC16; }
+.marker-overripe { color: #F59E0B; }
+.marker-spoiled { color: #F97316; }
+.marker-unsafe { color: #EF4444; }
+.freshness-labels { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.freshness-label { font-size: 11px; line-height: 14px; font-weight: 400; color: var(--text-muted); text-align: center; }
+.freshness-label.is-current { font-size: 12px; line-height: 16px; color: var(--text-primary); font-weight: 700; }
+/* The current stage's name in its own colour, darkened to read on white (5.0–6.5:1) */
+.label-fresh { color: #047857; }
+.label-ripening { color: #4D7C0F; }
+.label-overripe { color: #B45309; }
+.label-spoiled { color: #C2410C; }
+.label-unsafe { color: #B91C1C; }
+
+/* Item facts: Stock · Confidence · Since last photo */
+/* Three equal, top-aligned columns in a soft box, so labels, values and details line up across the row */
 .item-def-grid, .metrics-summary-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
   gap: 16px 24px;
-  padding: 16px;
+  padding: 20px 16px;
   background-color: #F8FAFC;
   border-radius: 10px;
-  border: 0;
 }
 
 .item-def-cell, .metric-item-group {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: center; /* centred in its third: the three read as one balanced strip */
+  text-align: center;
+  gap: 4px;
+  min-width: 0;
 }
 
 .item-def-label, .metric-item-label {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 16px;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--text-muted);
 }
 
 .item-def-value, .metric-item-value {
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 500;
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
   color: #0F172A;
   font-variant-numeric: tabular-nums;
   font-family: var(--font-body);
+}
+.item-def-detail { font-size: 13px; line-height: 18px; color: var(--text-secondary); } /* data, so one step above the label */
+.item-def-value.trend-down { color: var(--amber-text); } /* the one colour cue: worse since the last photo */
+.item-def-value.trend-up { color: var(--emerald); }
+
+@media (max-width: 560px) {
+  .item-def-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .item-def-cell { align-items: flex-start; text-align: left; } /* stacked: read down the left edge */
 }
 
 /* Staff check notice */
@@ -1720,17 +1801,19 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
 #impactHint { color: var(--text-secondary); }
 
 /* Section Footer Telemetry */
+/* How the reading was made, as one quiet line in the body font (was a monospace log) */
 .section-meta-footer {
   margin-top: 1.25rem;
   padding-top: 0.875rem;
   border-top: 1px solid var(--border-muted);
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: 12px;
+  line-height: 18px;
   color: var(--text-muted);
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.25rem;
+  align-items: flex-start; /* the icon stays on the first line when the text wraps */
+  gap: 6px;
 }
+.section-meta-footer .inline-icon { width: 14px; height: 14px; color: var(--indigo); flex: none; margin-top: 2px; }
 
 /* Loading Spinner & Skeletons */
 .loading-box {

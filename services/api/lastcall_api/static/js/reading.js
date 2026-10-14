@@ -4,7 +4,10 @@ import { state } from './state.js';
 import * as dom from './dom.js';
 import { accessCode, apiFetch, errorMessage } from './api.js';
 import { setStoredItem, getOrCreateShelfId } from './storage.js';
-import { rankItems, formatObserved, formatQuantity, STAFF_REASON_LABELS } from './format.js';
+import {
+  rankItems, formatQuantity, formatChange, formatStockBasis, freshnessPosition, readingSummary,
+  FRESHNESS_STAGES, STAFF_REASON_LABELS,
+} from './format.js';
 import { icon, showToast } from './ui.js';
 import { updateShelfLock } from './lock.js';
 import { triggerDecide, renderActiveDecision } from './decision.js';
@@ -163,15 +166,19 @@ export function renderItemsList(data) {
     state.activeItemKey = ranked[0].item_key;
   }
 
-  ranked.forEach(item => {
+  ranked.forEach((item, idx) => {
     const isActive = item.item_key === state.activeItemKey;
     const row = document.createElement('div');
     row.className = 'item-row' + (isActive ? ' active' : '');
     row.dataset.itemKey = item.item_key;
+    const detailsId = `itemDetails${idx}`;
 
-    // Header: name, stage chip, level; score on the right
-    const header = document.createElement('div');
+    // Header (a disclosure button, so the keyboard can open items): name, stage chip, level; score on the right
+    const header = document.createElement('button');
+    header.type = 'button';
     header.className = 'item-row-header';
+    header.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+    if (isActive) header.setAttribute('aria-controls', detailsId);
 
     const head = document.createElement('div');
     head.className = 'item-head';
@@ -181,20 +188,20 @@ export function renderItemsList(data) {
     nameSpan.textContent = displayName(item.name);
     head.appendChild(nameSpan);
 
+    // The verdict, in the header of every item: "● Overripe · mid stage" (the open card's scale shows where)
     const stageChip = document.createElement('span');
     stageChip.className = 'chip chip-stage';
     const dot = document.createElement('span');
     dot.className = `dot dot-${item.stage}`;
     stageChip.appendChild(dot);
     stageChip.appendChild(document.createTextNode(displayName(item.stage || '')));
-    head.appendChild(stageChip);
-
     if (item.stage_level) {
-      const lvlSpan = document.createElement('span');
-      lvlSpan.className = 'item-stage-level';
-      lvlSpan.textContent = `${String(item.stage_level).toLowerCase()} stage`;
-      head.appendChild(lvlSpan);
+      const lvl = document.createElement('span');
+      lvl.className = 'chip-stage-level';
+      lvl.textContent = ` · ${String(item.stage_level).toLowerCase()} stage`;
+      stageChip.appendChild(lvl);
     }
+    head.appendChild(stageChip);
 
     if (item.needs_staff_check) {
       const alertChip = document.createElement('span');
@@ -209,6 +216,12 @@ export function renderItemsList(data) {
     const scoreNum = document.createElement('div');
     scoreNum.className = 'item-score-num';
     scoreNum.textContent = item.score != null ? String(Math.round(item.score)) : '—';
+    if (item.score != null) {
+      const outOf = document.createElement('span');
+      outOf.className = 'item-score-outof';
+      outOf.textContent = '/100';
+      scoreNum.appendChild(outOf);
+    }
     scoreWrap.appendChild(scoreNum);
     const scoreBarTrack = document.createElement('div');
     scoreBarTrack.className = 'item-score-bar-track';
@@ -224,6 +237,7 @@ export function renderItemsList(data) {
     if (isActive) {
       const details = document.createElement('div');
       details.className = 'item-row-details';
+      details.id = detailsId;
 
       if (item.evidence) {
         const ev = document.createElement('p');
@@ -232,28 +246,19 @@ export function renderItemsList(data) {
         details.appendChild(ev);
       }
 
-      const tags = (item.issues || []).filter(iss => iss !== 'instruction_text');
-      if (tags.length > 0 || item.zoomed) {
-        const issuesWrap = document.createElement('div');
-        issuesWrap.className = 'issues-chips';
-        tags.forEach(iss => {
-          const chip = document.createElement('span');
-          chip.className = 'chip';
-          chip.textContent = iss.replace(/_/g, ' ');
-          issuesWrap.appendChild(chip);
-        });
-        if (item.zoomed) {
-          const zChip = document.createElement('span');
-          zChip.className = 'chip chip-indigo';
-          zChip.textContent = 'Zoomed in for a closer look';
-          issuesWrap.appendChild(zChip);
-        }
-        details.appendChild(issuesWrap);
+      if (item.zoomed) {
+        const zoomNote = document.createElement('p');
+        zoomNote.className = 'item-zoom-note';
+        zoomNote.append(icon('sparkle'), 'Zoomed in for a closer look');
+        details.appendChild(zoomNote);
       }
+
+      const scale = renderFreshnessScale(item);
+      if (scale) details.appendChild(scale);
 
       const defGrid = document.createElement('div');
       defGrid.className = 'item-def-grid';
-      const addGridItem = (lblText, valText) => {
+      const addGridItem = (lblText, valText, detailText = '', valClass = '') => {
         const cell = document.createElement('div');
         cell.className = 'item-def-cell';
         const lbl = document.createElement('div');
@@ -263,17 +268,21 @@ export function renderItemsList(data) {
         const val = document.createElement('div');
         val.className = 'item-def-value';
         val.textContent = valText || '—';
+        if (valClass) val.classList.add(valClass);
         cell.appendChild(val);
+        if (detailText) {
+          const sub = document.createElement('div');
+          sub.className = 'item-def-detail';
+          sub.textContent = detailText;
+          cell.appendChild(sub);
+        }
         defGrid.appendChild(cell);
       };
-      addGridItem('Observed', formatObserved(item.observed) || '—');
-      addGridItem('Estimated stock', formatQuantity(item.quantity) || '—');
-      const confWord = item.confidence_level
-        ? `${displayName(item.confidence_level.toLowerCase())} confidence`
-        : '—';
+      addGridItem('Stock', formatQuantity(item.quantity) || '—', formatStockBasis(item.observed));
+      const confWord = item.confidence_level ? displayName(item.confidence_level.toLowerCase()) : '—';
       addGridItem('Confidence', confWord);
-      const noMatch = data.previous_inspection_id ? 'New on this shelf' : 'First photo of this shelf';
-      addGridItem('Since last photo', item.change_note ? displayName(item.change_note) : noMatch);
+      const change = formatChange(item, Boolean(data.previous_inspection_id));
+      addGridItem('Since last photo', change.value, change.detail, `trend-${change.trend}`);
       details.appendChild(defGrid);
 
       if (item.needs_staff_check) {
@@ -293,6 +302,13 @@ export function renderItemsList(data) {
 
     row.addEventListener('click', () => {
       setActiveItem(item.item_key);
+    });
+    // Keyboard: the list is rebuilt, so put focus back on the item just opened
+    header.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      setActiveItem(item.item_key);
+      dom.itemsContainer.querySelector(`[data-item-key="${CSS.escape(item.item_key)}"] .item-row-header`)?.focus();
     });
 
     dom.itemsContainer.appendChild(row);
@@ -352,26 +368,11 @@ export function renderResults(data, imgSrc) {
     (data.items && data.items.some(i => i.issues && i.issues.includes('instruction_text'))));
   dom.inspectInstructionBanner.style.display = hasInstruction ? 'block' : 'none';
 
-  // Section Footer Metadata
+  // Section footer: how the reading was made, in words
   if (data && data.inspector) {
-    dom.inspectFooter.replaceChildren();
-    const meta = data.inspector;
-    const callsOrCached = meta.from_cache
-      ? 'stored reading reused'
-      : `calls: ${meta.calls}`;
-    const metaItems = [
-      `Model: ${meta.model}`,
-      `Latency: ${meta.latency_ms} ms`,
-      callsOrCached,
-      `Hedges: ${meta.hedges || 0}`,
-      `Zoomed: ${meta.zoomed_groups}`
-    ];
-
-    metaItems.forEach(text => {
-      const span = document.createElement('span');
-      span.textContent = text;
-      dom.inspectFooter.appendChild(span);
-    });
+    const line = document.createElement('span');
+    line.textContent = readingSummary(data.inspector);
+    dom.inspectFooter.replaceChildren(icon('sparkle'), line);
     dom.inspectFooter.style.display = 'flex';
   } else {
     dom.inspectFooter.style.display = 'none';
@@ -386,6 +387,42 @@ export function renderResults(data, imgSrc) {
     renderImpact();
   }
   updateShelfLock();
+}
+
+// Fresh → Unsafe in the stage colours, the item's stage solid and a marker where it sits (early/mid/late).
+// One picture of what the score means; screen readers get the same as a sentence.
+function renderFreshnessScale(item) {
+  const pos = freshnessPosition(item.stage, item.stage_level);
+  if (pos == null) return null;
+
+  const scale = document.createElement('div');
+  scale.className = 'freshness-scale';
+  scale.setAttribute('role', 'img');
+  const level = item.stage_level ? `, ${item.stage_level} stage` : '';
+  const score = item.score != null ? `, score ${Math.round(item.score)} of 100` : '';
+  scale.setAttribute('aria-label', `Freshness: ${item.stage}${level}${score}`);
+
+  const track = document.createElement('div');
+  track.className = 'freshness-track';
+  const labels = document.createElement('div');
+  labels.className = 'freshness-labels';
+  FRESHNESS_STAGES.forEach(stage => {
+    const current = stage === item.stage ? ' is-current' : '';
+    const seg = document.createElement('span');
+    seg.className = `freshness-seg seg-${stage}${current}`;
+    track.appendChild(seg);
+    const lbl = document.createElement('span');
+    lbl.className = `freshness-label${current}${current ? ` label-${stage}` : ''}`;
+    lbl.textContent = displayName(stage);
+    labels.appendChild(lbl);
+  });
+  const marker = document.createElement('span');
+  marker.className = `freshness-marker marker-${item.stage}`;
+  marker.style.left = `${(pos * 100).toFixed(1)}%`;
+  track.appendChild(marker);
+
+  scale.append(track, labels);
+  return scale;
 }
 
 // Produce names and words arrive in lower case; capitalise the first letter for display only.

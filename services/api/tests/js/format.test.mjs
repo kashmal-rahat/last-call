@@ -9,6 +9,10 @@ import {
   getStageColor,
   formatObserved,
   formatQuantity,
+  formatChange,
+  formatStockBasis,
+  readingSummary,
+  freshnessPosition,
   formatUncertainFields,
   formatDecisionLine,
   formatProfileLine,
@@ -257,4 +261,55 @@ test('getNextStepTargetLabel: donate -> charities, animal_feed -> cattle farms, 
     plans: [{ step: 'bulk_sale' }, { step: 'compost_bin' }]
   };
   assert.equal(getNextStepTargetLabel(batchOther), 'compost bin');
+});
+
+test('formatChange: "Since last photo" as a value, a trend and a detail', () => {
+  assert.deepEqual(formatChange({ change_since_last: null }, false), { value: 'First photo of this shelf', trend: 'none', detail: '' });
+  assert.deepEqual(formatChange({ change_since_last: null }, true), { value: 'New on this shelf', trend: 'none', detail: '' });
+  assert.deepEqual(
+    formatChange({ score: 46, change_since_last: -9, change_note: 'dropped 9 points since the last photo (today 20:30)' }, true),
+    { value: '−9 points', trend: 'down', detail: 'since 20:30' },
+  );
+  assert.deepEqual(
+    formatChange({ score: 46, change_since_last: -42, change_note: 'dropped 42 points since the last photo (12 Oct 09:15); worst pieces now spoiled' }, true),
+    { value: '−42 points', trend: 'down', detail: 'since 12 Oct 09:15 · worst pieces now spoiled' },
+  );
+  assert.deepEqual(
+    formatChange({ score: 81, change_since_last: 1, change_note: 'up 1 points since the last photo (yesterday 18:00)' }, true),
+    { value: '+1 point', trend: 'up', detail: 'since yesterday 18:00' },
+  );
+  assert.deepEqual(
+    formatChange({ score: 88, change_since_last: 0, change_note: 'no change since the last photo (today 10:00)' }, true),
+    { value: 'No change', trend: 'flat', detail: 'since 10:00' },
+  );
+});
+
+test('formatStockBasis: how the stock estimate was made', () => {
+  assert.equal(formatStockBasis({ method: 'count', min: 25, max: 34 }), '25–34 pieces');
+  assert.equal(formatStockBasis({ method: 'count', min: 7, max: 7 }), '7 pieces');
+  assert.equal(formatStockBasis({ method: 'fill_level', min: 60, max: 80 }), 'container 60–80% full');
+  assert.equal(formatStockBasis(null), '');
+});
+
+test('freshnessPosition: stage fifth plus early/mid/late, Fresh on the left', () => {
+  assert.equal(freshnessPosition('fresh', 'early'), 0.04);
+  assert.equal(freshnessPosition('overripe', 'mid'), 0.5);
+  assert.equal(freshnessPosition('unsafe', 'late'), 0.96);
+  assert.equal(freshnessPosition('ripening', undefined), 0.3);
+  assert.equal(freshnessPosition('unknown', 'mid'), null);
+});
+
+test('readingSummary: the reading footer in words', () => {
+  assert.equal(
+    readingSummary({ model: 'gemini-3.8-flash', latency_ms: 7412, calls: 2, zoomed_groups: 1, hedges: 0, from_cache: false }),
+    'Read by Gemini 3.8 Flash · 7.4 s · 2 calls · 1 zoomed in',
+  );
+  assert.equal(
+    readingSummary({ model: 'gemini-3.8-flash', latency_ms: 60004, calls: 1, zoomed_groups: 0, hedges: 1, from_cache: false }),
+    'Read by Gemini 3.8 Flash · 60.0 s · 1 call · 1 hedged',
+  );
+  assert.equal(
+    readingSummary({ model: 'gemini-3.8-flash', latency_ms: 40, calls: 0, zoomed_groups: 0, hedges: 0, from_cache: true }),
+    'Read by Gemini 3.8 Flash · same photo as before, stored reading reused',
+  );
 });

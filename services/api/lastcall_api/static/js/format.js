@@ -258,3 +258,52 @@ export function computeImpact(batchesMap) {
     dealsClosed
   };
 }
+
+// "Since last photo": the change as a value, a trend for its colour, and a quiet detail ("since 20:30"). matching.py writes change_note as
+// "dropped 9 points since the last photo (today 20:30)[; worst pieces now spoiled]".
+export function formatChange(item, hadPreviousPhoto) {
+  if (item.change_since_last == null) {
+    return { value: hadPreviousPhoto ? 'New on this shelf' : 'First photo of this shelf', trend: 'none', detail: '' };
+  }
+  const delta = Number(item.change_since_last);
+  const points = Math.abs(delta) === 1 ? 'point' : 'points';
+  const value = delta < 0 ? `−${Math.abs(delta)} ${points}` : delta > 0 ? `+${delta} ${points}` : 'No change';
+  const trend = delta < 0 ? 'down' : delta > 0 ? 'up' : 'flat';
+  const note = item.change_note || '';
+  const when = note.match(/\(([^)]+)\)/);
+  const worse = note.match(/;\s*(worst pieces now \w+)/);
+  const since = when ? `since ${when[1].replace(/^today /, '')}` : ''; // "today 20:30" -> "20:30"
+  const detail = [since, worse ? worse[1] : ''].filter(Boolean).join(' · ');
+  return { value, trend, detail };
+}
+
+// What the stock estimate is based on, for the line under it: "25–34 pieces" or "container 60–80% full".
+export function formatStockBasis(obs) {
+  if (!obs) return '';
+  const range = obs.min === obs.max ? `${obs.min}` : `${obs.min}–${obs.max}`;
+  return obs.method === 'count' ? `${range} pieces` : `container ${range}% full`;
+}
+
+// Where an item sits on the Fresh → Unsafe scale (0 to 1): its stage's fifth, and early/mid/late inside it.
+export const FRESHNESS_STAGES = ['fresh', 'ripening', 'overripe', 'spoiled', 'unsafe'];
+export function freshnessPosition(stage, level) {
+  const idx = FRESHNESS_STAGES.indexOf(stage);
+  if (idx < 0) return null;
+  const within = { early: 0.2, mid: 0.5, late: 0.8 }[level] ?? 0.5;
+  return (idx + within) / FRESHNESS_STAGES.length;
+}
+
+// The reading's footer in words: "Read by Gemini 3.8 Flash · 7.4 s · 2 calls · 1 zoomed in", or the cached case.
+// The raw numbers stay in the API response.
+export function readingSummary(meta) {
+  const model = (meta.model || 'Gemini')
+    .split('-')
+    .map(w => (/^[a-z]/.test(w) ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(' ');
+  if (meta.from_cache) return `Read by ${model} · same photo as before, stored reading reused`;
+  const parts = [`Read by ${model}`, `${(meta.latency_ms / 1000).toFixed(1)} s`];
+  parts.push(`${meta.calls} ${meta.calls === 1 ? 'call' : 'calls'}`);
+  if (meta.zoomed_groups) parts.push(`${meta.zoomed_groups} zoomed in`);
+  if (meta.hedges) parts.push(`${meta.hedges} hedged`);
+  return parts.join(' · ');
+}

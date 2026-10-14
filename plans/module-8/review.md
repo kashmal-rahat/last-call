@@ -619,3 +619,27 @@ Round 17 noted that the muted grey #94A3B8 (from the Module 8 spec) was used for
   - **Left as they are, and allowed:** decorative dots, the disabled Hang up and disabled inputs (WCAG exempts inactive controls), and #94A3B8 texts on the dark panel that already pass.
 - **After:** 204 visible text nodes, 0 failing.
 - **Checks:** `pytest` 421 passed, 20 skipped; `node --test` 22 passed; no sideways scroll at 1280 or 375 px.
+
+---
+
+# Round 19: AI shelf reading, box alignment and a calmer item card, by Claude (2026-10-14)
+
+- **Bug fixed: boxes off the produce on tall photos.**
+  - The picture sat letterboxed inside the dark viewfinder (`object-fit: contain`, `max-height: 480px`), but the box overlay covered the whole frame, so on portrait photos the boxes shifted and stretched by the bars.
+  - The image and overlay now sit in `.photo-stage`, an inline-block exactly the picture's size, centred in the unchanged dark frame.
+  - Measured in the preview: portrait 360 × 480 and phone 301 × 401, each with the overlay identical to the image.
+- **Keyboard access:** each item header is a `<button>` with `aria-expanded` (and `aria-controls` on the open item). It is reset to look exactly as before, with a focus ring for keyboard use only. Enter or Space opens an item and keeps focus on it after the list is rebuilt. The box overlay is `aria-hidden` (a pointer shortcut for the same choice).
+- **The item card (several rounds with the user; the dark frame, mint outline and facts box stay):**
+  - **Freshness scale under the AI sentence:** Fresh · Ripening · Overripe · Spoiled · Unsafe in the stage colours, the item's stage solid, a marker at early, mid or late, and the current label bold. It has `role="img"` with a sentence label. It replaces the small score bar on the open card.
+  - **Header:** every item states its verdict, "● Overripe · mid stage", with the score as "46/100" (headline plus chart: the header says it, the scale shows where). "Zoomed in for a closer look" is a small indigo line with a sparkle under the AI sentence. For a while the zoom note took the header and the stage chip appeared only on collapsed rows; that made the verdict hard to see at a glance, so it was reverted.
+  - **Scale emphasis:** a 6 px track, the other stages at 22%, a 14 px marker. The current stage's name is 12 px bold, in a text-safe version of its colour (fresh #047857, ripening #4D7C0F, overripe #B45309, spoiled #C2410C, unsafe #B91C1C; 5.0–6.5:1 on white). The level is not repeated under it, since the header says "mid stage". Tried and reverted: 35% opacity with thicker and thinner bars and a 16 px marker.
+  - **Duplicates removed:** the issue tags (dark spots, browning) repeated the AI sentence, and the stage chip repeated the scale.
+  - **Facts:** three equal, top-aligned columns in the box: **Stock** "2.1–2.9 dozen" with "25–34 pieces" (or "container 60–80% full") beneath, replacing Observed and Estimated stock; **Confidence** "High"; **Since last photo** "−9 points" in amber (green when up) with "since 21:36" beneath.
+  - **Type:** labels 12 px muted, values 15 px semibold, details 13 px secondary, so each step down is quieter.
+  - **Open card:** keeps the mint outline on white. Matching the photo list's emerald tint was tried and reverted at the user's request.
+  - **Spacing:** 24 px between the AI sentence and the scale; the facts box has 20 px padding top and bottom, with 4 px between label, value and detail. Stacked on a phone, the three facts are 16 px apart, so each group reads as its own.
+  - **Alignment:** each fact is centred in its third ("Confidence" sits on the box's centre line, measured), so the three read as one balanced strip under the centred scale labels. Left-aligned when stacked on a phone.
+  - **Tried and dropped at the user's request:** a lighter restyle without the dark frame; icons, meters and trend badges per fact (judged too busy); the facts without a box; "counted" and "55 → 46" in the details.
+- **Footer:** "✦ Read by Gemini 3.8 Flash · 4.2 s · 2 calls · 1 zoomed in" (or "same photo as before, stored reading reused") in the body font. It replaces the monospace `Model: … Latency: 60004 ms calls: 4 Hedges: 1 Zoomed: 0`. `readingSummary` is in `format.js` with unit tests; the raw numbers stay in the API response. On a phone, where it wraps, the sparkle stays on the first line.
+- **Code:** `formatChange`, `formatStockBasis` and `freshnessPosition` are pure functions in `format.js`, with 13 unit-test cases. The renderer changes are in `renderItemsList` and the new `renderFreshnessScale`. Unused styles (`issues-chips`, `issue-tag`, `item-stage-level`) are removed.
+- **Checks:** `pytest` 421 passed, 20 skipped; `node --test` 26 passed; `node --check` on every module; no sideways scroll at 1280 and 375 px.

@@ -210,8 +210,12 @@
         <!-- Left: Photo Viewfinder -->
         <div class="camera-viewfinder">
           <div class="photo-wrapper" id="photoWrapper">
-            <img id="inspectedImage" alt="Inspected Shelf Photo">
-            <div id="bboxOverlay" class="bbox-overlay"></div>
+            <!-- The stage is exactly the picture's size, so boxes (0–1 of the picture) line up -->
+            <div class="photo-stage">
+              <img id="inspectedImage" alt="Inspected Shelf Photo">
+              <!-- Box clicks are a pointer shortcut; the item list is the accessible control -->
+              <div id="bboxOverlay" class="bbox-overlay" aria-hidden="true"></div>
+            </div>
           </div>
         </div>
 
