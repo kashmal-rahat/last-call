@@ -250,19 +250,21 @@
       </div>
 
       <div id="decisionContent">
-        <!-- Ladder Stepper Trail -->
-        <div class="stepper-trail" id="ladderStepper" aria-label="Recovery ladder">
-          <div class="stepper-item ladder-step" data-step="keep">Keep</div>
-          <span class="stepper-arrow" aria-hidden="true">›</span>
-          <div class="stepper-item ladder-step" data-step="discount">Discount</div>
-          <span class="stepper-arrow" aria-hidden="true">›</span>
-          <div class="stepper-item ladder-step" data-step="bulk_sale">Bulk sale</div>
-          <span class="stepper-arrow" aria-hidden="true">›</span>
-          <div class="stepper-item ladder-step" data-step="donate">Donate</div>
-          <span class="stepper-arrow" aria-hidden="true">›</span>
-          <div class="stepper-item ladder-step" data-step="animal_feed">Animal feed</div>
-          <span class="stepper-arrow" aria-hidden="true">›</span>
-          <div class="stepper-item ladder-step" data-step="compost">Compost</div>
+        <!-- Ladder Stepper Trail. The divider sits on the wrapper, so the row's edge fade never fades the line -->
+        <div class="stepper-wrap">
+          <div class="stepper-trail" id="ladderStepper" aria-label="Recovery ladder">
+            <div class="stepper-item ladder-step" data-step="keep">Keep</div>
+            <span class="stepper-arrow" aria-hidden="true">›</span>
+            <div class="stepper-item ladder-step" data-step="discount">Discount</div>
+            <span class="stepper-arrow" aria-hidden="true">›</span>
+            <div class="stepper-item ladder-step" data-step="bulk_sale">Bulk sale</div>
+            <span class="stepper-arrow" aria-hidden="true">›</span>
+            <div class="stepper-item ladder-step" data-step="donate">Donate</div>
+            <span class="stepper-arrow" aria-hidden="true">›</span>
+            <div class="stepper-item ladder-step" data-step="animal_feed">Animal feed</div>
+            <span class="stepper-arrow" aria-hidden="true">›</span>
+            <div class="stepper-item ladder-step" data-step="compost">Compost</div>
+          </div>
         </div>
 
         <!-- Why this step: the section's main sentence (the stepper already names the step) -->

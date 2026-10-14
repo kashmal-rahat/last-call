@@ -31,6 +31,24 @@ function priceCell(label, value, unit = '', iconName = null) {
   return cell;
 }
 
+// On a phone the six steps don't fit: scroll the row (never the page) so the chosen step is in the middle
+function centreActiveStep() {
+  const trail = dom.ladderStepper;
+  const active = trail.querySelector('.step-active');
+  if (active && trail.scrollWidth > trail.clientWidth) {
+    trail.scrollLeft = active.offsetLeft - (trail.clientWidth - active.offsetWidth) / 2;
+  }
+  updateStepperFade();
+}
+
+// Fade the edge that has more steps beyond it, so the row reads as one that scrolls
+export function updateStepperFade() {
+  const trail = dom.ladderStepper;
+  const hidden = trail.scrollWidth - trail.clientWidth;
+  trail.classList.toggle('fade-start', hidden > 1 && trail.scrollLeft > 1);
+  trail.classList.toggle('fade-end', hidden > 1 && trail.scrollLeft < hidden - 1);
+}
+
 export async function triggerDecide() {
   if (!state.currentInspection || !state.currentInspection.inspection_id) return;
   if (!accessCode()) return;
@@ -125,6 +143,7 @@ export function renderActiveDecision() {
       st.classList.add('step-disabled');
     }
   });
+  centreActiveStep();
 
   // Price strip: the prices this step uses, all derived from the shelf price (D41)
   const unitStr = decision.unit || 'kg';

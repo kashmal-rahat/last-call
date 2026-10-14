@@ -172,6 +172,20 @@ def compute_sellable_hours(item: ItemAssessment, profile: ProduceProfile) -> flo
     return BAND_HOURS.get(band, 15.0) * factor
 
 
+def selling_time(hours: float) -> str:
+    """How long produce still sells, in words: "about 34 h". A duration, not a clock time, so it reads the same
+    whichever time the page simulates, and lines up with the "4 h to closing" chip. Rounded because the
+    estimate is approximate on purpose (bands × level)."""
+    if hours < 1:
+        return "under an hour"
+    if hours < 10:
+        half_hours = math.floor(hours * 2 + 0.5) / 2  # nearest half hour, halves rounded up
+        return f"about {half_hours:g} h"
+    if hours < 48:
+        return f"about {math.floor(hours + 0.5)} h"
+    return f"about {math.floor(hours / 24 + 0.5)} days"
+
+
 def decide_item(
     item: ItemAssessment,
     profile: ProduceProfile,
@@ -216,17 +230,7 @@ def decide_item(
     close_str = rules.closing_time.strftime("%H:%M")
     window_start_dt = close_dt - timedelta(hours=window_h)
     window_start_str = window_start_dt.strftime("%H:%M")
-
-    photo_dt = close_dt - timedelta(hours=H)
-    sells_until_dt = photo_dt + timedelta(hours=life)
-
-    if sells_until_dt.date() == photo_dt.date():
-        sells_until_str = sells_until_dt.strftime("%H:%M")
-    elif sells_until_dt.date() == photo_dt.date() + timedelta(days=1):
-        sells_until_str = f"{sells_until_dt.strftime('%H:%M')} tomorrow"
-    else:
-        days_ahead = (sells_until_dt.date() - photo_dt.date()).days
-        sells_until_str = f"{sells_until_dt.strftime('%H:%M')} in {days_ahead} days"
+    sells_for = selling_time(life)
 
     # Step 4 v2 (D44) decision branches. Reasons are read under the item's name and the chosen step on the page,
     # so they start with the stage and never repeat the name or the step
@@ -235,22 +239,24 @@ def decide_item(
         recheck_next_photo = True
         if life >= H + overnight_h:
             chosen_step = "keep"
-            reason = f"{stage}: sells until {sells_until_str}, still fine at tomorrow's {open_str} opening."
+            reason = f"{stage}: sells for {sells_for}, still fine at tomorrow's {open_str} opening."
         elif H > window_h:
             chosen_step = "keep"
-            reason = f"{stage}: sells until {sells_until_str}. Any discount is decided in the evening, from {window_start_str}."
+            reason = f"{stage}: sells for {sells_for}. Any discount is decided in the evening, from {window_start_str}."
         else:
             chosen_step = "discount"
             if life < H:
                 discount_pct = rules.max_discount_pct
-                reason = f"{stage}: sells until {sells_until_str}, so it stops selling before the {close_str} closing."
+                reason = f"{stage}: sells for {sells_for}, so it stops selling before the {close_str} closing."
             else:
                 raw_pct = rules.min_discount_pct + (rules.max_discount_pct - rules.min_discount_pct) * (
                     1.0 - H / window_h
                 )
                 discount_pct = round_to(raw_pct, 5)
                 discount_pct = max(rules.min_discount_pct, min(rules.max_discount_pct, discount_pct))
-                reason = f"{stage} ({item.stage_level}): about {life:.0f} h of selling left, until {sells_until_str}; not fine at tomorrow's {open_str} opening."
+                reason = (
+                    f"{stage} ({item.stage_level}): sells for {sells_for}, not fine at tomorrow's {open_str} opening."
+                )
 
     elif item.stage == "overripe":
         has_business_buyer = bool(uses and (uses.juice_shop or uses.restaurant or uses.bakery))

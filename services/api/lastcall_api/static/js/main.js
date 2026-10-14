@@ -14,7 +14,7 @@ import {
 } from './setup.js';
 import { isShelfLocked, updateShelfLock, loadBatchesForBranch } from './lock.js';
 import { handleInspect, renderResults } from './reading.js';
-import { triggerDecide } from './decision.js';
+import { triggerDecide, updateStepperFade } from './decision.js';
 import { fetchScoutBuyers } from './buyers.js';
 import { hangup } from './call.js';
 import { renderImpact } from './impact.js';
@@ -132,6 +132,12 @@ if (dom.btnInspect) {
 
 if (dom.btnHangup) {
   dom.btnHangup.addEventListener('click', hangup);
+}
+
+// Decision steps: keep the edge fades in step with scrolling and the window's width
+if (dom.ladderStepper) {
+  dom.ladderStepper.addEventListener('scroll', updateStepperFade, { passive: true });
+  window.addEventListener('resize', updateStepperFade);
 }
 
 if (dom.btnActiveItemRedecide) {

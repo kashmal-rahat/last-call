@@ -672,11 +672,12 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   color: var(--text-primary);
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .photo-option:hover { border-color: #CBD5E1; }
-.photo-option.selected { border-color: var(--emerald); background: var(--emerald-light); }
-.photo-option:has(input:focus-visible) { outline: 2px solid var(--emerald); outline-offset: 2px; }
+/* Selected: the open item card's quiet mint outline on white; the check marks the choice (not colour alone) */
+.photo-option.selected { border-color: #A7F3D0; box-shadow: 0 0 0 3px #ECFDF5; }
+.photo-option:has(input:focus-visible) { outline: 2px solid var(--emerald); outline-offset: 4px; } /* clear of the ring */
 .photo-option-thumb {
   width: 40px;
   height: 54px; /* 3:4, the photos' own shape, so the whole shelf shows */
@@ -1120,15 +1121,25 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
 
 /* SECTION 3: Decision & Pricing Engine */
 .stepper-trail {
+  position: relative; /* the steps' offsetLeft is measured from the row, for centring the chosen one */
   display: flex;
   align-items: center;
   gap: 14px;
   overflow-x: auto;
+  scrollbar-width: none; /* swipe to scroll; the edge fade shows there is more */
   padding: 8px 0;
-  border-bottom: 1px solid #F1F5F9;
-  margin-bottom: 24px;
   background: transparent;
   border-radius: 0;
+}
+
+.stepper-wrap { border-bottom: 1px solid #F1F5F9; margin-bottom: 24px; }
+.stepper-trail::-webkit-scrollbar { display: none; }
+/* Set by updateStepperFade: fade the edge(s) with more steps beyond them */
+.stepper-trail.fade-end { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+.stepper-trail.fade-start { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent); }
+.stepper-trail.fade-start.fade-end {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
 }
 
 .stepper-item {
@@ -1980,6 +1991,7 @@ button:disabled, .btn-primary:disabled, .btn-ai:disabled, .btn-ghost:disabled, .
   .section-head-left { flex-wrap: nowrap; align-items: flex-start; }
   .section-title-group { min-width: 0; }
 
+  .stepper-trail { gap: 10px; } /* about four steps in view on a phone */
   .price-override-label { flex-basis: 100%; } /* its own line, so the input keeps a usable width */
   .price-override-row .input-number { flex: 1; min-width: 0; }
 }
