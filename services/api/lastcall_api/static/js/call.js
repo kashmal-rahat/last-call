@@ -3,7 +3,7 @@
 import { state } from './state.js';
 import * as dom from './dom.js';
 import { setStoredItem } from './storage.js';
-import { apiFetch, errorMessage, requireAccessCode } from './api.js';
+import { ACCESS_CODE_REFUSED, apiFetch, errorMessage, requireAccessCode, showAccessCodeError } from './api.js';
 import { showToast, scriptClass, icon, initials, scrollToSection } from './ui.js';
 import { updateShelfLock } from './lock.js';
 import { renderResults } from './reading.js';
@@ -212,7 +212,8 @@ export async function startCallForItem(itemKey, buyerId) {
     const res = await apiFetch('/demo/calls', { method: 'POST', json: payload });
 
     if (res.status === 401) {
-      throw new Error("Invalid access code. You'll find it in our submission deck.");
+      showAccessCodeError(ACCESS_CODE_REFUSED);
+      throw new Error(ACCESS_CODE_REFUSED);  // the catch below ends the call that never started
     } else if (!res.ok) {
       throw new Error(await errorMessage(res, `Failed to create call (${res.status})`));
     }

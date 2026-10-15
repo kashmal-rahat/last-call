@@ -6,6 +6,7 @@ export const inspectorSection = document.getElementById('inspectorSection');
 
 // Section 1 / Header / Shelf elements
 export const inspectAccessCodeEl = document.getElementById('inspectAccessCode');
+export const accessCodeError = document.getElementById('accessCodeError');
 export const shelfPhotoInput = document.getElementById('shelfPhotoInput');
 export const btnInspect = document.getElementById('btnInspect');
 export const shelfIdDisplay = document.getElementById('shelfIdDisplay');

@@ -4,6 +4,7 @@ import * as dom from './dom.js';
 import { state } from './state.js';
 import { getStoredItem, setStoredItem, getOrCreateShelfId, resetShelfId } from './storage.js';
 import { showToast, initInfoTips, scrollToSection } from './ui.js';
+import { clearAccessCodeError } from './api.js';
 import {
   updateClock,
   syncClosingTimeButtons,
@@ -191,6 +192,7 @@ if (savedCode && dom.inspectAccessCodeEl) {
 }
 if (dom.inspectAccessCodeEl) {
   dom.inspectAccessCodeEl.addEventListener('input', () => {
+    clearAccessCodeError();
     setStoredItem('lc_code', dom.inspectAccessCodeEl.value.trim());
   });
 }

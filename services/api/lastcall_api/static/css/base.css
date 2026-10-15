@@ -339,6 +339,11 @@ button:disabled, .btn-primary:disabled, .btn-ghost:disabled, .btn-danger:disable
   box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
 }
 
+/* A field the judge needs to fix: red edge, and the reason right under it */
+.field input[aria-invalid="true"] { border-color: var(--rose); }
+.field input[aria-invalid="true"]:focus { border-color: var(--rose); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+.field-error { font-size: 0.8125rem; color: var(--rose-text); }
+
 /* Banners */
 .banner {
   padding: 0.875rem 1rem;

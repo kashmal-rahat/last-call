@@ -2,7 +2,7 @@
 
 import { state } from './state.js';
 import * as dom from './dom.js';
-import { accessCode, apiFetch, errorMessage } from './api.js';
+import { ACCESS_CODE_REFUSED, apiFetch, errorMessage, requireAccessCode, showAccessCodeError } from './api.js';
 import { setStoredItem, getOrCreateShelfId } from './storage.js';
 import {
   rankItems, formatQuantity, formatChange, formatStockBasis, freshnessPosition, readingSummary,
@@ -16,11 +16,9 @@ import { renderImpact } from './impact.js';
 import { resetCallPanel } from './call.js';
 
 export async function handleInspect() {
-  const code = accessCode();
+  const code = requireAccessCode();
   if (!code) {
-    dom.inspectError.textContent = 'Please enter the Demo Access Code.';
-    dom.inspectError.style.display = 'block';
-    dom.inspectAccessCodeEl.focus();
+    dom.inspectError.style.display = 'none';
     return;
   }
   setStoredItem('lc_code', code);
@@ -89,7 +87,8 @@ export async function handleInspect() {
     const res = await apiFetch('/demo/inspect', { method: 'POST', form: formData });
 
     if (res.status === 401) {
-      throw new Error("Invalid access code. You'll find it in our submission deck.");
+      showAccessCodeError(ACCESS_CODE_REFUSED);
+      return;  // the finally block still ends the loading state
     } else if (res.status === 415) {
       throw new Error('Please upload a JPEG or PNG photo.');
     } else if (res.status === 413) {

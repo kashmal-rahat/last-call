@@ -170,3 +170,32 @@ test('without a hang-up, a busy line is retried', async (t) => {
 
   assert.equal(log.sockets.length, 1);
 });
+
+// A problem with the access code is shown at the code field, where the judge fixes it
+test('a refused access code is shown at the code field, and the call does not start', async () => {
+  reset();
+  globalThis.fetch = async (url) => {
+    log.requests.push(url);
+    return { ok: false, status: 401, json: async () => ({ detail: 'Invalid access code' }) };
+  };
+  dom.accessCodeError.hidden = true;
+
+  await startCallForItem('item_banana', 'places:a');
+
+  assert.equal(dom.accessCodeError.hidden, false);
+  assert.match(dom.accessCodeError.textContent, /isn't right/);
+  assert.equal(log.sockets.length, 0);
+  assert.equal(state.isCallInProgress, false);
+});
+
+test('a missing access code is asked for at the code field, with no request sent', async () => {
+  reset();
+  dom.inspectAccessCodeEl.value = '';
+  dom.accessCodeError.hidden = true;
+
+  await startCallForItem('item_banana', 'places:a');
+
+  assert.equal(dom.accessCodeError.hidden, false);
+  assert.match(dom.accessCodeError.textContent, /Enter the access code/);
+  assert.equal(log.requests.length, 0);
+});
