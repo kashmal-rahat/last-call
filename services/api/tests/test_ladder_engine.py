@@ -368,7 +368,7 @@ def test_hours_until_closing():
             10,
             [],
         ),
-        # 9: same as 7, 22:00 (H=1) -> keep (still fine at 09:00 tomorrow)
+        # 9: same as 7, 22:00 (H=1) -> keep (still fine when the mart reopens at 09:00)
         (
             9,
             {"name": "spinach", "stage": "fresh", "stage_level": "early"},
@@ -376,7 +376,7 @@ def test_hours_until_closing():
             1.0,
             "keep",
             None,
-            ["fine_tomorrow"],
+            ["fine_at_reopening"],
         ),
         # 10: spinach, ripening (mid), ripening under_6h (2.8h), 19:00 (H=4) -> discount 40% (stops before closing)
         (
@@ -567,8 +567,9 @@ def test_twenty_four_scenarios_table_driven(
     for flag in flags_to_check:
         if flag == "recheck_next_photo":
             assert dec.recheck_next_photo is True
-        elif flag == "fine_tomorrow":
-            assert "09:00" in dec.reason and "tomorrow" in dec.reason
+        elif flag == "fine_at_reopening":
+            # No day named: the page's time presets are simulated, and "reopens" reads right for any of them
+            assert "when the mart reopens at 09:00" in dec.reason and "tomorrow" not in dec.reason
         elif flag == "stops_before_closing":
             assert "stops selling before" in dec.reason
         elif flag == "too_late_for_pickup":

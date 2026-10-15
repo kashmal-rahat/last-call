@@ -267,7 +267,7 @@ def decide_item(
         recheck_next_photo = True
         if life >= H + overnight_h:
             chosen_step = "keep"
-            reason = f"{stage}: sells for {sells_for}, still fine at tomorrow's {open_str} opening."
+            reason = f"{stage}: sells for {sells_for}, still fine when the mart reopens at {open_str}."
         elif H > window_h:
             chosen_step = "keep"
             reason = f"{stage}: sells for {sells_for}. Any discount is decided in the evening, from {window_start_str}."
@@ -282,9 +282,7 @@ def decide_item(
                 )
                 discount_pct = round_to(raw_pct, 5)
                 discount_pct = max(rules.min_discount_pct, min(rules.max_discount_pct, discount_pct))
-                reason = (
-                    f"{stage} ({item.stage_level}): sells for {sells_for}, not fine at tomorrow's {open_str} opening."
-                )
+                reason = f"{stage} ({item.stage_level}): sells for {sells_for}, not fine when the mart reopens at {open_str}."
 
     elif item.stage == "overripe":
         has_business_buyer = bool(uses and (uses.juice_shop or uses.restaurant or uses.bakery))
