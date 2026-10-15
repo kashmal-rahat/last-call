@@ -410,6 +410,10 @@ class FirestoreStore:
         )
         await batch.commit()
 
+    async def mark_photo_stored(self, inspection_id: str) -> None:
+        # One field: the rest of the inspection is never rewritten. Raises NotFound if it doesn't exist.
+        await self._col("inspections").document(inspection_id).update({"photo_stored": True})
+
     async def get_inspection(self, inspection_id: str) -> FreshnessResult | None:
         snap = await self._col("inspections").document(inspection_id).get()
         if not snap.exists:

@@ -51,7 +51,7 @@ Built directly by Claude at the user's request on 2026-10-13 (the user said "imp
 | Part | Files |
 |---|---|
 | shared | `item_photos.py` (signed links), `twilio.py` (`PhoneDemoConfig`, `TwilioClient`: calls and WhatsApp), `Settings.SHELF_PHOTO_BUCKET` / `API_PUBLIC_URL`, `FreshnessResult.photo_stored` |
-| api | `item_photos.py` (`PhotoStore` on GCS or in memory, `save_shelf_photo`, `crop_item` reusing the Inspector's `crop_group`, the signed photo endpoint). `main.py`: saves the photo after each inspection (best effort) and mounts the router |
+| api | `item_photos.py` (`PhotoStore` on GCS or in memory, `save_shelf_photo`, `crop_item` reusing the Inspector's `crop_group`, the signed photo endpoint). `main.py` mounts the router; `/demo/inspect` saves the photo after each inspection, best effort and since D72 in the background |
 | voice | `negotiator/buyer_messages.py` (event, signed link, confirmation text), `tools.py` (`send_photo`, `confirm_deal`), `call_context.notify`, `live_session.py` passes `notify`, `phone/bridge.py` forwards to WhatsApp, one prompt line for `ok=false` |
 | page | `call.js` `appendWhatsApp` (browser), `phone.js` (phone lines), `demo.css`, a `message` icon |
 | Terraform | bucket `<project>-shelf-photos` (private, uniform access, public access blocked, 1-day delete), `api-sa` object create and read, `voice-sa` read on `phone-demo-config`, `SHELF_PHOTO_BUCKET` on api, `API_PUBLIC_URL` on voice, `PHONE_DEMO_CONFIG` on voice while the phone demo is on |

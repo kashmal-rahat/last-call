@@ -42,15 +42,15 @@ demo they appear on the page.
 - **Role-play never touches real businesses' records** (D55). Buyers are real nearby businesses, but a
   judge's "don't call me again" or a demo deal is not written against them. Phone numbers are masked
   everywhere, in API responses, call records and logs, and demo call records expire after 24 h.
-- **Shelf photos are kept for one day** in a private bucket, and served only as signed, 1-hour
-  links to a crop of one item (D62).
+- **Shelf photos are deleted after a day** (a bucket rule at one day, with no soft-delete copy;
+  Cloud Storage removes them shortly after), and served only as signed, 1-hour links to a crop of one item (D62).
 - **Safe to hand to judges:** an access code, per-IP hourly limits and global daily caps on
   inspections, decisions, buyer searches and calls. A refused request never uses up a cap.
 - **The phone demo is off for judging.** For the demo video, Twilio rings the presenter's own SIM
   through a separate add-on, switched on with a Terraform variable (D61). The number lives only in
   Secret Manager, so it can ring nothing else.
 
-Every decision, with its reason, is in the decision log: [`plans/README.md`](plans/README.md) (D1–D71).
+Every decision, with its reason, is in the decision log: [`plans/README.md`](plans/README.md) (D1–D72).
 The full design is in [`docs/last-call-architecture.md`](docs/last-call-architecture.md).
 
 ## Architecture

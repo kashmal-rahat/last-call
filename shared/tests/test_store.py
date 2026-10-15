@@ -256,6 +256,13 @@ async def test_inspection_lifecycle(store):
     # Other shelf still returns None
     assert await store.get_latest_inspection("mart_1", "shelf_2") is None
 
+    # 3. The shelf photo is kept later, in the background (D62): only the flag changes
+    assert latest_2.photo_stored is False
+    await store.mark_photo_stored("insp_2")
+    marked = await store.get_inspection("insp_2")
+    assert marked is not None and marked.photo_stored is True
+    assert marked.photo_note == "Still empty" and marked.previous_inspection_id == "insp_1"
+
 
 @pytest.mark.asyncio
 async def test_produce_profile_lifecycle(store):

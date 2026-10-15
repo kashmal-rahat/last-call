@@ -157,7 +157,7 @@ CPU always allocated, one warm instance, session affinity, long request timeout,
 
 ### Tools (code)
 
-- `send_photo` and `confirm_deal` (D62): send the buyer a WhatsApp photo of just that item (a signed, 1-hour crop of the shelf photo, kept 1 day in a private bucket) and the deal confirmation. In the browser demo they appear on the page as WhatsApp messages; in the phone demo they are also sent to the presenter's SIM through Twilio.
+- `send_photo` and `confirm_deal` (D62): send the buyer a WhatsApp photo of just that item (a signed, 1-hour crop of the shelf photo, saved in the background after the inspection is answered and deleted after a day from a private bucket, D72) and the deal confirmation. In the browser demo they appear on the page as WhatsApp messages; in the phone demo they are also sent to the presenter's SIM through Twilio.
 - `verify_offer`: never sends the floor to the model. Accepts the buyer's offer if it's at or above the next counter; otherwise returns the higher of the floor or the previous counter minus a shrinking step.
 - `confirm_deal`: checks price, remaining quantity and pickup deadline; saves the deal and updates the batch in one all-or-nothing transaction; sends the WhatsApp confirmation.
 - `send_photo`, `schedule_callback`, `record_outcome`

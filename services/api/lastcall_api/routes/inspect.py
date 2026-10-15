@@ -15,7 +15,7 @@ from lastcall_api.deps import (
 )
 from lastcall_api.inspector.images import ImageError
 from lastcall_api.inspector.inspector import InspectorError, inspect_photo
-from lastcall_api.item_photos import save_shelf_photo
+from lastcall_api.item_photos import keep_shelf_photo
 from lastcall_shared import ids
 from lastcall_shared.clock import now_pkt
 from lastcall_shared.config import get_settings
@@ -98,8 +98,8 @@ async def demo_inspect(
             status_code=status.HTTP_502_BAD_GATEWAY, detail="Inspection failed, please try again"
         ) from exc
 
-    # Keep the shelf photo so the agent can send the buyer an item photo (D62; best effort)
-    if await save_shelf_photo(photo_store_for(request.app), result.inspection_id, contents):
-        result = result.model_copy(update={"photo_stored": True})
     await store.save_inspection(result)
+    # Keep the shelf photo so the agent can send the buyer an item photo (D62). The upload runs in the
+    # background (D72); it marks photo_stored when done, which is why the inspection is saved first.
+    await keep_shelf_photo(photo_store_for(request.app), store, result.inspection_id, contents)
     return result.model_dump(mode="json")

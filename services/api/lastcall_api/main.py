@@ -33,6 +33,8 @@ async def lifespan(app: FastAPI):
         },
     )
     yield
+    # Cloud Run allows 10 s after SIGTERM: let shelf photos still uploading finish (D72), within 8 s
+    await item_photos.wait_for_shelf_photos(timeout=8)
     logger.info("API service shutting down")
 
 

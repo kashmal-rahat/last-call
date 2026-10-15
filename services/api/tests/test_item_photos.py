@@ -1,6 +1,8 @@
-"""D62: the shelf photo is kept at inspection and served as a signed crop of one item."""
+"""D62: the shelf photo is kept at inspection (in the background) and served as a signed crop of one item."""
 
+import asyncio
 import io
+import threading
 from datetime import datetime
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
@@ -10,7 +12,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from lastcall_api.deps import _IP_REQUEST_HISTORY
-from lastcall_api.item_photos import InMemoryPhotoStore
+from lastcall_api.item_photos import InMemoryPhotoStore, keep_shelf_photo, wait_for_shelf_photos
 from lastcall_api.main import app
 from lastcall_shared.item_photos import sign_item_photo_url
 from lastcall_shared.models import BoundingBox, FreshnessResult, ItemAssessment, ObservedQuantity, QuantityEstimate
@@ -84,6 +86,17 @@ def _inspect(client: TestClient, photo: bytes):
     )
 
 
+def _inspect_and_keep(client: TestClient, photo: bytes):
+    """Inspects, then waits (on the app's own event loop) for the background photo save to finish."""
+    resp = _inspect(client, photo)
+    client.portal.call(wait_for_shelf_photos)
+    return resp
+
+
+def _stored_flag(client: TestClient, store: InMemoryStore) -> bool:
+    return client.portal.call(store.get_inspection, "insp_photo_1").photo_stored
+
+
 def _path(url: str) -> str:
     parsed = urlparse(url)
     return f"{parsed.path}?{parsed.query}"
@@ -91,13 +104,15 @@ def _path(url: str) -> str:
 
 def test_inspection_keeps_the_photo_and_serves_a_signed_item_crop(setup):
     store, photos = setup
-    client = TestClient(app)
-    resp = _inspect(client, _shelf_jpeg())
-    assert resp.status_code == 200 and resp.json()["photo_stored"] is True
-    assert "insp_photo_1" in photos.photos
+    with TestClient(app) as client:
+        resp = _inspect_and_keep(client, _shelf_jpeg())
+        # Answered before the photo was kept; the inspection is marked once it is
+        assert resp.status_code == 200 and resp.json()["photo_stored"] is False
+        assert "insp_photo_1" in photos.photos
+        assert _stored_flag(client, store) is True
 
-    url = sign_item_photo_url("https://api.example.com", "insp_photo_1", "banana_top_left", key=KEY)
-    photo = client.get(_path(url))
+        url = sign_item_photo_url("https://api.example.com", "insp_photo_1", "banana_top_left", key=KEY)
+        photo = client.get(_path(url))
     assert photo.status_code == 200 and photo.headers["content-type"] == "image/jpeg"
     crop = Image.open(io.BytesIO(photo.content))
     assert crop.width < 800 and crop.height < 600  # a crop, not the shelf
@@ -110,8 +125,6 @@ def test_inspection_keeps_the_photo_and_serves_a_signed_item_crop(setup):
     [("bad_signature", 403), ("expired", 403), ("other_item", 404), ("bad_item_key", 404)],
 )
 def test_photo_link_refusals(setup, case, expected):
-    client = TestClient(app)
-    _inspect(client, _shelf_jpeg())
     item = "banana_top_left"
     url = sign_item_photo_url("https://api.example.com", "insp_photo_1", item, key=KEY)
     if case == "bad_signature":
@@ -122,14 +135,82 @@ def test_photo_link_refusals(setup, case, expected):
         url = sign_item_photo_url("https://api.example.com", "insp_photo_1", "apple_center", key=KEY)
     elif case == "bad_item_key":
         url = sign_item_photo_url("https://api.example.com", "insp_photo_1", "Bad.Key", key=KEY)
-    assert client.get(_path(url)).status_code == expected
+    with TestClient(app) as client:
+        _inspect_and_keep(client, _shelf_jpeg())
+        assert client.get(_path(url)).status_code == expected
 
 
 def test_inspection_still_works_when_the_photo_cannot_be_kept(setup):
     store, photos = setup
-    client = TestClient(app)
-    resp = _inspect(client, b"not-a-real-jpeg")  # the fake inspector accepts it; the photo step can't
-    assert resp.status_code == 200 and resp.json()["photo_stored"] is False
-    assert photos.photos == {}
-    url = sign_item_photo_url("https://api.example.com", "insp_photo_1", "banana_top_left", key=KEY)
-    assert client.get(_path(url)).status_code == 404
+    with TestClient(app) as client:
+        resp = _inspect_and_keep(client, b"not-a-real-jpeg")  # the fake inspector accepts it; the photo step can't
+        assert resp.status_code == 200 and resp.json()["photo_stored"] is False
+        assert photos.photos == {}
+        assert _stored_flag(client, store) is False
+        url = sign_item_photo_url("https://api.example.com", "insp_photo_1", "banana_top_left", key=KEY)
+        assert client.get(_path(url)).status_code == 404
+
+
+class _SlowPhotoStore(InMemoryPhotoStore):
+    """An upload that waits until the test releases it, like the 10 s Cloud Storage stalls seen live."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.release = threading.Event()
+
+    async def put_shelf_photo(self, inspection_id: str, jpeg: bytes) -> None:
+        await asyncio.to_thread(self.release.wait, 5)
+        await super().put_shelf_photo(inspection_id, jpeg)
+
+
+def test_the_inspection_is_answered_without_waiting_for_the_photo_upload(setup):
+    store, _ = setup
+    slow = _SlowPhotoStore()
+    app.state.photo_store = slow
+    with TestClient(app) as client:
+        resp = _inspect(client, _shelf_jpeg())  # returns while the upload is still held
+        assert resp.status_code == 200 and resp.json()["photo_stored"] is False
+        assert slow.photos == {} and _stored_flag(client, store) is False
+
+        slow.release.set()
+        client.portal.call(wait_for_shelf_photos)
+        assert "insp_photo_1" in slow.photos and _stored_flag(client, store) is True
+
+
+@pytest.mark.asyncio
+async def test_keep_shelf_photo_never_raises_when_the_mark_fails():
+    class NoInspectionStore(InMemoryStore):
+        async def mark_photo_stored(self, inspection_id: str) -> None:
+            raise LookupError(inspection_id)  # e.g. Firestore NotFound
+
+    photos = InMemoryPhotoStore()
+    await keep_shelf_photo(photos, NoInspectionStore(), "insp_photo_1", _shelf_jpeg())
+    await wait_for_shelf_photos()
+    assert "insp_photo_1" in photos.photos  # kept; the agent just won't offer it
+
+
+@pytest.mark.asyncio
+async def test_the_photo_is_made_small_before_the_answer_and_only_uploaded_in_the_background():
+    """The decode needs CPU, which Cloud Run gives only during a request, so it is done before returning."""
+    slow = _SlowPhotoStore()
+    store = InMemoryStore()
+    await store.save_inspection(_result("insp_photo_1"))
+    await keep_shelf_photo(slow, store, "insp_photo_1", _shelf_jpeg())  # returns with the upload held
+    assert slow.photos == {}
+
+    slow.release.set()
+    await wait_for_shelf_photos()
+    kept = Image.open(io.BytesIO(slow.photos["insp_photo_1"]))
+    assert max(kept.size) <= 1600 and (await store.get_inspection("insp_photo_1")).photo_stored is True
+
+
+@pytest.mark.asyncio
+async def test_waiting_for_uploads_is_bounded():
+    """At shutdown the app waits for uploads, but a stuck one can't hold it past the limit."""
+    slow = _SlowPhotoStore()
+    await keep_shelf_photo(slow, InMemoryStore(), "insp_photo_1", _shelf_jpeg())
+    started = asyncio.get_running_loop().time()
+    await wait_for_shelf_photos(timeout=0.2)
+    assert asyncio.get_running_loop().time() - started < 1 and slow.photos == {}
+    slow.release.set()
+    await wait_for_shelf_photos()
