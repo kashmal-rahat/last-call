@@ -83,7 +83,7 @@ async function followPhoneCall(callId, batchId) {
         answered = true;
         if (dom.callerSub) dom.callerSub.textContent = 'On your phone through Twilio · the AI speaks Urdu';
         startCallTimer();
-        setStatus('Live Call', 'live');
+        setStatus('Live', 'live');
         appendNotice('Call answered');
       }
       for (const line of d.lines || []) {

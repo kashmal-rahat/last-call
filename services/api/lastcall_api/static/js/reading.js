@@ -8,7 +8,7 @@ import {
   rankItems, formatQuantity, formatChange, formatStockBasis, freshnessPosition, readingSummary,
   FRESHNESS_STAGES, STAFF_REASON_LABELS,
 } from './format.js';
-import { icon, showToast, scrollToSection } from './ui.js';
+import { icon, scrollToSection } from './ui.js';
 import { updateShelfLock } from './lock.js';
 import { triggerDecide, renderActiveDecision } from './decision.js';
 import { renderActiveBuyers } from './buyers.js';
@@ -20,7 +20,6 @@ export async function handleInspect() {
     dom.inspectError.textContent = 'Please enter the Demo Access Code.';
     dom.inspectError.style.display = 'block';
     dom.inspectAccessCodeEl.focus();
-    showToast('Please enter the Demo Access Code.', 'error');
     return;
   }
   setStoredItem('lc_code', code);
@@ -51,7 +50,6 @@ export async function handleInspect() {
   if (!photoFile) {
     dom.inspectError.textContent = 'Please select a sample photo or upload a shelf photo.';
     dom.inspectError.style.display = 'block';
-    showToast('Please select a sample photo or upload a shelf photo.', 'error');
     return;
   }
 
@@ -112,7 +110,6 @@ export async function handleInspect() {
   } catch (err) {
     dom.inspectError.textContent = err.message;
     dom.inspectError.style.display = 'block';
-    showToast(err.message, 'error');
   } finally {
     state.isInspecting = false;
     dom.inspectLoading.style.display = 'none';

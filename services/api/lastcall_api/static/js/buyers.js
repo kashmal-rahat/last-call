@@ -565,7 +565,7 @@ function buyerStatusChip(att, unit) {
       chip.textContent = `Donated ${att.agreed_quantity || 0}\u00A0${unit}`;
     } else {
       const priceStr = att.agreed_price == null ? '—' : att.agreed_price;
-      chip.textContent = `Deal ${att.agreed_quantity || 0}\u00A0${unit} @ Rs\u00A0${priceStr}`;
+      chip.textContent = `Deal ${att.agreed_quantity || 0}\u00A0${unit} at Rs\u00A0${priceStr}`;
     }
   } else if (att.outcome === 'call_back') {
     chip.className = 'chip chip-amber';

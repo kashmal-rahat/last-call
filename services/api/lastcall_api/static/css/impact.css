@@ -1,3 +1,4 @@
 /* Section 6: impact. The results use the shared stat strip and the section footer (base.css) */
 
+#sectionImpact { display: none; } /* shown once there is a reading (impact.js) */
 #impactHint { color: var(--text-secondary); } /* the call to action reads one step above the disclaimer */

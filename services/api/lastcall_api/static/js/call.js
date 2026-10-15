@@ -165,7 +165,7 @@ export async function startCallForItem(itemKey, buyerId) {
 
   dom.btnHangup.disabled = false;
   startCallTimer();
-  setStatus('Starting session...', 'busy');
+  setStatus('Starting…', 'busy');
   dom.transcript.replaceChildren();
   if (dom.resultCard) {
     dom.resultCard.style.display = 'none';
@@ -244,7 +244,7 @@ export async function startCallForItem(itemKey, buyerId) {
     state.captureNode = new AudioWorkletNode(state.audioCtx, 'capture-worklet');
     micSource.connect(state.captureNode);
 
-    setStatus('Connecting audio...', 'busy');
+    setStatus('Connecting audio…', 'busy');
     connectWebSocket(data.ws_url, data.token);
 
   } catch (err) {
@@ -268,7 +268,7 @@ export function connectWebSocket(wsUrl, token) {
   let waitingForAgentAudio = false;
 
   state.ws.onopen = () => {
-    setStatus('Authenticating...', 'busy');
+    setStatus('Connecting…', 'busy');
     state.ws.send(JSON.stringify({ type: 'auth', token: token }));
 
     state.captureNode.port.onmessage = (event) => {
@@ -300,7 +300,7 @@ export function connectWebSocket(wsUrl, token) {
         const data = JSON.parse(event.data);
         if (data.type === 'transcript') {
           if (data.speaker === 'agent') {
-            setStatus('Live Call', 'live');
+            setStatus('Live', 'live');
           }
           appendMessage(data.speaker, data.text);
         } else if (data.type === 'whatsapp') {
@@ -311,7 +311,7 @@ export function connectWebSocket(wsUrl, token) {
         } else if (data.type === 'tool') {
           appendNotice(`Tool: ${data.name} (${data.decision || 'executing'})`);
         } else if (data.type === 'busy') {
-          appendNotice('Server capacity reached. Retrying...');
+          appendNotice('Server busy, retrying…');
           handleBusyRetry(wsUrl, token);
         }
       } catch (e) {
@@ -322,7 +322,7 @@ export function connectWebSocket(wsUrl, token) {
 
   state.ws.onclose = async (event) => {
     if (event.code === 1013) {
-      setStatus('Server Busy');
+      setStatus('Server busy');
       return;
     }
 
@@ -333,23 +333,23 @@ export function connectWebSocket(wsUrl, token) {
       state.isCallInProgress = false;
       updateShelfLock();
       if (event.code === 4401) {
-        setStatus('Auth Failed');
-        showToast('WebSocket Auth failed (Code 4401)', 'error');
+        setStatus('Access refused');
+        showToast('This call was refused. Please start it again.', 'error');
       } else if (event.code === 4409) {
-        setStatus('Token Expired / Reused');
-        showToast('Session token already used or expired (Code 4409)', 'error');
+        setStatus('Session expired');
+        showToast('This call session has expired. Please start the call again.', 'error');
       } else if (event.code === 4423) {
-        setStatus('Batch Locked');
-        showToast('Call already in progress on this batch (Code 4423)', 'error');
+        setStatus('Another call is on');
+        showToast('Another call is already running for this item.', 'error');
       } else {
-        setStatus('Call Failed');
-        showToast(`Call closed with error code ${event.code}`, 'error');
+        setStatus('Call failed');
+        showToast(`The call closed unexpectedly (code ${event.code}). Please try again.`, 'error');
       }
       if (state.currentInspection) renderResults(state.currentInspection, state.currentDisplayUrl);
       return;
     }
 
-    setStatus('Call Ended');
+    setStatus('Call ended');
     appendNotice(`Call closed (Code: ${event.code})`);
 
     if (state.currentActiveCall && state.currentActiveCall.batchId) {
@@ -363,12 +363,12 @@ export function connectWebSocket(wsUrl, token) {
 
   state.ws.onerror = () => {
     cleanupAudio();
-    setStatus('Connection Error');
+    setStatus('Connection lost');
   };
 }
 
 export async function pollBatchUntilCompleted(batchId, callId) {
-  setStatus('Saving call result...', 'busy');
+  setStatus('Saving the result…', 'busy');
   let attemptFound = false;
   let batchData = null;
 
@@ -391,7 +391,7 @@ export async function pollBatchUntilCompleted(batchId, callId) {
 
   state.isCallInProgress = false;
   updateShelfLock();
-  setStatus('Call Ended');
+  setStatus('Call ended');
 
   if (state.currentActiveCall && state.currentActiveCall.itemKey) {
     if (batchData) {
@@ -488,11 +488,11 @@ export function handleBusyRetry(wsUrl, token) {
       connectWebSocket(wsUrl, token);
     }, 3000);
   } else {
-    showToast('Server is currently at maximum concurrency. Please try again later.', 'error');
+    showToast('All call lines are busy. Please try again in a minute.', 'error');
     cleanupAudio();
     state.isCallInProgress = false;
     dom.btnHangup.disabled = true;
-    setStatus('Server Busy');
+    setStatus('Server busy');
     updateShelfLock();
     if (state.currentInspection) {
       renderResults(state.currentInspection, state.currentDisplayUrl);
@@ -506,7 +506,7 @@ export function hangup() {
     state.ws.close();
   }
   cleanupAudio();
-  setStatus('Call Ended');
+  setStatus('Call ended');
   dom.btnHangup.disabled = true;
 }
 

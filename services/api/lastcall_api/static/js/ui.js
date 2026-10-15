@@ -110,8 +110,7 @@ export function showToast(message, kind = 'info') {
 
   const toast = document.createElement('div');
   toast.className = `toast toast-${kind}`;
-  toast.setAttribute('role', 'status');
-  toast.setAttribute('aria-live', 'polite');
+  toast.setAttribute('role', kind === 'error' ? 'alert' : 'status');
   toast.textContent = message;
 
   container.appendChild(toast);

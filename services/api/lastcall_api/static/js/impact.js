@@ -12,6 +12,8 @@ function quantities(byUnit) {
 
 export function renderImpact() {
   if (!dom.impactRevenue) return;
+  // Shown with the other results: before a reading there is nothing to count (and sections 2–5 are hidden)
+  dom.sectionImpact.style.display = state.currentInspection ? 'block' : 'none';
   const { revenue, placedByUnit, donatedByUnit, feedByUnit, callsMade, dealsClosed } = computeImpact(state.currentBatchesMap);
 
   dom.impactRevenue.textContent = `Rs ${revenue.toLocaleString()}`;

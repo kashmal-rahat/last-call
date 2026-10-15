@@ -137,10 +137,10 @@
   .buyer-item { grid-template-columns: 20px minmax(0, 1fr); padding: 16px; gap: 12px; }
   .buyer-line2 { gap: 2px 14px; } /* the facts wrap here, so spacing separates them, not dots */
   .buyer-line2 > * + *::before { content: none; }
-  .buyer-side { grid-column: 1 / -1; }
-  .buyer-side > * { width: 100%; }
-  .buyer-side .btn-primary, .buyer-side .btn-ghost { height: 44px; justify-content: center; }
-  .buyer-side .chip { justify-content: center; height: 32px; }
+  .buyer-side { grid-column: 2; justify-content: flex-start; } /* under the name, aligned with the text */
+  .buyer-side .btn-primary { width: 100%; height: 44px; justify-content: center; } /* the one main action */
+  .buyer-side .btn-ghost { height: 40px; padding: 0 20px; } /* quiet, like on desktop */
+  .buyer-side .chip { height: 32px; }
   .buyers-footer { flex-direction: column; align-items: flex-start; }
   .stock-progress { align-items: flex-start; min-width: 0; width: 100%; }
   .stock-progress-track { width: 100%; }
