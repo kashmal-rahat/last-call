@@ -22,20 +22,48 @@ import { initPhoneDemo } from './phone.js';
 
 // Setup Event Listeners
 
+// A trackpad keeps sending wheel events for a moment after a flick (momentum), even once the page is at the
+// top, and each one cancels a smooth scroll in progress: the page slides back up. So a scroll the judge asks
+// for while they are still arriving waits until none has come for 100 ms, and at most 1 s.
+const MOMENTUM_GAP_MS = 100;
+const MOMENTUM_MAX_WAIT_MS = 1000;
+let lastWheelAt = -Infinity;  // performance.now(), the same clock as the checks below
+let pendingScroll = null;     // one waiting scroll: clicking again while it waits doesn't add another
+window.addEventListener('wheel', () => { lastWheelAt = performance.now(); }, { passive: true });
+
+function scrollToSectionWhenStill(el) {
+  clearTimeout(pendingScroll);
+  const askedAt = performance.now();
+  (function attempt() {
+    const now = performance.now();
+    const stillFor = now - lastWheelAt;
+    if (stillFor >= MOMENTUM_GAP_MS || now - askedAt >= MOMENTUM_MAX_WAIT_MS) {
+      pendingScroll = null;
+      scrollToSection(el);
+    } else {
+      pendingScroll = setTimeout(attempt, MOMENTUM_GAP_MS - stillFor);
+    }
+  })();
+}
+
 // "Try the live demo": the page scrolls to the setup itself, with the same helper as its other scrolls, and
 // leaves the address as /demo. Following the link's #inspectorSection (kept for a page without JS) put the
 // fragment in the address, so every refresh, back or forward made the browser scroll again while loading.
 if (dom.heroDemoLink) {
   dom.heroDemoLink.addEventListener('click', (e) => {
     e.preventDefault();
-    scrollToSection(dom.inspectorSection);
+    scrollToSectionWhenStill(dom.inspectorSection);
   });
 }
-// An address that still carries the fragment (from before this change, or shared) opens at the setup as
-// before; the fragment is then dropped, so a refresh starts like any other visit
+// An address that still carries the fragment (saved from before this change) is cleaned up and opens like
+// any other visit
 if (location.hash === '#inspectorSection') {
   history.replaceState(null, '', location.pathname + location.search);
 }
+
+// A refresh opens at the hero, not where the judge was: the reload clears the reading, buyers and calls,
+// so the old position would point into a page that no longer has what was there
+history.scrollRestoration = 'manual';
 
 if (dom.btnNewShelf) {
   dom.btnNewShelf.addEventListener('click', (e) => {
