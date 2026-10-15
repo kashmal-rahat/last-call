@@ -309,6 +309,8 @@ async def _batch_view(store: CallStore, batch: BatchRecord, rules: MartRules, no
             "kind": action.kind,
             "step": action.step,
             "buyer_rank": action.buyer.rank if action.buyer else None,
+            # The page matches on the ID; the rank is for display and older pages
+            "buyer_id": action.buyer.buyer_id if action.buyer else None,
         },
         "outside_calling_hours": outside_calling_hours(rules, now),
     }

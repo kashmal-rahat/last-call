@@ -64,14 +64,22 @@ export async function fetchScoutBuyers(itemKey, refresh = false) {
   }
 }
 
+// The buyer a "call" next action points at. By ID when the server names one (exact, even if ranks shifted
+// after a new search), never guessed by rank then; by rank only for a response without an ID.
+function findNextBuyer(act, buyers) {
+  if (act.buyer_id) return buyers.find(b => b.buyer_id === act.buyer_id) || null;
+  return buyers.find(b => b.rank === act.buyer_rank) || null;
+}
+
 export function renderNextActionRow(container, batch, itemKey, buyers = [], showCallButton = false) {
   container.replaceChildren();
 
   if (batch && batch.next_action) {
     const act = batch.next_action;
     if (act.kind === 'call') {
-      const rank = act.buyer_rank || ((batch.attempts ? batch.attempts.length : 0) + 1);
-      const targetB = buyers.find(x => x.rank === rank) || buyers[rank - 1];
+      const fallbackRank = act.buyer_rank || ((batch.attempts ? batch.attempts.length : 0) + 1);
+      const targetB = findNextBuyer(act, buyers) || (act.buyer_id ? null : buyers[fallbackRank - 1] || null);
+      const rank = targetB ? targetB.rank : fallbackRank;
       const bName = targetB ? targetB.name : '';
       if (showCallButton) {
         const btnCall = document.createElement('button');
@@ -79,7 +87,7 @@ export function renderNextActionRow(container, batch, itemKey, buyers = [], show
         btnCall.className = 'btn-primary';
         btnCall.textContent = `Next buyer · #${rank}${bName ? ' ' + bName : ''}`;
         btnCall.disabled = state.isCallInProgress;
-        const targetBId = targetB ? targetB.buyer_id : null;
+        const targetBId = targetB ? targetB.buyer_id : (act.buyer_id || null);  // the server's choice, exactly
         btnCall.addEventListener('click', () => {
           startCallForItem(itemKey, targetBId);
         });
@@ -289,15 +297,15 @@ export function renderActiveBuyers() {
     dom.buyerHoursBanner.style.display = 'none';
   }
 
-  // Determine highlighted buyer card
+  // Highlighted buyer: while this item's call runs, the buyer on it (the batch isn't refetched until the
+  // call ends, so its next action is out of date); otherwise the next buyer to call
+  const onCall = (state.isCallInProgress && state.currentActiveCall && state.currentActiveCall.itemKey === state.activeItemKey)
+    ? state.currentActiveCall : null;
   let highlightedBuyer = null;
-  if (batch && batch.next_action) {
-    if (batch.next_action.kind === 'call') {
-      highlightedBuyer = buyers.find(b => b.rank === batch.next_action.buyer_rank) ||
-                         buyers.find(b => b.buyer_id === batch.next_action.buyer_id) || null;
-    } else {
-      highlightedBuyer = null;
-    }
+  if (onCall) {
+    highlightedBuyer = buyers.find(b => b.buyer_id === onCall.buyerId) || null;
+  } else if (batch && batch.next_action) {
+    highlightedBuyer = batch.next_action.kind === 'call' ? findNextBuyer(batch.next_action, buyers) : null;
   } else if (!batch) {
     highlightedBuyer = buyers.length > 0 ? buyers[0] : null;
   }
@@ -314,11 +322,11 @@ export function renderActiveBuyers() {
     const list = document.createElement('div');
     list.className = 'buyer-list';
     buyers.forEach(b => {
-      const isNext = !!highlightedBuyer && b.buyer_id === highlightedBuyer.buyer_id;
+      const isHighlighted = !!highlightedBuyer && b.buyer_id === highlightedBuyer.buyer_id;
       const att = (batch && batch.attempts)
         ? batch.attempts.findLast(a => a.buyer_id === b.buyer_id && a.call_status !== 'pending')
         : null;
-      list.appendChild(buyerItem(b, isNext, att, batch ? (batch.unit || 'kg') : 'kg'));
+      list.appendChild(buyerItem(b, isHighlighted && !onCall, isHighlighted && !!onCall, att, batch ? (batch.unit || 'kg') : 'kg'));
     });
     dom.buyersListContainer.appendChild(list);
   }
@@ -427,9 +435,9 @@ function capitalise(text) {
 
 // One buyer: rank, name (with hours only when not open), Gemini's reason, one quiet facts line, the action.
 // Labels that every row would repeat ("Open now", "Likely fit") are left out; only the exceptions show.
-function buyerItem(b, isNext, att, unit) {
+function buyerItem(b, isNext, isOnCall, att, unit) {
   const item = document.createElement('div');
-  item.className = 'buyer-item' + (isNext ? ' is-next' : '') + (att ? ' is-called' : '');
+  item.className = 'buyer-item' + (isNext ? ' is-next' : '') + (isOnCall ? ' is-oncall' : '') + (att ? ' is-called' : '');
 
   const rank = document.createElement('div');
   rank.className = 'buyer-rank';
@@ -439,10 +447,10 @@ function buyerItem(b, isNext, att, unit) {
   const body = document.createElement('div');
   body.className = 'buyer-body';
 
-  if (isNext) {
+  if (isNext || isOnCall) {
     const eyebrow = document.createElement('div');
     eyebrow.className = 'buyer-eyebrow';
-    eyebrow.textContent = 'Next to call';
+    eyebrow.textContent = isOnCall ? 'On the call now' : 'Next to call';
     body.appendChild(eyebrow);
   }
 
@@ -497,7 +505,13 @@ function buyerItem(b, isNext, att, unit) {
 
   const side = document.createElement('div');
   side.className = 'buyer-side';
-  if (att && !isNext) {
+  if (isOnCall) {
+    // The live call is shown in the call section; here the row only says so
+    const chip = document.createElement('span');
+    chip.className = 'chip chip-indigo';
+    chip.textContent = 'In progress…';
+    side.appendChild(chip);
+  } else if (att && !isNext) {
     // A finished call shows its outcome. The next buyer always gets the button, even after an earlier
     // "call back", as before
     side.appendChild(buyerStatusChip(att, unit));

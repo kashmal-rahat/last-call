@@ -52,8 +52,8 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .buyer-item:hover { border-color: #CBD5E1; }
-.buyer-item.is-next { border-color: #A7F3D0; box-shadow: 0 0 0 3px #ECFDF5; }
-.buyer-item.is-called:not(.is-next) .buyer-name { color: var(--text-secondary); } /* the next buyer never looks finished */
+.buyer-item.is-next, .buyer-item.is-oncall { border-color: #A7F3D0; box-shadow: 0 0 0 3px #ECFDF5; }
+.buyer-item.is-called:not(.is-next):not(.is-oncall) .buyer-name { color: var(--text-secondary); } /* the next buyer never looks finished */
 
 /* The rank alone: the order is the information (initials avatars said nothing) */
 .buyer-rank {
@@ -67,7 +67,7 @@
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
-.is-next .buyer-rank { padding-top: 22px; color: #047857; } /* below the "Next to call" line */
+.is-next .buyer-rank, .is-oncall .buyer-rank { padding-top: 22px; color: #047857; } /* below the "Next to call" line */
 
 .buyer-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .buyer-eyebrow { font-size: 12px; line-height: 16px; font-weight: 600; color: #047857; margin-bottom: 2px; }

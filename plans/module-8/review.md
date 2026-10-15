@@ -768,3 +768,18 @@ The call screen was already the page's strongest section (a dark "call mode": ca
   Text contrast: 9.9:1 on your bubbles, about 14:1 on the agent's.
 - **"Next buyer" uses the page's green button:** `renderNextActionRow` uses `btn-primary`, like "Start call" in Buyers. The indigo `.btn-ai` style had no other use and is removed from `base.css`.
 - **Checked** in the preview with a fictional call (caller, deal sheet, transcript, a tool notice, a deal result) at 1280 and 375 px, with no sideways scroll. A pickup window that wrapped mid-range was the fake data's format; the real one is words ("… to …") and also goes into the agent's prompt, so it is unchanged.
+
+# Round 27: the Buyers list marks the right buyer during and after a call, by Claude (2026-10-15)
+
+- **Bug:** the page only refetches the batch when a call ends, so during a call the Buyers list showed the pre-call state. Calling #3 from its "Call" button left #1 highlighted as "Next to call" and #3 unmarked; calling #1 left it labelled "Next to call" while on the call.
+- **Fix (page):**
+  - `startCallForItem` records who the call is with (`state.currentActiveCall`) as soon as it starts, with the buyer ID the page passes; it is confirmed (or filled in, when the server picks) from the server's answer, which then redraws the list.
+  - While this item's call runs, `renderActiveBuyers` highlights that buyer (the same mint ring) as "On the call now · In progress…", and no row says "Next to call".
+  - A call on another item doesn't mark this item's list.
+  - A failed start clears the record.
+- **Robustness (server + page):**
+  - the batch's `next_action` named the next buyer by rank only, and the page matched the rank against its own copy of the list, both for the highlight and for the result screen's "Next buyer" button. A stale list (a search refreshed elsewhere) could point at a different business;
+  - `next_action` now also carries `buyer_id` (an added field). The page matches by ID only when there is one: no highlight rather than a rank guess if the buyer isn't in its list, and the button then calls the server's buyer ID exactly. Rank is used only for a response without an ID.
+- **Tests:**
+  - `test_batch_next_action_names_the_buyer_by_id`.
+  - In the preview, with fictional buyers, each case gave the expected result: no calls yet; calling #3; an ID that disagrees with a stale rank (the ID wins); an ID not in the list (no guess, the button keeps the server's ID); rank only; a call on another item.

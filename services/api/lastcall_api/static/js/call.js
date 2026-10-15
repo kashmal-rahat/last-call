@@ -151,6 +151,9 @@ export async function startCallForItem(itemKey, buyerId) {
   const staffChecked = !!state.staffCheckedMap[itemKey];
 
   state.isCallInProgress = true;
+  // Who this call is with, from the start, so the Buyers list marks the right buyer (not an earlier call's);
+  // the server's answer below confirms it, and fills it in when the server picks the buyer
+  state.currentActiveCall = { itemKey, batchId: null, callId: null, buyerId: buyerId || null };
   updateShelfLock();
   renderResults(state.currentInspection, state.currentDisplayUrl);
 
@@ -194,6 +197,7 @@ export async function startCallForItem(itemKey, buyerId) {
       callId: data.call_id,
       buyerId: data.buyer ? data.buyer.buyer_id : buyerId
     };
+    renderResults(state.currentInspection, state.currentDisplayUrl);  // the Buyers list now marks the confirmed buyer
 
     // Populate Call info panel
     const bName = data.buyer ? data.buyer.name : 'Buyer';
@@ -249,6 +253,7 @@ export async function startCallForItem(itemKey, buyerId) {
     setStatus('Ready');
     dom.btnHangup.disabled = true;
     state.isCallInProgress = false;
+    state.currentActiveCall = null;  // the call never started
     cleanupAudio();
     updateShelfLock();
     renderResults(state.currentInspection, state.currentDisplayUrl);

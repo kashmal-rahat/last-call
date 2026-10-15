@@ -424,6 +424,29 @@ async def test_get_batch_no_phones(setup_api_test):
 
 
 @pytest.mark.asyncio
+async def test_batch_next_action_names_the_buyer_by_id(setup_api_test):
+    """The next buyer is identified by ID as well as rank, so the page can't match the wrong row."""
+    store = setup_api_test
+    await seed_demo_data(store)
+    client = TestClient(app)
+    headers = {"X-Demo-Access-Code": CODE}
+
+    r1 = client.post("/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_banana_1"})
+    batch_id, call_id = r1.json()["batch_id"], r1.json()["call_id"]
+    await store.finish_call(
+        call_id,
+        CallResult(
+            mart_id="demo_mart", batch_id=batch_id, call_id=call_id, status="completed", outcome="declined", flags=[]
+        ),
+    )
+
+    action = client.get(f"/demo/batches/{batch_id}", headers=headers).json()["next_action"]
+    assert action["kind"] == "call"
+    assert action["buyer_rank"] == 2
+    assert action["buyer_id"] == "places:ChIJ_buyer_2"
+
+
+@pytest.mark.asyncio
 async def test_next_step_then_demo_scout_charity(setup_api_test):
     store = setup_api_test
     await seed_demo_data(store)
