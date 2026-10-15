@@ -2,47 +2,31 @@ import * as dom from './dom.js';
 import { state } from './state.js';
 import { computeImpact } from './format.js';
 
+// "2.5 dozen, 3 kg": one quantity per unit (items can be sold by different units), zeros left out
+function quantities(byUnit) {
+  return Object.entries(byUnit)
+    .filter(([, q]) => q > 0)
+    .map(([unit, q]) => `${Math.round((q + Number.EPSILON) * 100) / 100} ${unit}`)
+    .join(', ');
+}
+
 export function renderImpact() {
+  if (!dom.impactRevenue) return;
   const { revenue, placedByUnit, donatedByUnit, feedByUnit, callsMade, dealsClosed } = computeImpact(state.currentBatchesMap);
 
-  function formatQty(n, unit) {
-    const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
-    return `${rounded}\u00A0${unit}`;
-  }
+  dom.impactRevenue.textContent = `Rs ${revenue.toLocaleString()}`;
+  dom.impactRescued.textContent = quantities(placedByUnit) || '0';
 
-  if (dom.impactRevenue) {
-    dom.impactRevenue.textContent = `Rs\u00A0${revenue.toLocaleString()}`;
-  }
+  // How the placed stock went: the parts given to charities or sold as feed; the rest went to businesses
+  const donated = quantities(donatedByUnit);
+  const feed = quantities(feedByUnit);
+  const ways = [donated && `${donated} donated`, feed && `${feed} as animal feed`].filter(Boolean);
+  dom.impactPlacedDetail.textContent = ways.length > 0 ? ways.join(' · ') : (dealsClosed > 0 ? 'all sold to businesses' : '');
 
-  if (dom.impactRescued) {
-    const rescuedParts = Object.entries(placedByUnit).map(([u, q]) => formatQty(q, u));
-    dom.impactRescued.textContent = rescuedParts.length > 0 ? rescuedParts.join(', ') : '0';
-  }
-
-  if (dom.impactDonated) {
-    const donatedParts = Object.entries(donatedByUnit).map(([u, q]) => formatQty(q, u));
-    dom.impactDonated.textContent = donatedParts.length > 0 ? donatedParts.join(', ') : '0';
-  }
-
-  if (dom.impactFeed) {
-    const feedParts = Object.entries(feedByUnit).map(([u, q]) => formatQty(q, u));
-    dom.impactFeed.textContent = feedParts.length > 0 ? feedParts.join(', ') : '0';
-  }
-
-  if (dom.impactCalls) {
-    dom.impactCalls.textContent = String(callsMade);
-  }
-
-  if (dom.impactDeals) {
-    dom.impactDeals.textContent = String(dealsClosed);
-  }
+  dom.impactCalls.textContent = String(callsMade);
+  dom.impactDeals.textContent = String(dealsClosed);
 
   if (dom.impactHint) {
-    if (dealsClosed === 0) {
-      dom.impactHint.style.display = 'inline';
-      dom.impactHint.textContent = 'Start a call to see the impact here. ';
-    } else {
-      dom.impactHint.style.display = 'none';
-    }
+    dom.impactHint.style.display = dealsClosed === 0 ? 'inline' : 'none';
   }
 }

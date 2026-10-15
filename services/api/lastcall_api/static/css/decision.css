@@ -90,39 +90,9 @@
 /* Decision: why → prices → actions → where the knowledge came from (same rhythm as the AI reading card) */
 .decision-reason-line { margin: 0 0 16px; font-size: 15px; line-height: 24px; color: var(--text-primary); }
 
-/* Price strip: the step's prices in one soft box, like the reading's facts; money is the section's headline */
-.price-strip {
-  display: grid;
-  grid-auto-flow: column; /* one equal column per price, however many the step has */
-  grid-auto-columns: minmax(0, 1fr);
-  align-items: start;
-  gap: 16px 24px;
-  padding: 20px 16px;
-  margin-bottom: 16px;
-  background-color: #F8FAFC;
-  border-radius: 10px;
-}
-.price-strip:empty { display: none; } /* compost: no prices */
-.price-cell { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; min-width: 0; }
-.price-cell-label { display: flex; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--text-muted); }
-.price-cell-label .inline-icon { width: 13px; height: 13px; flex: none; }
-.price-cell-value {
-  font-family: var(--font-heading);
-  font-size: 22px;
-  line-height: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-.price-cell-unit { margin-left: 2px; font-family: var(--font-body); font-size: 12px; font-weight: 500; color: var(--text-muted); }
-/* No shelf price yet: quieter than a real price, with the ask beneath */
-.price-cell.is-unset .price-cell-value { font-size: 17px; line-height: 24px; color: var(--text-secondary); }
-.price-cell-hint { margin: 0; font-size: 13px; line-height: 18px; color: var(--text-secondary); }
-
-@media (max-width: 560px) {
-  .price-strip { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); }
-  .price-cell { align-items: flex-start; text-align: left; } /* stacked: read down the left edge */
-}
+/* The step's prices, in the shared stat strip (base.css); money is the section's headline */
+#decisionPriceCards { margin-bottom: 16px; }
+.stat-cell.is-unset .stat-value { font-size: 17px; line-height: 24px; color: var(--text-secondary); } /* no shelf price yet */
 
 .badges-row {
   display: flex;

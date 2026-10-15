@@ -526,3 +526,36 @@ button:disabled, .btn-primary:disabled, .btn-ghost:disabled, .btn-danger:disable
 }
 .input-number:focus { outline: none; border-color: #059669; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
 .input-number:disabled { background: #F8FAFC; color: var(--text-muted); }
+
+/* Stat strip: a few headline numbers in one soft box, centred columns (Decision's prices, Impact's results).
+   One equal column per cell, however many there are; stacked down the left edge on a phone */
+.stat-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 16px 24px;
+  padding: 20px 16px;
+  background-color: #F8FAFC;
+  border-radius: 10px;
+}
+.stat-strip:empty { display: none; } /* e.g. compost: no prices to show */
+.stat-cell { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; min-width: 0; }
+.stat-label { display: flex; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--text-muted); }
+.stat-label .inline-icon { width: 13px; height: 13px; flex: none; }
+.stat-value {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.stat-unit { margin-left: 2px; font-family: var(--font-body); font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.stat-hint, .stat-detail { margin: 0; font-size: 13px; line-height: 18px; color: var(--text-secondary); }
+.stat-detail:empty { display: none; }
+
+@media (max-width: 560px) {
+  .stat-strip { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); }
+  .stat-cell { align-items: flex-start; text-align: left; }
+}

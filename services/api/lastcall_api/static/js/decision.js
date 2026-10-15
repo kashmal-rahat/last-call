@@ -10,19 +10,19 @@ import { renderResults } from './reading.js';
 // One cell of the price strip: a quiet label over the price, "Rs 180 /dozen"
 function priceCell(label, value, unit = '', iconName = null) {
   const cell = document.createElement('div');
-  cell.className = 'price-cell';
+  cell.className = 'stat-cell';
 
   const lbl = document.createElement('div');
-  lbl.className = 'price-cell-label';
+  lbl.className = 'stat-label';
   if (iconName) lbl.appendChild(icon(iconName));
   lbl.appendChild(document.createTextNode(label));
 
   const val = document.createElement('div');
-  val.className = 'price-cell-value';
+  val.className = 'stat-value';
   val.textContent = value;
   if (unit) {
     const u = document.createElement('span');
-    u.className = 'price-cell-unit';
+    u.className = 'stat-unit';
     u.textContent = '/' + unit;
     val.appendChild(u);
   }
@@ -154,7 +154,7 @@ export function renderActiveDecision() {
     const cell = priceCell('Shelf price', 'Price not set');
     cell.classList.add('is-unset');
     const hint = document.createElement('p');
-    hint.className = 'price-cell-hint';
+    hint.className = 'stat-hint';
     // Also covers an item that is on the list in the other unit (kg vs dozen): prices are never converted (D4)
     hint.textContent = `No price per ${unitStr} on the mart's list yet. Enter it below.`;
     cell.appendChild(hint);

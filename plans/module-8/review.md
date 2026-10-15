@@ -798,3 +798,17 @@ The call screen was already the page's strongest section (a dark "call mode": ca
   - the transcript is 420 px empty and after 12 messages (360 px on a phone), with no sideways scroll.
 - **Refactor:** the "scroll a section into view, smooth unless reduced motion" logic was in `reading.js` (the reading after Inspect) and `buyers.js` (this button). It is now one helper, `scrollToSection(el)` in `ui.js`, also used when a call starts (`call.js`), which used to scroll smoothly even with reduced motion. In the preview, the reading reveal and the next-step button both go through the helper (smooth, `block: start`); the page's only console error was the test's own stubbed 404.
 - **Checked:** the fixed 420 px transcript beside the deal sheet. The deal sheet is 382 px typically and 402 px with an unusually long pickup text, and the column bottoms line up.
+
+# Round 29: Impact in the page's style, and one shared stat strip, by Claude (2026-10-15)
+
+- **Before:** six separate grey boxes with uppercase labels ("MONEY RECOVERED", and a title-case "Deals Closed"). "Stock placed" already included what was donated and fed, so three boxes overlapped. Bare "0"s showed before any call.
+- **After:** one stat strip with the three headline results, a detail line where it helps, and the disclaimer as the section's quiet footer line (like the reading's and Decision's):
+  - **Money recovered:** "Rs 135".
+  - **Stock placed:** "2 dozen, 3.5 kg", with "1 dozen donated · 3.5 kg as animal feed", or "all sold to businesses" once there are deals.
+  - **Deals closed:** "3", with "of 4 calls".
+  
+  The numbers come from the unchanged `computeImpact`; only the presentation changed. "Start a call to see the impact here." stays in the footer until the first deal.
+- **Shared component:** Decision's price strip became the generic **stat strip** (`.stat-strip`, `.stat-cell`, `.stat-label`, `.stat-value`, `.stat-unit`, `.stat-hint`, plus a new `.stat-detail`) in `base.css`, used by Decision and Impact. Decision keeps only its own margin and its "Price not set" style. Before the move, the computed styles of Decision's strip (bulk sale and "Price not set" at 1280 px, bulk sale at 375 px) were saved; after it they are identical.
+- **Removed:** `.impact-grid`, `.impact-metric-*`, `.impact-disclaimer`, and the Donated, Animal feed and Calls made boxes with their DOM lookups (nothing else used them).
+- **Checked** in the preview with fictional call results (empty; one deal; a donation plus feed in two units) at 1280 and 375 px, with no sideways scroll. The money adds up: Rs 100 sold, plus 3.5 kg of feed at Rs 10, plus a free donation, is Rs 135.
+- **Follow-up, at the user's request:** the number of calls was only a small "of 4 calls" detail under Deals closed, and hidden before the first call. Calls are the product's core action, so **Calls made** is a headline again. The strip now reads as a funnel, left to right: **Calls made → Deals closed → Stock placed → Money recovered** ("4 calls → 3 deals → 2 dozen, 3.5 kg placed → Rs 135"), ending on the money. Deals closed drops its detail line, since the call count sits next to it. Checked at 1280 px (four columns) and 375 px (stacked, no sideways scroll).

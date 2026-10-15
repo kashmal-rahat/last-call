@@ -280,7 +280,7 @@
         <p id="decisionReasonLine" class="decision-reason-line">—</p>
 
         <!-- The prices for this step, in one soft strip like the reading's facts; empty for compost -->
-        <div class="price-strip" id="decisionPriceCards"></div>
+        <div class="stat-strip" id="decisionPriceCards"></div>
 
         <div id="decisionBadgesRow" class="badges-row"></div>
 
@@ -427,34 +427,28 @@
         </div>
       </div>
 
-      <div class="impact-grid" id="impactGrid">
-        <div class="impact-metric-card">
-          <div class="impact-metric-label">Money recovered</div>
-          <div class="impact-metric-value" id="impactRevenue">Rs&nbsp;0</div>
+      <!-- The results as a funnel, left to right: calls → deals → stock placed → money recovered -->
+      <div class="stat-strip" id="impactGrid">
+        <div class="stat-cell">
+          <div class="stat-label">Calls made</div>
+          <div class="stat-value" id="impactCalls">0</div>
         </div>
-        <div class="impact-metric-card">
-          <div class="impact-metric-label">Stock placed</div>
-          <div class="impact-metric-value" id="impactRescued">0</div>
+        <div class="stat-cell">
+          <div class="stat-label">Deals closed</div>
+          <div class="stat-value" id="impactDeals">0</div>
         </div>
-        <div class="impact-metric-card">
-          <div class="impact-metric-label">Donated</div>
-          <div class="impact-metric-value" id="impactDonated">0</div>
+        <div class="stat-cell">
+          <div class="stat-label">Stock placed</div>
+          <div class="stat-value" id="impactRescued">0</div>
+          <p class="stat-detail" id="impactPlacedDetail"></p>
         </div>
-        <div class="impact-metric-card">
-          <div class="impact-metric-label">Animal feed</div>
-          <div class="impact-metric-value" id="impactFeed">0</div>
-        </div>
-        <div class="impact-metric-card">
-          <div class="impact-metric-label">Calls made</div>
-          <div class="impact-metric-value" id="impactCalls">0</div>
-        </div>
-        <div class="impact-metric-card">
-          <div class="impact-metric-label">Deals Closed</div>
-          <div class="impact-metric-value" id="impactDeals">0</div>
+        <div class="stat-cell">
+          <div class="stat-label">Money recovered</div>
+          <div class="stat-value" id="impactRevenue">Rs&nbsp;0</div>
         </div>
       </div>
-      <p class="impact-disclaimer">
-        <span id="impactHint">Start a call to see the impact here. </span>Counts only your calls on this shelf: demo role-play, not real sales.
+      <p class="section-meta-footer">
+        <span><span id="impactHint">Start a call to see the impact here. </span>Counts only your calls on this shelf: demo role-play, not real sales.</span>
       </p>
     </section>
 

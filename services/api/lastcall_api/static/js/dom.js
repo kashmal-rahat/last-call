@@ -86,10 +86,9 @@ export const resultNextAction = document.getElementById('resultNextAction');
 // Section 6: Impact elements
 export const impactRevenue = document.getElementById('impactRevenue');
 export const impactRescued = document.getElementById('impactRescued');
-export const impactDonated = document.getElementById('impactDonated');
-export const impactFeed = document.getElementById('impactFeed');
-export const impactCalls = document.getElementById('impactCalls');
+export const impactPlacedDetail = document.getElementById('impactPlacedDetail');
 export const impactDeals = document.getElementById('impactDeals');
+export const impactCalls = document.getElementById('impactCalls');
 export const impactHint = document.getElementById('impactHint');
 
 // Header & Telemetry elements
