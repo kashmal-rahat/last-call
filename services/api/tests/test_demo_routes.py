@@ -356,6 +356,36 @@ async def test_existing_batch_ignores_new_quantity(setup_api_test):
 
 
 @pytest.mark.asyncio
+async def test_batch_tells_a_dropped_call_from_a_requested_call_back(setup_api_test):
+    store = setup_api_test
+    await seed_demo_data(store)
+    client = TestClient(app)
+    headers = {"X-Demo-Access-Code": CODE}
+    batch_id = "insp_1__item_banana_1__johar_town"
+    callback_at = datetime.now(PKT) + timedelta(hours=2)
+
+    # A buyer who asked to be called back, then one who hung up mid-conversation (the voice service's "dropped")
+    for flags in ([], ["dropped"]):
+        r = client.post("/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_banana_1"})
+        assert r.status_code == 200
+        await store.finish_call(
+            r.json()["call_id"],
+            CallResult(
+                mart_id="demo_mart",
+                batch_id=batch_id,
+                call_id=r.json()["call_id"],
+                status="completed",
+                outcome="call_back",
+                callback_at=callback_at,
+                flags=flags,
+            ),
+        )
+
+    attempts = client.get(f"/demo/batches/{batch_id}", headers=headers).json()["attempts"]
+    assert [(a["outcome"], a["dropped"]) for a in attempts] == [("call_back", False), ("call_back", True)]
+
+
+@pytest.mark.asyncio
 async def test_second_call_offers_rank_2(setup_api_test):
     store = setup_api_test
     await seed_demo_data(store)

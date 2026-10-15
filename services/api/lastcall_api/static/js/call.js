@@ -8,6 +8,7 @@ import { showToast, scriptClass, icon, initials, scrollToSection } from './ui.js
 import { updateShelfLock } from './lock.js';
 import { renderResults } from './reading.js';
 import { renderNextActionRow } from './buyers.js';
+import { formatCallbackTime } from './format.js';
 import { isPhoneMode, startPhoneCall } from './phone.js';
 
 export function setStatus(text, type = '') {
@@ -175,8 +176,11 @@ export async function startCallForItem(itemKey, buyerId) {
 
   state.isCallInProgress = true;
   // Who this call is with, from the start, so the Buyers list marks the right buyer (not an earlier call's);
-  // the server's answer below confirms it, and fills it in when the server picks the buyer
-  state.currentActiveCall = { itemKey, batchId: null, callId: null, buyerId: buyerId || null };
+  // the server's answer below confirms it, and fills it in when the server picks the buyer.
+  // `hungUp` is set by Hang up: each step below checks it after waiting, so a call hung up while it is
+  // still starting never goes on to the microphone or the agent.
+  const call = { itemKey, batchId: null, callId: null, buyerId: buyerId || null, hungUp: false };
+  state.currentActiveCall = call;
   updateShelfLock();
   renderResults(state.currentInspection, state.currentDisplayUrl);
 
@@ -214,12 +218,12 @@ export async function startCallForItem(itemKey, buyerId) {
     }
 
     const data = await res.json();
-    state.currentActiveCall = {
-      itemKey: itemKey,
+    if (call.hungUp) return endCallBeforeConnect(call);
+    Object.assign(call, {
       batchId: data.batch_id,
       callId: data.call_id,
       buyerId: data.buyer ? data.buyer.buyer_id : buyerId
-    };
+    });
     renderResults(state.currentInspection, state.currentDisplayUrl);  // the Buyers list now marks the confirmed buyer
 
     // Populate Call info panel
@@ -256,6 +260,7 @@ export async function startCallForItem(itemKey, buyerId) {
     state.audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
     await state.audioCtx.audioWorklet.addModule('/static/capture-worklet.js');
     await state.audioCtx.audioWorklet.addModule('/static/playback-worklet.js');
+    if (call.hungUp) return endCallBeforeConnect(call);
 
     state.playbackNode = new AudioWorkletNode(state.audioCtx, 'playback-worklet');
     state.playbackNode.connect(state.audioCtx.destination);
@@ -263,6 +268,7 @@ export async function startCallForItem(itemKey, buyerId) {
     state.micStream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
     });
+    if (call.hungUp) return endCallBeforeConnect(call);  // e.g. hung up while the browser asked for the microphone
     const micSource = state.audioCtx.createMediaStreamSource(state.micStream);
     state.captureNode = new AudioWorkletNode(state.audioCtx, 'capture-worklet');
     micSource.connect(state.captureNode);
@@ -271,6 +277,7 @@ export async function startCallForItem(itemKey, buyerId) {
     connectWebSocket(data.ws_url, data.token);
 
   } catch (err) {
+    if (call.hungUp) return endCallBeforeConnect(call);  // the judge ended it; a refused microphone isn't an error then
     state.scoutErrorsMap[itemKey] = err.message;
     showToast(err.message, 'error');
     setStatus('Ready');
@@ -284,13 +291,16 @@ export async function startCallForItem(itemKey, buyerId) {
 }
 
 export function connectWebSocket(wsUrl, token) {
+  const call = state.currentActiveCall;
   state.ws = new WebSocket(wsUrl);
   state.ws.binaryType = 'arraybuffer';
 
   let speechEndTs = 0;
   let waitingForAgentAudio = false;
+  let opened = false;
 
   state.ws.onopen = () => {
+    opened = true;
     setStatus('Connecting…', 'busy');
     state.ws.send(JSON.stringify({ type: 'auth', token: token }));
 
@@ -344,6 +354,11 @@ export function connectWebSocket(wsUrl, token) {
   };
 
   state.ws.onclose = async (event) => {
+    // Hung up while the connection was still opening: the server never got the call, so there is no result
+    if (!opened && call && call.hungUp) {
+      endCallBeforeConnect(call);
+      return;
+    }
     if (event.code === 1013) {
       setStatus('Server busy');
       return;
@@ -456,7 +471,9 @@ export function renderCallResult(batchData, callId) {
         wants_photo: 'Buyer wants a photo first',
         wants_manager: 'Buyer wants to speak to the manager'
       };
-      title = labels[attempt.outcome] || (attempt.outcome || 'Call finished').replace(/_/g, ' ');
+      title = attempt.dropped
+        ? 'Ended early'
+        : labels[attempt.outcome] || (attempt.outcome || 'Call finished').replace(/_/g, ' ');
     }
 
     const row = document.createElement('div');
@@ -474,6 +491,9 @@ export function renderCallResult(batchData, callId) {
     const sub = document.createElement('div');
     sub.className = 'result-sub';
     const parts = [`${batchData.remaining_quantity} of ${batchData.total_quantity}\u00A0${unit} left`];
+    if (attempt.outcome === 'call_back' && attempt.callback_at && !attempt.dropped) {
+      parts.unshift(`Call back ${formatCallbackTime(attempt.callback_at)}`);
+    }
     if (isDeal && attempt.pickup_time) {
       parts.unshift(`Pickup ${new Date(attempt.pickup_time).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Karachi' })}`);
     }
@@ -507,7 +527,12 @@ export function renderCallPendingResult(batchId, callId) {
 export function handleBusyRetry(wsUrl, token) {
   if (state.retryCount < 3) {
     state.retryCount++;
+    const call = state.currentActiveCall;
     setTimeout(() => {
+      if (call && call.hungUp) {
+        endCallBeforeConnect(call);  // hung up while waiting for a free line: don't dial again
+        return;
+      }
       connectWebSocket(wsUrl, token);
     }, 3000);
   } else {
@@ -523,14 +548,36 @@ export function handleBusyRetry(wsUrl, token) {
   }
 }
 
+// Ends the call at whatever stage it has reached. Live: the server is told and saves the result, which
+// the socket's close then shows. Still opening: the connection is dropped and its close ends the call here.
+// Still starting (no socket yet) or waiting to retry a busy line: the start stops at its next step.
 export function hangup() {
-  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
-    state.ws.send(JSON.stringify({ type: 'hangup' }));
-    state.ws.close();
+  const call = state.currentActiveCall;
+  if (call) call.hungUp = true;
+  const ws = state.ws;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'hangup' }));
+    ws.close();
+  } else if (ws && ws.readyState === WebSocket.CONNECTING) {
+    ws.close();
   }
   cleanupAudio();
   setStatus('Call ended');
   dom.btnHangup.disabled = true;
+}
+
+// A call hung up before it reached the agent. Nothing was said, so there is no result to wait for: the
+// server's record stays "pending", which doesn't use up this buyer, and they can be called again at once.
+function endCallBeforeConnect(call) {
+  if (state.currentActiveCall !== call) return;  // already ended, or a newer call has started
+  cleanupAudio();
+  state.isCallInProgress = false;
+  state.currentActiveCall = null;
+  dom.btnHangup.disabled = true;
+  setStatus('Call ended');
+  appendNotice('You hung up before the call connected.');
+  updateShelfLock();
+  if (state.currentInspection) renderResults(state.currentInspection, state.currentDisplayUrl);
 }
 
 export function cleanupAudio() {

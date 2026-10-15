@@ -3,7 +3,7 @@
 import { state } from './state.js';
 import * as dom from './dom.js';
 import { apiFetch, errorMessage, requireAccessCode } from './api.js';
-import { buyerTypesPhrase, getFindBuyersLabel, getNextStepTargetLabel } from './format.js';
+import { buyerTypesPhrase, formatCallbackTime, getFindBuyersLabel, getNextStepTargetLabel } from './format.js';
 import { icon, showToast, scrollToSection } from './ui.js';
 import { batchIdFor, loadBatchesForBranch } from './lock.js';
 import { renderResults } from './reading.js';
@@ -85,7 +85,12 @@ export function renderNextActionRow(container, batch, itemKey, buyers = [], show
         const btnCall = document.createElement('button');
         btnCall.type = 'button';
         btnCall.className = 'btn-primary';
-        btnCall.textContent = `Next buyer · #${rank}${bName ? ' ' + bName : ''}`;
+        // Google Maps names can be long ("… | Johar Town Lahore"): one line, ending in "…" if it must
+        const label = document.createElement('span');
+        label.className = 'btn-label';
+        label.textContent = `Next buyer · #${rank}${bName ? ' ' + bName : ''}`;
+        btnCall.title = label.textContent;
+        btnCall.appendChild(label);
         btnCall.disabled = state.isCallInProgress;
         const targetBId = targetB ? targetB.buyer_id : (act.buyer_id || null);  // the server's choice, exactly
         btnCall.addEventListener('click', () => {
@@ -611,10 +616,14 @@ function buyerStatusChip(att, unit) {
       chip.textContent = `Deal ${att.agreed_quantity || 0}\u00A0${unit} at Rs\u00A0${priceStr}`;
     }
   } else if (att.outcome === 'call_back') {
-    chip.className = 'chip chip-amber';
-    chip.textContent = att.callback_at
-      ? `Call back ${new Date(att.callback_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Karachi' })}`
-      : 'Call back';
+    // A buyer who asked to be called back, or a call that ended mid-conversation with no answer
+    if (att.dropped) {
+      chip.className = 'chip';
+      chip.textContent = 'Ended early';
+    } else {
+      chip.className = 'chip chip-amber';
+      chip.textContent = att.callback_at ? `Call back ${formatCallbackTime(att.callback_at)}` : 'Call back';
+    }
   } else if (att.outcome === 'do_not_call') {
     chip.className = 'chip chip-rose';
     chip.textContent = 'Asked not to be called';

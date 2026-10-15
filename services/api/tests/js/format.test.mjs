@@ -17,7 +17,8 @@ import {
   formatDecisionLine,
   formatProfileLine,
   getFindBuyersLabel,
-  getNextStepTargetLabel
+  getNextStepTargetLabel,
+  formatCallbackTime
 } from '../../lastcall_api/static/js/format.js';
 
 test('computeImpact: zero batches -> zero metrics', () => {
@@ -317,4 +318,13 @@ test('readingSummary: the reading footer in words', () => {
     readingSummary({ model: 'gemini-3.8-flash', latency_ms: 40, calls: 0, zoomed_groups: 0, hedges: 0, from_cache: true }),
     'Read by Gemini 3.8 Flash · same photo as before, stored reading reused',
   );
+});
+
+test('formatCallbackTime: Lahore time, with the day when it is not today', () => {
+  const now = new Date('2026-10-15T15:10:00Z');  // 20:10 in Lahore (UTC+5)
+  assert.equal(formatCallbackTime('2026-10-15T21:30:00+05:00', now), '21:30');
+  assert.equal(formatCallbackTime('2026-10-16T09:00:00+05:00', now), 'tomorrow 09:00');
+  assert.equal(formatCallbackTime('2026-10-17T09:00:00+05:00', now), 'Sat 17 Oct 09:00');
+  // Just after midnight in Lahore, 09:00 is today there, though it is still the 15th in UTC
+  assert.equal(formatCallbackTime('2026-10-16T09:00:00+05:00', new Date('2026-10-15T19:30:00Z')), '09:00');
 });

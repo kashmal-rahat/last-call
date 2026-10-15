@@ -863,3 +863,40 @@ The whole page was walked at 375 px and 1280 px with every section filled: a rea
   - A Refresh, "Search again" or "Next step" search replaces the old list with the same state, so stale buyers are never shown as current. A repeat click within the hour answers from the stored list at once, as before.
 - **Bug fixed on the way:** the button always said "Find juice shops & bakeries" for a bulk sale, but the Ladder picks the types per produce and can include restaurants (`engine.py` step 8). `getFindBuyersLabel` now takes the step's real buyer types (the batch's snapshot once calling has started, D54, else the decision's), through a new `buyerTypesPhrase`. For example "Find juice shops, restaurants and bakeries", "Find restaurants" or "Find cattle farms". On a phone the button is full width and may take two lines.
 - **Checks:** ruff clean; pytest 440 passed, 20 skipped; `node --test` 26 passed (the label test now covers 1, 2 and 3 types and none). In the preview (fake Inspector, Ladder and a Scout that waits 6 s, with fictional businesses), at 1280 and 375 px: the searching state, the finished list, a Refresh, no sideways scroll and no console errors.
+
+# Round 35: Hang up works while a call is still connecting, by Claude (2026-10-15)
+
+- **Bug (reported):** Hang up pressed while a call was connecting led to odd behaviour. `hangup()` only acted on an **open** socket; earlier it stopped the audio but not the call:
+  - **while the call was being created** ("Starting…"): `startCallForItem` carried on, asked for the microphone and connected, so the agent started with Hang up already disabled;
+  - **while the socket was opening:** it was never closed, so it opened, the voice service started the call, and transcript lines came in with no audio, while the page stayed locked "in a call" until the server's time limit;
+  - **while a busy line waited to retry:** the 3 s retry redialled anyway.
+- **Fix (`call.js`, page only):**
+  - Hang up marks the current call (`hungUp`). `startCallForItem` checks it after each wait (the call request, the audio setup, the microphone prompt) and stops there. The busy retry checks it before redialling. A socket that is still opening is closed.
+  - A call ended before it reached the agent ends on the page at once (`endCallBeforeConnect`): audio released, page unlocked, "You hung up before the call connected." in the transcript, and no wait for a result, since none will come. The server's call record stays `pending`, which `next_action` already ignores (rule 3, D53), so the same buyer can be called again right away. A refused microphone after a hang-up is no longer shown as an error.
+  - A live call is unchanged: the server is told, saves the result (no answer if the buyer said nothing), and the page shows it.
+  - `currentActiveCall` keeps one object per call (filled in from the server's answer rather than replaced), so the flag survives, and a late step of an old call can't end a newer one.
+- **Tests:** new `services/api/tests/js/call.test.mjs` with fake page elements, socket, audio and microphone, one case per stage (being created, opening, live, busy retry, and a retry without a hang-up). Against the old `call.js`, the three bug cases fail as expected.
+- **Checks:** ruff clean; pytest 440 passed, 20 skipped; `node --test` 31 passed. In the preview, with a stand-in microphone and a socket that never opens: Hang up during "Connecting audio…" closed the socket, ended the call with the note and unlocked the page, and calling the same buyer again started normally.
+
+# Round 36: call screen on a phone, Hang up and a long next-buyer name, by Claude (2026-10-15)
+
+From the user's iPhone screenshots of the deployed page:
+
+- **Hang up stuck out of the panel.** The controls row (waveform, the status with its timer, the worded Hang up) needs about 360 px for "Connecting audio…" or "Saving the result…", but a phone gives it 301–316 px, and nothing could shrink. At ≤480 px:
+  - Hang up becomes the round red button of a phone's call screen: 44 × 44 px with the handset turned down (the page's phone icon at 135°). Its name is still "Hang up" (the word is visually hidden, not removed). From 481 px up it keeps the word, now with the same icon, at the same size as before.
+  - The "·" between the status and the timer is dropped (the gap separates them), and the gaps tighten from 12 to 8 px.
+  - As a last resort the status word, never the timer, can end in "…"; in practice every status fits at 375 px.
+  - Measured, every status (Live, Starting…, Connecting audio…, Saving the result…, Another call is on, Connection lost) fits the row exactly at 390 and 375 px, uncut, with no sideways scroll.
+- **"Next buyer · #3 …" overflowed its button.** Google Maps names can be long ("Bismillah Fresh Juice & Dahi bhally | Johar Town Lahore"), and the 44 px pill showed three lines spilling out. The label is now one line in a `.btn-label` span (a generic style in `base.css`), ending in "…" when it can't fit. The button's text, so its accessible name, is still the full name, and a tooltip shows it too.
+- **Checks:** ruff clean; pytest 440 passed, 20 skipped; `node --test` 31 passed. Checked in the preview at 390 and 375 px with the screenshot's names and every status, and at desktop width.
+
+# Round 37: a hung-up call no longer reads "Call back", by Claude (2026-10-15)
+
+- **Reported:** hanging up mid-conversation showed "Call back 09:00" on the buyer, and "Buyer asked for a call back" on the result.
+- **Not a voice bug:** the voice service's rule (Module 2 plan, Step 10, `test_text_session_dropped_callback`) saves a call that ends with no outcome after the buyer has spoken as `call_back` at the next calling time at least 2 h away, flagged `dropped`, so a real mart tries again. 09:00 was right for a call after 19:00 (now + 2 h is past the 21:00 end of calling hours). The page presented it as the buyer's request, and showed no day.
+- **Fix:**
+  - `GET /demo/batches/{id}` gives each attempt `dropped` (the call's `dropped` flag), so the page can tell the two cases apart. Test: `test_batch_tells_a_dropped_call_from_a_requested_call_back`.
+  - A dropped call shows **"Ended early"** (a neutral chip, and the result title), with no retry time, as the user chose.
+  - A real call-back names the day: "Call back 19:30", "Call back tomorrow 09:00", or "Call back Sat 17 Oct 09:00" (`formatCallbackTime` in `format.js`, Lahore time, with tests including just after midnight in Lahore).
+  - The outcome and its retry time on the server are unchanged.
+- **Checks:** ruff clean; pytest 441 passed, 20 skipped; `node --test` 32 passed. In the preview, the result card reads "Ended early · 2.5 of 2.5 dozen left" for a dropped call and "Buyer asked for a call back · Call back tomorrow 09:00 · …" for a real one.

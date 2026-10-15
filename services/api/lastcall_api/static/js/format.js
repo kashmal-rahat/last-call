@@ -190,6 +190,17 @@ export function getFindBuyersLabel(types) {
   return phrase ? `Find ${phrase}` : 'Find buyers';
 }
 
+// When a call-back is due, in Lahore time: "19:30" today, "tomorrow 09:00", else "Sat 17 Oct 09:00"
+export function formatCallbackTime(iso, now = new Date()) {
+  const tz = 'Asia/Karachi';  // no daylight saving, so "tomorrow" is exactly 24 h on
+  const at = new Date(iso);
+  const day = d => d.toLocaleDateString('en-CA', { timeZone: tz });
+  const time = at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: tz });
+  if (day(at) === day(now)) return time;
+  if (day(at) === day(new Date(now.getTime() + 24 * 3600 * 1000))) return `tomorrow ${time}`;
+  return `${at.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz })} ${time}`;
+}
+
 // getNextStepTargetLabel (from 63109cf verbatim)
 export function getNextStepTargetLabel(batch) {
   if (batch && batch.plans && batch.step_index + 1 < batch.plans.length) {

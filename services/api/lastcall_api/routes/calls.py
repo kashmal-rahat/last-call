@@ -293,6 +293,9 @@ async def _batch_view(store: CallStore, batch: BatchRecord, rules: MartRules, no
                 "agreed_quantity": result.agreed_quantity if result else None,
                 "pickup_time": result.pickup_time.isoformat() if (result and result.pickup_time) else None,
                 "callback_at": result.callback_at.isoformat() if (result and result.callback_at) else None,
+                # The call ended mid-conversation with no answer (the voice service then plans a retry,
+                # outcome call_back), as opposed to a buyer who asked to be called back
+                "dropped": bool(result and "dropped" in result.flags),
             }
         )
 
