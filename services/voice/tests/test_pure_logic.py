@@ -696,3 +696,41 @@ def test_verify_offer_no_numeric_offer_ladder_progression():
     # 8. After accept, even buyer_asks_lower=True returns accepted price 140 without moving
     d_try_lower = verify_offer(state, policy, "sale", None, buyer_asks_lower=True)
     assert d_try_lower.price_per_unit == 140
+
+
+def test_fallback_config_and_parsing():
+    """D68: the spoken-price fallback asks for a schema at thinking LOW with no sampling parameters, drops
+    non-positive prices, and treats an answer that breaks the schema as unchecked (never as "no prices")."""
+    import asyncio
+
+    from lastcall_voice.negotiator.price_guard import PriceAudit, fallback_extract_prices
+
+    class Resp:
+        def __init__(self, text):
+            self.text = text
+
+    class Models:
+        def __init__(self, text):
+            self.text, self.config = text, None
+
+        async def generate_content(self, *, model, contents, config):
+            self.config = config
+            return Resp(self.text)
+
+    class Client:
+        def __init__(self, text):
+            self.aio = type("Aio", (), {"models": Models(text)})()
+
+    ok = Client('{"agent_offered_prices": [145, 0, -5]}')
+    prices, unchecked = asyncio.run(fallback_extract_prices("ek sau pentalis rupay", ok, model="m"))
+    assert (prices, unchecked) == ([145], False)
+
+    cfg = ok.aio.models.config
+    assert cfg.response_schema is PriceAudit
+    assert cfg.response_mime_type == "application/json"
+    assert str(cfg.thinking_config.thinking_level).lower().endswith("low")
+    for key in ("temperature", "top_p", "top_k", "seed", "candidate_count", "presence_penalty", "frequency_penalty"):
+        assert getattr(cfg, key) is None, key
+
+    for bad in ('{"agent_offered_prices": ["sau"]}', '{"prices": [145]}', "not json"):
+        assert asyncio.run(fallback_extract_prices("ek sau rupay", Client(bad), model="m")) == ([], True), bad

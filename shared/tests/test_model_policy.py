@@ -111,3 +111,31 @@ def test_scan_tracked_files_for_unapproved_models():
                     violations.append(f"{rel_path}:{line_no}: Found forbidden model '{m}' in line: {line.strip()}")
 
     assert not violations, "Forbidden Gemini models detected in codebase:\n" + "\n".join(violations)
+
+
+SAMPLING_KWARG = re.compile(
+    r"\b(temperature|top_p|top_k|seed|candidate_count|presence_penalty|frequency_penalty|thinking_budget)\s*=(?!=)"
+)
+
+
+def test_no_sampling_parameters_in_gemini_calls():
+    """D30/D68: no Gemini call sets sampling parameters or the old thinking_budget, in any service or script.
+
+    Gemini 3.8 Flash ignores them and future models reject them (HTTP 400); thinking_level and a response
+    schema control the output instead. Tests are skipped: they name these keys as strings to forbid them.
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    tracked = subprocess.run(
+        ["git", "ls-files", "*.py"], cwd=repo_root, capture_output=True, text=True, check=True
+    ).stdout.splitlines()
+
+    violations = []
+    for rel_path in tracked:
+        if "/tests/" in f"/{rel_path}" or not rel_path.startswith(("services/", "shared/", "scripts/")):
+            continue
+        for line_no, line in enumerate((repo_root / rel_path).read_text(encoding="utf-8").splitlines(), start=1):
+            code = line.split("#", 1)[0]  # a comment may explain the rule
+            if SAMPLING_KWARG.search(code):
+                violations.append(f"{rel_path}:{line_no}: {line.strip()}")
+
+    assert not violations, "Sampling parameters set in Gemini calls:\n" + "\n".join(violations)

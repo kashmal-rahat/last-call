@@ -7,9 +7,10 @@ deterministic, and free of false positives.
 """
 
 import asyncio
-import json
 import re
 from typing import Any, Literal
+
+from pydantic import BaseModel
 
 from lastcall_shared.config import get_settings
 
@@ -111,6 +112,12 @@ def has_spoken_price_cue(text: str) -> bool:
     return any(cue in lower for cue in SPOKEN_PRICE_CUES)
 
 
+class PriceAudit(BaseModel):
+    """The fallback's answer, enforced by Vertex structured output."""
+
+    agent_offered_prices: list[int]
+
+
 async def fallback_extract_prices(
     text: str,
     client: Any,
@@ -131,17 +138,20 @@ async def fallback_extract_prices(
     try:
         from google.genai import types
 
+        # D30/D68: no sampling parameters (ignored on 3.8 Flash, rejected by future models). A schema and
+        # thinking LOW make the answer reliable and fast enough for the 3 s budget during a live call.
         coro = client.aio.models.generate_content(
             model=model_name,
             contents=prompt,
             config=types.GenerateContentConfig(
-                temperature=0.0,
                 response_mime_type="application/json",
+                response_schema=PriceAudit,
+                thinking_config=types.ThinkingConfig(thinking_level="low"),
             ),
         )
         resp = await asyncio.wait_for(coro, timeout=timeout)
-        data = json.loads(resp.text)
-        raw_prices = data.get("agent_offered_prices", [])
-        return [int(p) for p in raw_prices if isinstance(p, (int, float))], False
+        audit = PriceAudit.model_validate_json(resp.text)
+        # A price is positive: a stray 0 would otherwise read as "below the floor" and trigger a false correction
+        return [p for p in audit.agent_offered_prices if p > 0], False
     except Exception:
         return [], True

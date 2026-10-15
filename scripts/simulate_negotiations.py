@@ -100,8 +100,7 @@ async def generate_buyer_persona_reply(
         model=model,
         contents=full_prompt,
         config=types.GenerateContentConfig(
-            temperature=0.4,
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
+            thinking_config=types.ThinkingConfig(thinking_level="low"),  # D30/D68: no sampling parameters
             max_output_tokens=300,
         ),
     )
@@ -140,8 +139,7 @@ Answer in strictly valid JSON format:
                 model=model,
                 contents=judge_prompt,
                 config=types.GenerateContentConfig(
-                    temperature=0.0,
-                    thinking_config=types.ThinkingConfig(thinking_budget=0),
+                    thinking_config=types.ThinkingConfig(thinking_level="low"),
                     response_mime_type="application/json",
                 ),
             )

@@ -175,3 +175,24 @@ The earlier criticals (C0–C4) are verified fixed. The "Updated the Limit" comm
   - **Both:** recommended before the link goes to anyone beyond the native-speaker testers.
 - **Fix the doc** to show the real worst-case cost and the actual kill-switch state.
 
+
+# Follow-up: the spoken-price fallback follows D30 (D68), by Claude (2026-10-15)
+
+- **Found in a Vertex usage review:** `fallback_extract_prices` set `temperature=0.0` (ignored on Gemini 3.8 Flash and rejected by future models, after which every check would silently count as "unchecked"). It had no response schema and no thinking level, so it ran at 3.8 Flash's default MEDIUM inside a 3 s budget during a live call.
+- **Change** (`negotiator/price_guard.py`):
+  - the config is a `response_schema` (`PriceAudit`) plus `thinking_level="low"`, with no sampling parameters;
+  - the answer is parsed with `PriceAudit.model_validate_json`;
+  - non-positive prices are dropped (a stray 0 would read as below the floor and trigger a false correction);
+  - an answer that breaks the schema counts as unchecked.
+  
+  Unchanged: the prompt, the 3 s timeout, the `(prices, unchecked)` contract and the caller in `live_session.py`.
+- **Measured on Vertex EU** (the endpoint was slow that day):
+  - with no level: 105–302 thought tokens, 2.2–19.4 s and one timeout;
+  - at LOW: 77–114 tokens and 1.8–3.8 s;
+  - every answer either setting gave was correct.
+  
+  The new code itself, with the 3 s budget: 3 of 5 correct within the budget and 2 unchecked at 3.0 s (endpoint latency). No wrong answers.
+- **Tests:**
+  - `test_fallback_config_and_parsing` checks the config sent (schema, LOW, no sampling keys), that non-positive prices are dropped, and that three malformed answers count as unchecked;
+  - `test_no_sampling_parameters_in_gemini_calls` (shared) scans all tracked code. It was checked against the committed versions: it catches all five old settings, and it doesn't flag ordinary code.
+- **Release:** `./scripts/deploy.sh voice`, then one browser call in which the agent says a price in words.
