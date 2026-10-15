@@ -76,7 +76,7 @@ export function updateShelfLock() {
 
   if (dom.shelfLockNote) {
     if (locked) {
-      dom.shelfLockNote.textContent = 'Branch, closing time and prices are fixed once calls start · New shelf to start over';
+      dom.shelfLockNote.textContent = 'Branch, time of day and prices are fixed once calls start · New shelf to start over';
       dom.shelfLockNote.style.display = 'block';
     } else {
       dom.shelfLockNote.textContent = '';
