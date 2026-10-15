@@ -13,6 +13,7 @@ import { updateShelfLock } from './lock.js';
 import { triggerDecide, renderActiveDecision } from './decision.js';
 import { renderActiveBuyers } from './buyers.js';
 import { renderImpact } from './impact.js';
+import { resetCallPanel } from './call.js';
 
 export async function handleInspect() {
   const code = accessCode();
@@ -73,6 +74,7 @@ export async function handleInspect() {
   state.quantityEdited = {};
   state.staffCheckedMap = {};
   state.currentActiveCall = null;
+  resetCallPanel();  // the old call belonged to the previous reading
   updateShelfLock();
 
   const scrollYAtStart = window.scrollY;

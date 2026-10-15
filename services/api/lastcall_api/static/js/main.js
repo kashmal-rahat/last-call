@@ -16,7 +16,7 @@ import { isShelfLocked, updateShelfLock, loadBatchesForBranch } from './lock.js'
 import { handleInspect, renderResults } from './reading.js';
 import { triggerDecide, updateStepperFade } from './decision.js';
 import { fetchScoutBuyers } from './buyers.js';
-import { hangup } from './call.js';
+import { hangup, resetCallPanel } from './call.js';
 import { renderImpact } from './impact.js';
 import { initPhoneDemo } from './phone.js';
 
@@ -54,23 +54,12 @@ if (dom.btnNewShelf) {
     dom.sectionAiReading.style.display = 'none';
     dom.sectionDecision.style.display = 'none';
     dom.sectionBuyers.style.display = 'none';
-    dom.voiceSection.style.display = 'none';
     dom.inspectFooter.style.display = 'none';
     dom.inspectLoading.style.display = 'none';
     dom.inspectedImage.src = '';
     dom.bboxOverlay.replaceChildren();
     dom.itemsContainer.replaceChildren();
-
-    if (dom.resultCard) {
-      dom.resultCard.style.display = 'none';
-      dom.resultCard.classList.remove('visible');
-    }
-    if (dom.resultContent) {
-      dom.resultContent.replaceChildren();
-    }
-    if (dom.resultNextAction) {
-      dom.resultNextAction.replaceChildren();
-    }
+    resetCallPanel();
 
     updateShelfLock();
     renderImpact();
@@ -104,16 +93,7 @@ if (dom.branchSelect) {
     state.scoutErrorsMap = {};
     state.scoutLoadingMap = {};
     state.currentBatchesMap = {};
-    if (dom.resultCard) {
-      dom.resultCard.style.display = 'none';
-      dom.resultCard.classList.remove('visible');
-    }
-    if (dom.resultContent) {
-      dom.resultContent.replaceChildren();
-    }
-    if (dom.resultNextAction) {
-      dom.resultNextAction.replaceChildren();
-    }
+    resetCallPanel();
     renderResults(state.currentInspection, state.currentDisplayUrl);
   });
 }

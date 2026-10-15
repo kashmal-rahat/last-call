@@ -115,6 +115,29 @@ export function startCallTimer() {
   }, 1000);
 }
 
+// The transcript's starting content (every node, as written in index.html), taken once when the module loads,
+// so the page stays the only source of its text. Defensive: the module can load without the real page (tests).
+const transcriptStart = [...(dom.transcript?.childNodes ?? [])].map(node => node.cloneNode(true));
+
+// Puts the call section back to how the page starts: hidden, no caller, no transcript, no result.
+// Used when the shelf's results are reset (a new inspection, New shelf, a branch change); never during a call.
+export function resetCallPanel() {
+  if (state.isCallInProgress) return;
+  stopCallTimer();
+  dom.voiceSection.style.display = 'none';
+  dom.callBuyerName.textContent = '—';
+  dom.callerAvatar.textContent = '';
+  for (const el of [dom.callItemQty, dom.callOpeningQuote, dom.callFloorPrice, dom.callPickupWindow]) el.textContent = '—';
+  if (dom.callDuration) dom.callDuration.textContent = '00:00';
+  setStatus('Connecting…');
+  dom.btnHangup.disabled = true;
+  dom.transcript.replaceChildren(...transcriptStart.map(node => node.cloneNode(true)));  // hidden first: not announced
+  dom.resultCard.style.display = 'none';
+  dom.resultCard.classList.remove('visible');
+  dom.resultContent.replaceChildren();
+  dom.resultNextAction.replaceChildren();
+}
+
 export function stopCallTimer() {
   if (state.callTimerInterval) {
     clearInterval(state.callTimerInterval);
