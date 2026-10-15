@@ -14,7 +14,7 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "hypothesis>=6.100",
-    "google-genai>=1.0",
+    "google-genai>=2.30,<3",  # Gemini 3 settings (thinking_level); ADK 2.12 needs >=2.30 (D69)
     "pillow>=10.0",
     "ruff==0.17.0",
 ]

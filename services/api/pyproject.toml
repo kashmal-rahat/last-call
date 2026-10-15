@@ -8,7 +8,7 @@ dependencies = [
     "uvicorn[standard]>=0.29.0",
     "pydantic-settings>=2.0.0",
     "lastcall-shared",
-    "google-genai>=1.0",
+    "google-genai>=2.30,<3",  # Gemini 3 settings (thinking_level); ADK 2.12 needs >=2.30 (D69)
     "pillow>=10.0",
     "python-multipart>=0.0.9",
     "httpx>=0.27.0",
