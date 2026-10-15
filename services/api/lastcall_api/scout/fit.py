@@ -1,7 +1,9 @@
-"""Gemini fit screening for Scout candidates (D46, Step 6)."""
+"""Gemini fit screening for Scout candidates (D46, Step 6; in parallel groups, D73)."""
 
+import asyncio
 import json
 import logging
+import math
 import time
 from pathlib import Path
 from typing import Any
@@ -18,6 +20,10 @@ from lastcall_shared.models import BuyerFit, ScoutStep, UsageRecord
 logger = logging.getLogger("lastcall_api.scout.fit")
 
 FIT_PROMPT_VERSION = "1"
+
+# Businesses per Gemini call (D73). Each business is judged on its own (D46), so the list is screened as
+# even groups in parallel: the answer's length, and so its time, is set by the largest group, not the list.
+MAX_FIT_GROUP = 10
 
 _PROMPT_PATH = Path(__file__).resolve().parent / "fit_prompt.md"
 FIT_SYSTEM_PROMPT = _PROMPT_PATH.read_text().strip()
@@ -49,6 +55,19 @@ def build_fit_config() -> types.GenerateContentConfig:
     )
 
 
+def fit_groups(candidates: list[FilteredCandidate]) -> list[list[FilteredCandidate]]:
+    """Even groups of at most MAX_FIT_GROUP, dealt round-robin (23 → 8, 8, 7; 40 → 4 × 10).
+
+    Round-robin, not consecutive slices: the list comes sorted nearest first (rank.apply_filters), so
+    slices would put all the nearest businesses in one call; dealt, every group gets the same spread of
+    distances (and so a natural mix of buyer types), and every call sees a list like the whole one.
+    """
+    if not candidates:
+        return []
+    count = math.ceil(len(candidates) / MAX_FIT_GROUP)
+    return [candidates[i::count] for i in range(count)]
+
+
 async def screen_fit(
     candidates: list[FilteredCandidate],
     *,
@@ -58,9 +77,11 @@ async def screen_fit(
     client: genai.Client | None = None,
     deadline: float | None = None,
 ) -> tuple[dict[str, tuple[BuyerFit, str]], UsageRecord, dict[str, Any]]:
-    """Screens candidate businesses against item and condition using structured Gemini call (D46).
+    """Screens candidate businesses against item and condition (D46), one structured Gemini call per group,
+    all at once under the same deadline (D73).
 
-    Never raises on GeminiCallError; falls back gracefully to ('possible', '').
+    Never raises on a Gemini failure: a group that fails falls back to ('possible', '') for its businesses
+    only, and fit_fallback is set. The ranking of the merged verdicts is code's (rank.py), as before.
     """
     assert len(candidates) <= 40, f"At most 40 candidates allowed for fit screening, got {len(candidates)}"
 
@@ -70,9 +91,44 @@ async def screen_fit(
         "fit_prompt_version": FIT_PROMPT_VERSION,
     }
 
-    if not candidates:
+    groups = fit_groups(candidates)
+    if not groups:
         return {}, UsageRecord(), stats
 
+    if client is None:
+        client = get_genai_client()
+    if deadline is None:
+        deadline = time.monotonic() + 25.0
+
+    outcomes = await asyncio.gather(
+        *(
+            _screen_group(group, item=item, condition=condition, step=step, client=client, deadline=deadline)
+            for group in groups
+        )
+    )
+
+    result_fits: dict[str, tuple[BuyerFit, str]] = {}
+    usage = UsageRecord()
+    for group_fits, group_usage, fell_back in outcomes:
+        result_fits.update(group_fits)
+        usage.input_tokens += group_usage.input_tokens
+        usage.output_tokens += group_usage.output_tokens
+        stats["fit_fallback"] = stats["fit_fallback"] or fell_back
+    stats["fit_calls"] = len(groups)
+    return result_fits, usage, stats
+
+
+async def _screen_group(
+    candidates: list[FilteredCandidate],
+    *,
+    item: str,
+    condition: str,
+    step: ScoutStep,
+    client: genai.Client,
+    deadline: float,
+) -> tuple[dict[str, tuple[BuyerFit, str]], UsageRecord, bool]:
+    """One Gemini call for one group: (verdict per place ID, usage, fell back). Never raises on a Gemini failure."""
+    # Short refs, local to this call: Gemini never sees place IDs or phones
     ref_to_place_id: dict[str, str] = {f"c{i + 1}": c.place_id for i, c in enumerate(candidates)}
 
     biz_list = [
@@ -94,20 +150,11 @@ async def screen_fit(
     }
     user_text = json.dumps(user_payload)
 
-    if client is None:
-        client = get_genai_client()
-
-    if deadline is None:
-        deadline = time.monotonic() + 25.0
-
-    config = build_fit_config()
-    stats["fit_calls"] = 1
-
     try:
         out_raw, call_usage, attempts, was_hedged = await call_structured(
             client=client,
             contents=[user_text],
-            config=config,
+            config=build_fit_config(),
             schema=FitsOut,
             deadline=deadline,
             max_attempts=2,
@@ -138,7 +185,7 @@ async def screen_fit(
             input_tokens=call_usage.input_tokens,
             output_tokens=call_usage.output_tokens,
         )
-        return result_fits, usage, stats
+        return result_fits, usage, False
 
     except Exception as exc:
         reason = getattr(exc, "reason", None)
@@ -147,8 +194,7 @@ async def screen_fit(
             extra={
                 "error_class": exc.__class__.__name__,
                 "reason": str(reason) if reason else None,
+                "group_size": len(candidates),
             },
         )
-        stats["fit_fallback"] = True
-        result_fits = {c.place_id: ("possible", "") for c in candidates}
-        return result_fits, UsageRecord(), stats
+        return {c.place_id: ("possible", "") for c in candidates}, UsageRecord(), True
