@@ -29,22 +29,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #1E1B4B;
-  color: #C7D2FE;
+  background: #1E293B; /* the buyer, so neutral: indigo marks the AI */
+  color: #CBD5E1;
   font-family: var(--font-heading);
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.12);
 }
 
 .caller-text { min-width: 0; }
 .caller-kicker {
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 16px;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #818CF8;
+  color: var(--call-muted);
 }
 .caller-name {
   font-family: var(--font-heading);
@@ -116,10 +115,9 @@
 .deal-row { padding: 12px 0; border-bottom: 1px solid #1E293B; }
 .deal-row:first-child { padding-top: 0; }
 .deal-row dt {
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 16px;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--call-muted);
   margin-bottom: 4px;
 }
@@ -146,10 +144,11 @@
 .msg { display: flex; flex-direction: column; gap: 4px; max-width: 78%; }
 .msg-agent { align-self: flex-start; }
 .msg-buyer { align-self: flex-end; align-items: flex-end; }
-.msg-speaker { font-size: 11px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--call-muted); padding: 0 4px; }
+.msg-speaker { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--call-muted); padding: 0 4px; }
 .msg-bubble { padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 22px; }
-.msg-agent .msg-bubble { background: #1E293B; color: #F1F5F9; border-top-left-radius: 4px; }
-.msg-buyer .msg-bubble { background: #4338CA; color: #FFFFFF; border-top-right-radius: 4px; }
+/* Indigo marks the AI, as everywhere on the page: the agent's lines are tinted, yours are neutral (and on the right) */
+.msg-agent .msg-bubble { background: rgba(99, 102, 241, 0.16); box-shadow: inset 0 0 0 1px rgba(129, 140, 248, 0.22); color: #F1F5F9; border-top-left-radius: 4px; }
+.msg-buyer .msg-bubble { background: #334155; color: #F8FAFC; border-top-right-radius: 4px; }
 .msg-bubble.urdu { font-size: 16px; line-height: 2; }
 .transcript-notice {
   align-self: center;

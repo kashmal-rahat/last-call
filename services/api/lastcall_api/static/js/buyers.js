@@ -76,7 +76,7 @@ export function renderNextActionRow(container, batch, itemKey, buyers = [], show
       if (showCallButton) {
         const btnCall = document.createElement('button');
         btnCall.type = 'button';
-        btnCall.className = 'btn-ai';
+        btnCall.className = 'btn-primary';
         btnCall.textContent = `Next buyer · #${rank}${bName ? ' ' + bName : ''}`;
         btnCall.disabled = state.isCallInProgress;
         const targetBId = targetB ? targetB.buyer_id : null;
@@ -140,7 +140,7 @@ export function renderNextActionRow(container, batch, itemKey, buyers = [], show
     if (showCallButton) {
       const btnCall = document.createElement('button');
       btnCall.type = 'button';
-      btnCall.className = 'btn-ai';
+      btnCall.className = 'btn-primary';
       btnCall.textContent = `Next buyer · #1 ${buyers[0].name}`;
       btnCall.disabled = state.isCallInProgress;
       btnCall.addEventListener('click', () => {

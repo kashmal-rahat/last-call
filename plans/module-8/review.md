@@ -753,3 +753,18 @@ The Buyers list was the busiest section: about 20 indigo marks (an uppercase "NE
   - the masked phone keeps ordinary spaces but its element never wraps;
   - in the preview, every place shows U+00A0, including the server reason after JSON.
 - **Tests:** the formatter and `selling_time` expectations now spell out the non-breaking space. pytest 427 passed, 20 skipped; `node --test` 26 passed; ruff clean.
+
+# Round 26: call section, consistent with the page, by Claude (2026-10-15)
+
+The call screen was already the page's strongest section (a dark "call mode": caller, live status, Hang up, the deal sheet with "Floor · never told to the AI", the conversation and the result banner). No redesign, three consistency fixes:
+
+- **Sentence-case labels:** the caller line, the deal-sheet labels and the speaker labels drop `text-transform: uppercase` and letter-spacing (12 px, muted), like every other label on the page. The words in the markup and JS were already in sentence case.
+- **Indigo means the AI here too:**
+  - the agent's bubbles have a faint indigo tint;
+  - yours become neutral slate, still on the right as in any chat;
+  - the buyer's avatar is neutral (it showed the AI colour on the human side);
+  - the waveform (the AI speaking) and the tool notices ("Price check · counter") stay indigo.
+  
+  Text contrast: 9.9:1 on your bubbles, about 14:1 on the agent's.
+- **"Next buyer" uses the page's green button:** `renderNextActionRow` uses `btn-primary`, like "Start call" in Buyers. The indigo `.btn-ai` style had no other use and is removed from `base.css`.
+- **Checked** in the preview with a fictional call (caller, deal sheet, transcript, a tool notice, a deal result) at 1280 and 375 px, with no sideways scroll. A pickup window that wrapped mid-range was the fake data's format; the real one is words ("… to …") and also goes into the agent's prompt, so it is unchanged.
