@@ -47,24 +47,64 @@ test('martNow: the real time moved by the current decision\'s shift; unchanged w
   state.currentLadderResult = null;
 });
 
-test('header clock: a preset shows its time, plain, explained on hover and to screen readers', () => {
-  state.currentLadderResult = { clock_offset_s: EVENING };
+// The Time until closing options as the page has them (index.html): hours and the time each one sets
+const OPTIONS = { '': null, '12': '11:00', '4': '19:00', '1': '22:00' };
+function select(hours) {
+  dom.closingTimeSelect.selectedOptions = [{ value: hours, dataset: OPTIONS[hours] ? { time: OPTIONS[hours] } : {} }];
+}
+function header() {
+  dom.headerTime.children = [];
   updateClock();
-  const [note] = dom.headerTime.children;
-  assert.match(dom.headerTime.textContent, /^\d\d:\d\d PKT$/);
+  return dom.headerTime.textContent;
+}
+// The real time now, in Pakistan; the minute may turn while a test runs, so both readings are accepted
+function realNowEither(run) {
+  const before = `${formatPktClock(new Date())} PKT`;
+  const shown = run();
+  const after = `${formatPktClock(new Date())} PKT`;
+  assert.ok([before, after].includes(shown), shown);
+}
+
+test('header clock: a picked preset shows its time at once and holds it until there is a decision', () => {
+  state.currentLadderResult = null;
+  select('4');  // the page opens on 19:00 (D65)
+  assert.equal(header(), '19:00 PKT');
   assert.equal(dom.headerTime.title, 'Set by Time until closing');
+  const [note] = dom.headerTime.children;
   assert.equal(note.className, 'visually-hidden');
   assert.equal(note.textContent, ' (Set by Time until closing)');
 
-  // "Now" (or no decision): the real time, with no explanation
+  select('12');
+  assert.equal(header(), '11:00 PKT');
+});
+
+test('header clock: with a decision for the picked preset, it ticks on the decision\'s time', () => {
+  // Decided "19:00" 25 minutes ago: the mart is now at 19:25
+  const decidedOffset = (new Date('2026-10-16T19:00:00+05:00') - new Date(Date.now() - 25 * 60 * 1000)) / 1000;
+  state.currentLadderResult = { hours_until_closing: 4, clock_offset_s: decidedOffset };
+  select('4');
+  assert.ok(['19:25 PKT', '19:26 PKT'].includes(header()));
+  assert.equal(dom.headerTime.title, 'Set by Time until closing');
+});
+
+test('header clock: a new preset shows its time while its decision is on the way', () => {
+  state.currentLadderResult = { hours_until_closing: 4, clock_offset_s: EVENING };  // the old decision
+  select('1');
+  assert.equal(header(), '22:00 PKT');
+  select('');  // "Now", while the 19:00 decision is still the current one
+  realNowEither(header);
+  assert.equal(dom.headerTime.title, '');
+});
+
+test('header clock: "Now" shows the real time with no explanation, before and after its decision', () => {
+  select('');
   state.currentLadderResult = null;
-  dom.headerTime.children = [];
-  const before = `${formatPktClock(new Date())} PKT`;
-  updateClock();
-  const after = `${formatPktClock(new Date())} PKT`;
+  realNowEither(header);
+  state.currentLadderResult = { hours_until_closing: 20.5, clock_offset_s: 0 };
+  realNowEither(header);
   assert.equal(dom.headerTime.title, '');
   assert.equal(dom.headerTime.children.length, 0);
-  assert.ok([before, after].includes(dom.headerTime.textContent));  // the minute may turn in between
+  state.currentLadderResult = null;
 });
 
 test('a call-back is "today" on the mart\'s day, even when the real date has moved on', () => {

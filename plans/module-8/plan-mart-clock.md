@@ -208,3 +208,11 @@ As designed above, with two additions found while building:
   the mart's time (the text session's simulator has offset 0, so its behaviour is unchanged), with boundary tests
   (inside, before and after calling hours). The text session's other clock reads use `ctx.now()`. A JS test that
   compared against the clock after the call could fail on a turning minute; it now accepts the minute before or after.
+- **Header from the moment a preset is picked (user, same day):** before, the header changed only when a decision
+  arrived, so the page opened on 19:00 selected with the real time in the header. Now the header shows the selected
+  preset's time at once (on load and on every pick), holds it until a decision for that preset arrives, then ticks
+  from the decision. A decision for another option (a new one still on its way) doesn't count, so the header never
+  shows a stale time. Each option carries its time (`data-time` on the hidden select). Counting from the call instead
+  was considered and declined: the reading time moves every display together, and a shelf-wide "clock started"
+  moment would need a database write at the first call and a second header state.
+

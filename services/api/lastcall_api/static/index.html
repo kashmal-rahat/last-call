@@ -141,17 +141,19 @@
             </span>
           </div>
           <div class="segmented-control" id="closingTimeButtons">
-            <button type="button" data-val="" class="closing-time-btn" aria-pressed="false"><span class="seg-main">Now</span><span class="seg-sub">real time</span></button>
-            <button type="button" data-val="12" class="closing-time-btn" aria-pressed="false"><span class="seg-main">12&nbsp;h left</span><span class="seg-sub">morning</span></button>
-            <button type="button" data-val="4" class="closing-time-btn active" aria-pressed="true"><span class="seg-main">4&nbsp;h left</span><span class="seg-sub">evening</span></button>
-            <button type="button" data-val="1" class="closing-time-btn" aria-pressed="false"><span class="seg-main">1&nbsp;h left</span><span class="seg-sub">last hour</span></button>
+            <button type="button" data-val="" class="closing-time-btn" aria-pressed="false"><span class="seg-main">Now</span><span class="seg-sub">real time, PKT</span></button>
+            <!-- Each preset sets the mart's time of day (D74), shown as the header clock shows it; the value is the
+                 hours to the 23:00 closing that the decision uses -->
+            <button type="button" data-val="12" class="closing-time-btn" aria-pressed="false"><span class="seg-main">11:00&nbsp;PKT</span><span class="seg-sub">12&nbsp;h to closing</span></button>
+            <button type="button" data-val="4" class="closing-time-btn active" aria-pressed="true"><span class="seg-main">19:00&nbsp;PKT</span><span class="seg-sub">4&nbsp;h to closing</span></button>
+            <button type="button" data-val="1" class="closing-time-btn" aria-pressed="false"><span class="seg-main">22:00&nbsp;PKT</span><span class="seg-sub">1&nbsp;h to closing</span></button>
           </div>
-          <!-- Hidden select as the tested single source of truth; 4 h left by default (D65) -->
+          <!-- Hidden select as the tested single source of truth; 19:00 (4 h to closing) by default (D65) -->
           <select id="closingTimeSelect" aria-labelledby="closingTimeLabel">
-            <option value="">Now (closes 23:00)</option>
-            <option value="12">Morning (12 h left)</option>
-            <option value="4" selected>Evening (4 h left)</option>
-            <option value="1">Last hour (1 h left)</option>
+            <option value="">Now (real time, PKT)</option>
+            <option value="12" data-time="11:00">11:00 PKT (12 h to closing)</option>
+            <option value="4" data-time="19:00" selected>19:00 PKT (4 h to closing)</option>
+            <option value="1" data-time="22:00">22:00 PKT (1 h to closing)</option>
           </select>
         </div>
       </div>

@@ -8,7 +8,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from lastcall_api.deps import _IP_REQUEST_HISTORY
+from lastcall_api.ladder.engine import clock_offset
 from lastcall_api.main import app
+from lastcall_shared.clock import mart_now
+from lastcall_shared.marts.loader import load_mart_rules
 from lastcall_shared.models import (
     BoundingBox,
     CallResult,
@@ -159,6 +162,25 @@ def test_get_demo_page():
     resp = client.get("/demo")
     assert resp.status_code == 200
     assert "Last Call" in resp.text
+
+
+def test_time_presets_on_the_page_match_the_mart_clock():
+    """D74: each Time until closing preset shows (button) and carries (data-time, read by the header clock) the
+    time the server's mart clock gives it, and the tip names the mart's closing time, so the page, the header and
+    the call can't drift apart. Checked here rather than built at runtime: the times only change with the mart's
+    closing time, and a runtime source would cost a request and an empty first screen."""
+    page = TestClient(app).get("/demo").text
+    options = dict(re.findall(r'<option value="(\d+)" data-time="(\d\d:\d\d)"', page))
+    buttons = dict(re.findall(r'data-val="(\d+)"[^>]*><span class="seg-main">(\d\d:\d\d)&nbsp;PKT</span>', page))
+    rules = load_mart_rules("demo_mart")
+    now = datetime(2026, 10, 16, 2, 0, tzinfo=PKT)
+
+    assert set(options) == set(buttons) == {"12", "4", "1"}
+    for hours, shown in options.items():
+        mart = mart_now(clock_offset(rules, now, override=float(hours)), now)
+        assert shown == buttons[hours] == f"{mart:%H:%M}", hours
+    # The Time until closing tip names the same closing time
+    assert f"The mart closes at {rules.closing_time:%H:%M}." in page
 
 
 def test_auth_endpoints():

@@ -124,6 +124,7 @@ if (dom.closingTimeButtons) {
 if (dom.closingTimeSelect) {
   dom.closingTimeSelect.addEventListener('change', () => {
     syncClosingTimeButtons();
+    updateClock();  // the header shows the picked time at once, not after the decision
     if (state.currentInspection && state.currentInspection.items && state.currentInspection.items.length > 0) {
       triggerDecide();
     }

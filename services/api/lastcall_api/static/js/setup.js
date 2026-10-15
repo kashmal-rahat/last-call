@@ -8,11 +8,31 @@ import { formatPktClock } from './format.js';
 
 const SET_BY_PRESET = 'Set by Time until closing';
 
-// The header clock: the mart's time (D74). With a Time until closing preset that is the time the preset stands
-// for, still ticking; with "Now" the real time. Called every minute and whenever the decision changes.
+// The selected Time until closing option: its hours ('' for "Now") and the time it sets ("19:00", null for "Now")
+function selectedPreset() {
+  const option = dom.closingTimeSelect && dom.closingTimeSelect.selectedOptions[0];
+  return { hours: option ? option.value : '', time: (option && option.dataset.time) || null };
+}
+
+// Whether the decision was made for the selected option (a new one may still be on its way). Exact by
+// construction: a preset's decision keeps the preset's hours; a "Now" decision has a shift of exactly 0.
+function decidedFor(decision, preset) {
+  return preset.hours
+    ? decision.hours_until_closing === parseFloat(preset.hours)
+    : decision.clock_offset_s === 0;
+}
+
+// The header clock: the mart's time (D74). With a decision for the selected option, its time, ticking (the
+// server's clock for the calls starts there). Until then, the selected preset's time, held, so the header matches
+// the button as soon as the page opens or a preset is picked; "Now" shows the real time. Called every minute,
+// when a preset is picked and whenever the decision changes.
 export function updateClock() {
-  const simulated = Boolean(state.currentLadderResult && state.currentLadderResult.clock_offset_s);
-  dom.headerTime.textContent = `${formatPktClock(martNow())} PKT`;
+  const preset = selectedPreset();
+  const decision = state.currentLadderResult;
+  const ticking = Boolean(decision && decidedFor(decision, preset));
+  const simulated = Boolean(preset.time);
+  const shown = !simulated ? formatPktClock(new Date()) : ticking ? formatPktClock(martNow()) : preset.time;
+  dom.headerTime.textContent = `${shown} PKT`;
   dom.headerTime.title = simulated ? SET_BY_PRESET : '';
   if (simulated) {
     const note = document.createElement('span');
