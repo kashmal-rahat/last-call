@@ -162,7 +162,7 @@ def hours_until_closing(rules: MartRules, now: datetime, override: float | None 
 
 
 def clock_offset(rules: MartRules, now: datetime, override: float | None = None) -> float:
-    """The mart's time minus the real time, in seconds (D74): 0 for "Now"; for a Time until closing preset, the
+    """The mart's time minus the real time, in seconds (D74): 0 for "Now"; for a Time of day preset, the
     time it stands for (today's closing minus the preset hours, on today's date in the mart's timezone, so
     "today" and "tomorrow" keep their meaning). Calls, pickup windows and call-backs then run on that time."""
     if override is None:

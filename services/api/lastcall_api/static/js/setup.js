@@ -6,9 +6,9 @@ import { getStoredItem } from './storage.js';
 import { icon } from './ui.js';
 import { formatPktClock } from './format.js';
 
-const SET_BY_PRESET = 'Set by Time until closing';
+const SET_BY_PRESET = 'Set by Time of day';
 
-// The selected Time until closing option: its hours ('' for "Now") and the time it sets ("19:00", null for "Now")
+// The selected Time of day option: its hours ('' for "Now") and the time it sets ("19:00", null for "Now")
 function selectedPreset() {
   const option = dom.closingTimeSelect && dom.closingTimeSelect.selectedOptions[0];
   return { hours: option ? option.value : '', time: (option && option.dataset.time) || null };

@@ -1,6 +1,6 @@
 // services/api/tests/js/clock.test.mjs
 //
-// D74: the page shows the mart's time. With a Time until closing preset that is the time the preset stands for
+// D74: the page shows the mart's time. With a Time of day preset that is the time the preset stands for
 // (the decision's clock_offset_s), still ticking; with "Now" the real time. Always shown in Pakistan time.
 
 import test from 'node:test';
@@ -47,7 +47,7 @@ test('martNow: the real time moved by the current decision\'s shift; unchanged w
   state.currentLadderResult = null;
 });
 
-// The Time until closing options as the page has them (index.html): hours and the time each one sets
+// The Time of day options as the page has them (index.html): hours and the time each one sets
 const OPTIONS = { '': null, '12': '11:00', '4': '19:00', '1': '22:00' };
 function select(hours) {
   dom.closingTimeSelect.selectedOptions = [{ value: hours, dataset: OPTIONS[hours] ? { time: OPTIONS[hours] } : {} }];
@@ -69,10 +69,10 @@ test('header clock: a picked preset shows its time at once and holds it until th
   state.currentLadderResult = null;
   select('4');  // the page opens on 19:00 (D65)
   assert.equal(header(), '19:00 PKT');
-  assert.equal(dom.headerTime.title, 'Set by Time until closing');
+  assert.equal(dom.headerTime.title, 'Set by Time of day');
   const [note] = dom.headerTime.children;
   assert.equal(note.className, 'visually-hidden');
-  assert.equal(note.textContent, ' (Set by Time until closing)');
+  assert.equal(note.textContent, ' (Set by Time of day)');
 
   select('12');
   assert.equal(header(), '11:00 PKT');
@@ -84,7 +84,7 @@ test('header clock: with a decision for the picked preset, it ticks on the decis
   state.currentLadderResult = { hours_until_closing: 4, clock_offset_s: decidedOffset };
   select('4');
   assert.ok(['19:25 PKT', '19:26 PKT'].includes(header()));
-  assert.equal(dom.headerTime.title, 'Set by Time until closing');
+  assert.equal(dom.headerTime.title, 'Set by Time of day');
 });
 
 test('header clock: a new preset shows its time while its decision is on the way', () => {

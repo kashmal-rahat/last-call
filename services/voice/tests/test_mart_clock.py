@@ -1,4 +1,4 @@
-"""D74: a call runs on the mart's time (set by Time until closing), while records keep the real time.
+"""D74: a call runs on the mart's time (set by Time of day), while records keep the real time.
 
 The worst case before D74: a judge picks "12 h left" (the mart at 11:00) while it is 22:00 in Lahore. The buyer
 agrees to collect "aaj 3 baje" (15:00 today) and `confirm_deal` refused it as in the past, on the real clock.

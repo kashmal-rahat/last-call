@@ -291,7 +291,7 @@ def test_hours_until_closing():
     assert abs(hours_until_closing(rules, t2) - 23.5) < 0.01
 
 
-# D74: a Time until closing preset stands for a time of day, on the real date in Lahore, whatever the real time
+# D74: a Time of day preset stands for a time of day, on the real date in Lahore, whatever the real time
 @pytest.mark.parametrize("real_hour,real_minute", [(2, 0), (11, 0), (23, 30)])
 @pytest.mark.parametrize("preset,mart_hour", [(12.0, 11), (4.0, 19), (1.0, 22)])
 def test_clock_offset_puts_the_mart_at_the_presets_time_of_day(real_hour, real_minute, preset, mart_hour):

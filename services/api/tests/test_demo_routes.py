@@ -165,7 +165,7 @@ def test_get_demo_page():
 
 
 def test_time_presets_on_the_page_match_the_mart_clock():
-    """D74: each Time until closing preset shows (button) and carries (data-time, read by the header clock) the
+    """D74: each Time of day preset shows (button) and carries (data-time, read by the header clock) the
     time the server's mart clock gives it, and the tip names the mart's closing time, so the page, the header and
     the call can't drift apart. Checked here rather than built at runtime: the times only change with the mart's
     closing time, and a runtime source would cost a request and an empty first screen."""
@@ -179,7 +179,7 @@ def test_time_presets_on_the_page_match_the_mart_clock():
     for hours, shown in options.items():
         mart = mart_now(clock_offset(rules, now, override=float(hours)), now)
         assert shown == buttons[hours] == f"{mart:%H:%M}", hours
-    # The Time until closing tip names the same closing time
+    # The Time of day tip names the same closing time
     assert f"The mart closes at {rules.closing_time:%H:%M}." in page
 
 
@@ -449,7 +449,7 @@ async def test_second_call_offers_rank_2(setup_api_test):
     assert data2["buyer"]["buyer_id"] == "places:ChIJ_buyer_2"
 
 
-# --- D74: the call runs on the mart's time set by Time until closing ------------------------------
+# --- D74: the call runs on the mart's time set by Time of day ------------------------------
 
 REAL_2AM = datetime(2026, 10, 16, 2, 0, tzinfo=PKT)  # a judge in another time zone: night in Lahore
 EVENING = 17 * 3600  # "4 h left": the mart at 19:00 that day

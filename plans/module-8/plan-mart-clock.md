@@ -4,7 +4,8 @@ Status: **built 2026-10-16 (D74)**, after the user's review. Written 2026-10-16 
 
 ## The problem
 
-"Preset" in this plan means the **Time until closing** buttons in Shelf setup (Now, 12 h, 4 h, 1 h left). The
+"Preset" in this plan means the **Time of day** buttons in Shelf setup (Now, 12 h, 4 h, 1 h left; the field was called
+"Time until closing" until 2026-10-16, and the buttons now read Now, 11:00, 19:00 and 22:00 PKT). The
 12 h, 4 h and 1 h presets change only the Ladder decision. Everything after it
 runs on the real clock in Pakistan. With "Now" the two agree; with a preset they can contradict each other, and the
 judge can't see why. Judges may well be in other time zones, so the real time in Lahore can be anything, including
@@ -78,7 +79,7 @@ real time and everything behaves exactly as today.
    unchanged: it still uses the preset hours.
 3. **The batch copies it** at the item's first call: `BatchRecord.clock_offset_s` (default 0; D54 already snapshots
    plans and quantity at that moment). Later calls on the same batch use the batch's value, even if the shelf is
-   re-decided. This adds no restriction for the judge: the page already disables Time until closing once any call
+   re-decided. This adds no restriction for the judge: the page already disables Time of day once any call
    exists on the shelf (`lock.js`), and only New shelf unlocks it; before the first call they can change it freely.
    Keeping it on the server means consistency doesn't depend on the page's lock.
 4. **The call copies it from the batch:** `CallRecord.clock_offset_s` (default 0), so the voice service (browser
@@ -100,7 +101,7 @@ real time and everything behaves exactly as today.
      until closing" (decided). It changes when the decision arrives, the moment the preset takes effect;
    - `formatCallbackTime` gets mart time as its `now`, so "today / tomorrow" is judged on the mart's day;
    - the pickup window on the call panel already comes from the server;
-   - the Time until closing info tip (`#tipClosing`) says today "…Pickup times stay real.", which becomes false. New
+   - the Time of day info tip (`#tipClosing`) says today "…Pickup times stay real.", which becomes false. New
      text: "The mart closes at 23:00. Pick a time of day to see how the AI's decision, the pickup time and the call
      change as closing nears." This tip is where judges learn what the setting does, so it matters more than the
      header's tooltip.
@@ -144,7 +145,7 @@ switched on.
   `mart_clock`, read only by the two tools that check pickup and call-back times.
 - **Re-deciding:** each decision works the offset out again, so before the first call the header returns to the
   preset's time (for example 11:00) after a re-decide, the same moment the server would use. After the first call the
-  page disables Time until closing, price changes and re-decide (`lock.js`), and the batch keeps its offset, so the
+  page disables Time of day, price changes and re-decide (`lock.js`), and the batch keeps its offset, so the
   header and the calls can't drift apart.
 - **Days:** a preset's time is always on the real calendar day in Lahore (no daylight saving), so the page's
   "today / tomorrow" and the WhatsApp "today" agree with the agent.

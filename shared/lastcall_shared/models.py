@@ -508,7 +508,7 @@ class BatchAttempt(BaseModel):
     created_at: AwareDatetime
 
 
-# The mart's time minus the real time (D74): set by the Time until closing preset, 0 for "Now"
+# The mart's time minus the real time (D74): set by the Time of day preset, 0 for "Now"
 ClockOffset = Annotated[float, Field(ge=-MAX_CLOCK_OFFSET_S, le=MAX_CLOCK_OFFSET_S)]
 
 

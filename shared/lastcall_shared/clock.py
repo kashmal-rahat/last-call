@@ -2,7 +2,7 @@
 
 Two clocks (D74). The **real** time runs the system: tokens, locks, caps, cooldowns and record timestamps. The
 **mart's** time is what the mart, the agent and the buyer live in: pickup windows, calling hours, call-backs and
-"current time". It is the real time moved by a fixed shift (`clock_offset_s`), set by the page's Time until closing
+"current time". It is the real time moved by a fixed shift (`clock_offset_s`), set by the page's Time of day
 preset when the decision is made (0 for "Now") and copied to the batch and the call. One function adds it.
 """
 
