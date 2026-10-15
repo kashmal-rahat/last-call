@@ -170,11 +170,24 @@ export function formatProfileLine(decision) {
   return `${name} profile by Gemini · ${votes} votes, ${split ? `agreed except on ${split}` : 'all agreed'}`;
 }
 
-export function getFindBuyersLabel(step) {
-  if (step === 'bulk_sale') return 'Find juice shops & bakeries';
-  if (step === 'animal_feed') return 'Find cattle farms';
-  if (step === 'donate') return 'Find charities';
-  return 'Find buyers';
+// The buyer types a search covers, in plain words: "juice shops, restaurants and bakeries" ('' when none)
+const BUYER_TYPE_PLURALS = {
+  juice_shop: 'juice shops',
+  restaurant: 'restaurants',
+  bakery: 'bakeries',
+  charity: 'charities',
+  dairy_farm: 'cattle farms',
+};
+export function buyerTypesPhrase(types) {
+  const words = (types || []).map(t => BUYER_TYPE_PLURALS[t] || t.replace(/_/g, ' ') + 's');
+  if (words.length <= 1) return words[0] || '';
+  return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
+}
+
+// The Find buyers button names the types the search will cover (the Ladder picks them per produce)
+export function getFindBuyersLabel(types) {
+  const phrase = buyerTypesPhrase(types);
+  return phrase ? `Find ${phrase}` : 'Find buyers';
 }
 
 // getNextStepTargetLabel (from 63109cf verbatim)
@@ -192,8 +205,6 @@ export function getNextStepTargetLabel(batch) {
 export function computeImpact(batchesMap) {
   let revenue = 0;
   const placedByUnit = {};
-  const donatedByUnit = {};
-  const feedByUnit = {};
   let dealsClosed = 0;
   let callsMade = 0;
 
@@ -209,12 +220,8 @@ export function computeImpact(batchesMap) {
           const u = b.unit || 'kg';
           const qty = att.agreed_quantity || 0;
 
-          if (att.step === 'donate') {
-            donatedByUnit[u] = (donatedByUnit[u] || 0) + qty;
-          } else if (att.step === 'animal_feed') {
-            feedByUnit[u] = (feedByUnit[u] || 0) + qty;
-            revenue += (att.agreed_price || 0) * qty;
-          } else {
+          // A donation places stock but recovers no money
+          if (att.step !== 'donate') {
             revenue += (att.agreed_price || 0) * qty;
           }
           placedByUnit[u] = (placedByUnit[u] || 0) + qty;
@@ -226,18 +233,10 @@ export function computeImpact(batchesMap) {
   for (const u in placedByUnit) {
     placedByUnit[u] = Math.round((placedByUnit[u] + Number.EPSILON) * 100) / 100;
   }
-  for (const u in donatedByUnit) {
-    donatedByUnit[u] = Math.round((donatedByUnit[u] + Number.EPSILON) * 100) / 100;
-  }
-  for (const u in feedByUnit) {
-    feedByUnit[u] = Math.round((feedByUnit[u] + Number.EPSILON) * 100) / 100;
-  }
 
   return {
     revenue: Math.round(revenue),
     placedByUnit,
-    donatedByUnit,
-    feedByUnit,
     callsMade,
     dealsClosed
   };

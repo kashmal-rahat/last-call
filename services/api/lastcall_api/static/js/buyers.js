@@ -3,7 +3,7 @@
 import { state } from './state.js';
 import * as dom from './dom.js';
 import { apiFetch, errorMessage, requireAccessCode } from './api.js';
-import { getFindBuyersLabel, getNextStepTargetLabel } from './format.js';
+import { buyerTypesPhrase, getFindBuyersLabel, getNextStepTargetLabel } from './format.js';
 import { icon, showToast, scrollToSection } from './ui.js';
 import { batchIdFor, loadBatchesForBranch } from './lock.js';
 import { renderResults } from './reading.js';
@@ -211,17 +211,15 @@ export function renderActiveBuyers() {
   dom.sectionBuyers.style.display = 'block';
 
   const batch = state.currentBatchesMap[state.activeItemKey];
-  const effectiveStep = (batch && batch.current_step) || decision.step;
+  // The types this step searches: the batch's snapshot once calling has started (D54), else the decision's
+  const plan = batch && batch.plans ? batch.plans[batch.step_index] : null;
+  const buyerTypes = (plan && plan.buyer_types) || decision.buyer_types || [];
   const branchName = dom.branchSelect.options[dom.branchSelect.selectedIndex]?.textContent.split('(')[0].trim() || 'Johar Town';
 
-  dom.btnFindBuyers.textContent = getFindBuyersLabel(effectiveStep);
   const isCardLoading = !!state.scoutLoadingMap[state.activeItemKey];
-  if (isCardLoading) {
-    dom.btnFindBuyers.disabled = true;
-    dom.btnFindBuyers.textContent = 'Searching Google Maps…';
-  } else {
-    dom.btnFindBuyers.disabled = state.isCallInProgress;
-  }
+  dom.btnFindBuyers.textContent = isCardLoading ? 'Searching…' : getFindBuyersLabel(buyerTypes);
+  dom.btnFindBuyers.disabled = isCardLoading || state.isCallInProgress;
+  dom.btnFindBuyers.classList.toggle('is-busy', isCardLoading);
 
   // Quantity control row
   dom.buyerQuantityControl.replaceChildren();
@@ -298,10 +296,11 @@ export function renderActiveBuyers() {
     dom.buyerErrorBanner.style.display = 'none';
   }
 
-  const scoutResult = state.scoutResultsMap[state.activeItemKey];
+  // While a search runs, an earlier list (a Refresh, or the previous step's) gives way to the searching state
+  const scoutResult = isCardLoading ? null : state.scoutResultsMap[state.activeItemKey];
   const buyers = scoutResult ? (scoutResult.buyers || []) : [];
 
-  dom.buyersHeadChip.textContent = `${buyers.length} buyers · ${branchName}`;
+  dom.buyersHeadChip.textContent = isCardLoading ? `Searching · ${branchName}` : `${buyers.length} buyers · ${branchName}`;
 
   // Next action row
   dom.buyerNextActionRow.replaceChildren();
@@ -331,7 +330,10 @@ export function renderActiveBuyers() {
 
   // Buyers list: the next buyer as a highlighted card, the rest as rows
   dom.buyersListContainer.replaceChildren();
-  if (scoutResult && buyers.length === 0) {
+  dom.buyersListContainer.setAttribute('aria-busy', String(isCardLoading));
+  if (isCardLoading) {
+    dom.buyersListContainer.appendChild(buyerSearchState(buyerTypes, branchName));
+  } else if (scoutResult && buyers.length === 0) {
     const emptyMsg = document.createElement('div');
     emptyMsg.className = 'buyers-empty';
     emptyMsg.textContent = 'No suitable buyers found nearby';
@@ -423,6 +425,47 @@ export function renderActiveBuyers() {
     dom.buyersFooter.style.display = 'none';
     dom.buyersScreenedOutContainer.replaceChildren();
   }
+}
+
+// While the Scout runs (a few seconds): what it is doing, in its real order (Google Maps finds, then Gemini
+// screens), over placeholder cards shaped like the buyer rows, so the list arrives where the eye already is.
+// The spinner is on the Find buyers button (is-busy), so there is one per search
+function buyerSearchState(types, branchName) {
+  const wrap = document.createElement('div');
+  wrap.className = 'buyer-search';
+
+  const status = document.createElement('div');
+  status.className = 'buyer-search-status';
+  status.setAttribute('role', 'status');
+  const title = document.createElement('p');
+  title.className = 'buyer-search-title';
+  title.textContent = `Searching Google Maps for ${buyerTypesPhrase(types) || 'buyers'} near ${branchName}`;
+  const sub = document.createElement('p');
+  sub.className = 'buyer-search-sub';
+  sub.append(icon('sparkle'), document.createTextNode('Gemini then checks that each business is a real fit'));
+  status.append(title, sub);
+  wrap.appendChild(status);
+
+  const list = document.createElement('div');
+  list.className = 'buyer-list buyer-skeletons';
+  list.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < 3; i++) {
+    const row = document.createElement('div');
+    row.className = 'buyer-item is-skeleton';
+    const rank = document.createElement('div');
+    rank.className = 'sk sk-rank';
+    const body = document.createElement('div');
+    body.className = 'buyer-body';
+    for (const kind of ['sk-name', 'sk-reason', 'sk-meta']) {
+      const bone = document.createElement('div');
+      bone.className = `sk ${kind}`;
+      body.appendChild(bone);
+    }
+    row.append(rank, body);
+    list.appendChild(row);
+  }
+  wrap.appendChild(list);
+  return wrap;
 }
 
 // Plain words for the Scout's skip reasons (server SkipReason values)

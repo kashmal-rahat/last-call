@@ -164,6 +164,19 @@ button {
   transform: translateY(1px);
 }
 
+/* Working (e.g. a buyer search): a small spinner in the button at full strength; dimmed like a
+   disabled button, it looked stuck */
+.btn-primary.is-busy:disabled { opacity: 1; cursor: progress; }
+.btn-primary.is-busy::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #FFFFFF;
+  animation: spin 0.8s linear infinite;
+}
+
 .btn-ghost, .btn-secondary {
   background: #FFFFFF;
   color: var(--text-primary);
@@ -552,8 +565,7 @@ button:disabled, .btn-primary:disabled, .btn-ghost:disabled, .btn-danger:disable
   font-variant-numeric: tabular-nums;
 }
 .stat-unit { margin-left: 2px; font-family: var(--font-body); font-size: 12px; font-weight: 500; color: var(--text-muted); }
-.stat-hint, .stat-detail { margin: 0; font-size: 13px; line-height: 18px; color: var(--text-secondary); }
-.stat-detail:empty { display: none; }
+.stat-hint { margin: 0; font-size: 13px; line-height: 18px; color: var(--text-secondary); }
 
 @media (max-width: 560px) {
   .stat-strip { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); }

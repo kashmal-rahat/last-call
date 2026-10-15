@@ -38,6 +38,39 @@
   color: var(--text-muted);
 }
 
+/* Searching (the Scout runs for a few seconds): the steps in their real order, over placeholder cards
+   with the buyer rows' shape. The placeholders fade down the list and a soft light sweeps across them */
+.buyer-search-status { margin-bottom: 16px; }
+.buyer-search-title { margin: 0; font-size: 14px; line-height: 20px; font-weight: 500; color: var(--text-primary); }
+.buyer-search-sub { margin: 2px 0 0; display: flex; align-items: flex-start; gap: 6px; font-size: 13px; line-height: 20px; color: var(--text-secondary); }
+.buyer-search-sub .inline-icon { width: 13px; height: 13px; flex: none; margin-top: 4px; color: var(--indigo); }
+
+.buyer-item.is-skeleton, .buyer-item.is-skeleton:hover { border-color: var(--border-muted); }
+.is-skeleton .buyer-body { gap: 10px; padding: 3px 0; }
+.buyer-skeletons .buyer-item:nth-child(2) { opacity: 0.7; }
+.buyer-skeletons .buyer-item:nth-child(3) { opacity: 0.4; }
+.sk {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #F1F5F9 0%, #F1F5F9 35%, #E2E8F0 50%, #F1F5F9 65%, #F1F5F9 100%);
+  background-size: 300% 100%;
+  animation: sk-sweep 1.6s ease-in-out infinite;
+}
+.sk-rank { width: 10px; height: 14px; justify-self: center; align-self: start; margin-top: 3px; }
+.sk-name { width: 38%; height: 14px; }
+.sk-reason { width: 82%; }
+.sk-meta { width: 54%; }
+.buyer-skeletons .buyer-item:nth-child(2) .sk-name { width: 30%; }
+.buyer-skeletons .buyer-item:nth-child(2) .sk-reason { width: 70%; }
+.buyer-skeletons .buyer-item:nth-child(3) .sk-name { width: 44%; }
+.buyer-skeletons .buyer-item:nth-child(3) .sk-reason { width: 76%; }
+.buyer-skeletons .buyer-item:nth-child(2) .sk { animation-delay: 0.12s; }
+.buyer-skeletons .buyer-item:nth-child(3) .sk { animation-delay: 0.24s; }
+@keyframes sk-sweep { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .sk { animation: none; }
+}
+
 /* Buyer list: one card per buyer, like the reading's items; the next buyer has the page's mint "selected" ring */
 .buyer-list { display: flex; flex-direction: column; gap: 8px; }
 .buyer-item {
@@ -134,6 +167,8 @@
 .stock-progress-fill { height: 100%; border-radius: 999px; background: #10B981; transition: width 0.3s ease; }
 
 @media (max-width: 640px) {
+  /* "Find juice shops, restaurants and bakeries" can take two lines here: room for both, not a fixed height */
+  #btnFindBuyers { width: 100%; height: auto; min-height: 44px; padding-block: 10px; line-height: 20px; text-align: center; }
   .buyer-item { grid-template-columns: 20px minmax(0, 1fr); padding: 16px; gap: 12px; }
   .buyer-line2 { gap: 2px 14px; } /* the facts wrap here, so spacing separates them, not dots */
   .buyer-line2 > * + *::before { content: none; }

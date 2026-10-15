@@ -14,16 +14,10 @@ export function renderImpact() {
   if (!dom.impactRevenue) return;
   // Shown with the other results: before a reading there is nothing to count (and sections 2–5 are hidden)
   dom.sectionImpact.style.display = state.currentInspection ? 'block' : 'none';
-  const { revenue, placedByUnit, donatedByUnit, feedByUnit, callsMade, dealsClosed } = computeImpact(state.currentBatchesMap);
+  const { revenue, placedByUnit, callsMade, dealsClosed } = computeImpact(state.currentBatchesMap);
 
   dom.impactRevenue.textContent = `Rs ${revenue.toLocaleString()}`;
   dom.impactRescued.textContent = quantities(placedByUnit) || '0';
-
-  // How the placed stock went: the parts given to charities or sold as feed; the rest went to businesses
-  const donated = quantities(donatedByUnit);
-  const feed = quantities(feedByUnit);
-  const ways = [donated && `${donated} donated`, feed && `${feed} as animal feed`].filter(Boolean);
-  dom.impactPlacedDetail.textContent = ways.length > 0 ? ways.join(' · ') : (dealsClosed > 0 ? 'all sold to businesses' : '');
 
   dom.impactCalls.textContent = String(callsMade);
   dom.impactDeals.textContent = String(dealsClosed);

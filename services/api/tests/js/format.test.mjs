@@ -24,8 +24,6 @@ test('computeImpact: zero batches -> zero metrics', () => {
   const result = computeImpact({});
   assert.equal(result.revenue, 0);
   assert.deepEqual(result.placedByUnit, {});
-  assert.deepEqual(result.donatedByUnit, {});
-  assert.deepEqual(result.feedByUnit, {});
   assert.equal(result.callsMade, 0);
   assert.equal(result.dealsClosed, 0);
 });
@@ -52,7 +50,7 @@ test('computeImpact: one deal batch -> revenue matches price*qty and placedByUni
   assert.equal(result.callsMade, 1);
 });
 
-test('computeImpact: donate batch -> revenue 0, donatedByUnit updated', () => {
+test('computeImpact: donate batch -> revenue 0, stock still placed', () => {
   const batches = {
     b1: {
       unit: 'kg',
@@ -69,13 +67,12 @@ test('computeImpact: donate batch -> revenue 0, donatedByUnit updated', () => {
   };
   const result = computeImpact(batches);
   assert.equal(result.revenue, 0);
-  assert.deepEqual(result.donatedByUnit, { kg: 20 });
   assert.deepEqual(result.placedByUnit, { kg: 20 });
   assert.equal(result.dealsClosed, 1);
   assert.equal(result.callsMade, 1);
 });
 
-test('computeImpact: animal_feed batch -> revenue matches and feedByUnit updated', () => {
+test('computeImpact: animal_feed batch -> revenue matches and stock placed', () => {
   const batches = {
     b1: {
       unit: 'kg',
@@ -92,7 +89,6 @@ test('computeImpact: animal_feed batch -> revenue matches and feedByUnit updated
   };
   const result = computeImpact(batches);
   assert.equal(result.revenue, 750);
-  assert.deepEqual(result.feedByUnit, { kg: 30 });
   assert.deepEqual(result.placedByUnit, { kg: 30 });
   assert.equal(result.dealsClosed, 1);
   assert.equal(result.callsMade, 1);
@@ -242,11 +238,14 @@ test('formatProfileLine: the source of the produce profile, as one plain sentenc
   );
 });
 
-test('getFindBuyersLabel: bulk_sale -> juice shops & bakeries, animal_feed -> cattle farms, donate -> charities, default -> buyers', () => {
-  assert.equal(getFindBuyersLabel('bulk_sale'), 'Find juice shops & bakeries');
-  assert.equal(getFindBuyersLabel('animal_feed'), 'Find cattle farms');
-  assert.equal(getFindBuyersLabel('donate'), 'Find charities');
-  assert.equal(getFindBuyersLabel('unknown'), 'Find buyers');
+test('getFindBuyersLabel names the buyer types the search covers', () => {
+  assert.equal(getFindBuyersLabel(['juice_shop', 'bakery']), 'Find juice shops and bakeries');
+  assert.equal(getFindBuyersLabel(['juice_shop', 'restaurant', 'bakery']), 'Find juice shops, restaurants and bakeries');
+  assert.equal(getFindBuyersLabel(['restaurant']), 'Find restaurants');
+  assert.equal(getFindBuyersLabel(['dairy_farm']), 'Find cattle farms');
+  assert.equal(getFindBuyersLabel(['charity']), 'Find charities');
+  assert.equal(getFindBuyersLabel([]), 'Find buyers');
+  assert.equal(getFindBuyersLabel(undefined), 'Find buyers');
 });
 
 test('getNextStepTargetLabel: donate -> charities, animal_feed -> cattle farms, other -> underscored replaced', () => {

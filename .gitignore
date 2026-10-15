@@ -8,6 +8,7 @@ htmlcov/
 .terraform/
 *.tfstate*
 *.tfplan
+tf.plan
 *.tfvars
 !*.tfvars.example
 .DS_Store

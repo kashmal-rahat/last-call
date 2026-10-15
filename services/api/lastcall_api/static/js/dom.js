@@ -87,7 +87,6 @@ export const resultNextAction = document.getElementById('resultNextAction');
 export const sectionImpact = document.getElementById('sectionImpact');
 export const impactRevenue = document.getElementById('impactRevenue');
 export const impactRescued = document.getElementById('impactRescued');
-export const impactPlacedDetail = document.getElementById('impactPlacedDetail');
 export const impactDeals = document.getElementById('impactDeals');
 export const impactCalls = document.getElementById('impactCalls');
 export const impactHint = document.getElementById('impactHint');
