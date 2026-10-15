@@ -812,6 +812,7 @@ class LadderDecision(BaseModel):
     floor_price: int | None = None  # internal; never given to buyer-facing agents
     buyer_types: list[BuyerType] = []
     buyer_condition: str = ""  # becomes DealBrief.condition in Module 6
+    offer_quantity: float | None = None  # steps with buyers: the amount offered unless staff enter one (D71)
     reason: str
     staff_actions: list[StaffAction] = []
     on_hold: bool = False

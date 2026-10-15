@@ -120,7 +120,7 @@ Every step is its own Cloud Task.
     - If buyer list review is on, waits as "awaiting review"; the manager's approval schedules the next task.
     - If outside calling hours, waits as "scheduled," with a Cloud Task for when calling hours start.
     - Otherwise, schedules the next task.
-4. **Start call:** locks the batch and asks the `voice` service to call the next buyer. The offer uses the confirmed quantity, or the low end of the estimate when no check was needed.
+4. **Start call:** locks the batch and asks the `voice` service to call the next buyer. The offer uses the confirmed quantity, or the low end of the estimate when no check was needed, rounded down as people say it (to the half below 10, to the whole number from 10; D71).
 
 **`call-finished`:** called by the `voice` service after every call.
 

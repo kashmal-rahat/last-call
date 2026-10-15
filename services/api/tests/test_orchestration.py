@@ -185,6 +185,9 @@ def test_initial_quantity():
     assert initial_quantity(_make_item(0.0, 10.0)) == 10.0
     # Low == 0, High == 0 -> None
     assert initial_quantity(_make_item(0.0, 0.0)) is None
+    # Rounded down as people say it (D71)
+    assert initial_quantity(_make_item(2.1, 2.9)) == 2.0
+    assert initial_quantity(_make_item(0.0, 3.6)) == 3.5
 
 
 def test_pickup_window_table(demo_rules):

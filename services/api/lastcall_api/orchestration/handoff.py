@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from lastcall_api.ladder.engine import step_prices
+from lastcall_api.ladder.engine import offer_quantity, step_prices
 from lastcall_api.scout.rank import sanitise_name
 from lastcall_api.scout.scout import ScoutNotApplicable
 from lastcall_shared import ids
@@ -87,13 +87,9 @@ def build_step_plans(decision: LadderDecision, rules: MartRules) -> tuple[list[S
 
 
 def initial_quantity(item: ItemAssessment) -> float | None:
-    """Returns low estimate if > 0, else high if > 0, else None."""
-    if item.quantity:
-        if item.quantity.low > 0:
-            return float(item.quantity.low)
-        if item.quantity.high > 0:
-            return float(item.quantity.high)
-    return None
+    """The quantity a new batch offers when staff haven't entered one: the Ladder's rule (`offer_quantity`,
+    D71), the same amount the decision shows on the page."""
+    return offer_quantity(item.quantity)
 
 
 def pickup_window(rules: MartRules, now: datetime) -> tuple[datetime, datetime]:

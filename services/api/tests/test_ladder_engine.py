@@ -11,6 +11,8 @@ from lastcall_api.ladder.engine import (
     decide_item,
     find_price,
     hours_until_closing,
+    offer_quantity,
+    round_estimate,
     selling_time,
 )
 from lastcall_shared.marts.loader import load_mart_rules
@@ -219,6 +221,50 @@ def test_i4_keep_decision_next_steps_starts_with_discount():
     assert dec_rip.step == "keep"
     assert "discount" in dec_rip.allowed_steps
     assert dec_rip.next_steps[0] == "discount"
+
+
+@pytest.mark.parametrize(
+    ("estimate", "said"),
+    [
+        (2.1, 2.0),
+        (3.3, 3.0),
+        (3.6, 3.5),
+        (2.5, 2.5),
+        (2.0, 2.0),
+        (9.9, 9.5),
+        (10.0, 10.0),
+        (23.7, 23.0),
+        (0.6, 0.5),
+        (0.4, 0.4),
+    ],
+)
+def test_round_estimate_down_as_people_say_it(estimate, said):
+    """D71: to the half below 10, to the whole number from 10, never down to 0."""
+    assert round_estimate(estimate) == said
+
+
+def test_offer_quantity_low_end_else_high_end():
+    assert offer_quantity(QuantityEstimate(unit="dozen", low=2.1, high=2.9)) == 2.0
+    assert offer_quantity(QuantityEstimate(unit="kg", low=0.0, high=3.6)) == 3.5
+    assert offer_quantity(QuantityEstimate(unit="kg", low=0.0, high=0.0)) is None
+    assert offer_quantity(None) is None
+
+
+def test_decision_offers_a_quantity_only_when_buyers_are_called():
+    """The decision carries the amount the page shows and the call offers; keep and discount sell in store."""
+    rules = load_mart_rules("demo_mart")
+    prof = _make_profile("banana")
+    estimate = QuantityEstimate(unit="dozen", low=2.1, high=2.9)
+
+    overripe = _make_item("banana", stage="overripe").model_copy(update={"quantity": estimate})
+    bulk = decide_item(overripe, prof, rules, H=4.0, price=180)
+    assert bulk.step == "bulk_sale"
+    assert bulk.offer_quantity == 2.0
+
+    fresh = _make_item("banana", stage="fresh", stage_level="early").model_copy(update={"quantity": estimate})
+    kept = decide_item(fresh, prof, rules, H=14.0, price=180)
+    assert kept.step == "keep"
+    assert kept.offer_quantity is None
 
 
 def test_hours_until_closing():

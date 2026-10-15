@@ -10,6 +10,7 @@ Gemini knows, code decides:
 import math
 import re
 from datetime import datetime, timedelta
+from typing import get_args
 from zoneinfo import ZoneInfo
 
 from lastcall_api.inspector.guardrails import names_match
@@ -21,6 +22,8 @@ from lastcall_shared.models import (
     LadderStep,
     MartRules,
     ProduceProfile,
+    QuantityEstimate,
+    ScoutStep,
     ShelfLifeBand,
     StaffAction,
     StageLevel,
@@ -185,6 +188,30 @@ def selling_time(hours: float) -> str:
     if whole_hours < 48:  # decided on the rounded value, so 47.6 h reads "about 2 days", not "about 48 h"
         return f"about {whole_hours}\u00a0h"
     return f"about {math.floor(hours / 24 + 0.5)}\u00a0days"
+
+
+def round_estimate(quantity: float) -> float:
+    """A photo estimate as people say it, rounded down so the offer never grows (D71).
+
+    Below 10 to the half (2.1 → 2, 3.6 → 3.5), from 10 to the whole number (23.7 → 23). An amount that
+    would round to 0 is kept as it is.
+    """
+    step = 1.0 if quantity >= 10 else 0.5
+    rounded = math.floor(quantity / step) * step
+    return rounded if rounded > 0 else quantity
+
+
+def offer_quantity(estimate: QuantityEstimate | None) -> float | None:
+    """The amount offered to buyers when staff haven't entered one (D71): the estimate's low end if above 0,
+    else its high end, rounded; None when the photo gives no amount. The decision carries it for the page,
+    and the call handoff uses the same function, so the rule exists once."""
+    if estimate is None:
+        return None
+    if estimate.low > 0:
+        return round_estimate(estimate.low)
+    if estimate.high > 0:
+        return round_estimate(estimate.high)
+    return None
 
 
 def decide_item(
@@ -424,6 +451,7 @@ def decide_item(
         floor_price=floor_price,
         buyer_types=buyer_types,
         buyer_condition=cond,
+        offer_quantity=offer_quantity(item.quantity) if chosen_step in get_args(ScoutStep) else None,
         reason=reason,
         staff_actions=staff_actions,
         on_hold=on_hold,

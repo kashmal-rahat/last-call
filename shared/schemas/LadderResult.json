@@ -154,6 +154,18 @@
           "title": "Buyer Condition",
           "type": "string"
         },
+        "offer_quantity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Offer Quantity"
+        },
         "reason": {
           "title": "Reason",
           "type": "string"

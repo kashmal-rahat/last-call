@@ -42,7 +42,7 @@
 
 **Input: deal brief**
 
-- Item, condition, quantity (confirmed by staff, or the low end of the photo estimate)
+- Item, condition, quantity (confirmed by staff, or the low end of the photo estimate, rounded down as people say it; D71)
 - Buyer name and type (juice shop, restaurant, charity, dairy farm)
 - Opening price per kg and floor price (kept in code, never given to the agent)
 - Pickup window and pickup deadline, mart name and location

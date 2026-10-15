@@ -257,12 +257,8 @@ export function renderActiveBuyers() {
     input.step = 'any';
     input.className = 'input-number';
 
-    const itemObj = state.currentInspection.items.find(i => i.item_key === state.activeItemKey);
-    const low = (itemObj && itemObj.quantity && itemObj.quantity.low > 0) ? itemObj.quantity.low : 0;
-    const high = (itemObj && itemObj.quantity && itemObj.quantity.high > 0) ? itemObj.quantity.high : 0;
-    let defaultVal = '';
-    if (low > 0) defaultVal = String(low);
-    else if (high > 0) defaultVal = String(high);
+    // The amount the call offers when the box is left as it is: the Ladder's, from the photo estimate (D71)
+    const defaultVal = decision.offer_quantity == null ? '' : String(decision.offer_quantity);
 
     if (state.quantityInputs[state.activeItemKey] === undefined) {
       state.quantityInputs[state.activeItemKey] = defaultVal;
