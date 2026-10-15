@@ -4,7 +4,7 @@ import { state } from './state.js';
 import * as dom from './dom.js';
 import { setStoredItem } from './storage.js';
 import { apiFetch, errorMessage, requireAccessCode } from './api.js';
-import { showToast, scriptClass, icon, initials } from './ui.js';
+import { showToast, scriptClass, icon, initials, scrollToSection } from './ui.js';
 import { updateShelfLock } from './lock.js';
 import { renderResults } from './reading.js';
 import { renderNextActionRow } from './buyers.js';
@@ -160,7 +160,7 @@ export async function startCallForItem(itemKey, buyerId) {
   const liveSection = dom.voiceSection;
   if (liveSection) {
     liveSection.style.display = 'block';
-    liveSection.scrollIntoView({ behavior: 'smooth' });
+    scrollToSection(liveSection);
   }
 
   dom.btnHangup.disabled = false;

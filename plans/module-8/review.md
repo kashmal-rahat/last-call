@@ -783,3 +783,18 @@ The call screen was already the page's strongest section (a dark "call mode": ca
 - **Tests:**
   - `test_batch_next_action_names_the_buyer_by_id`.
   - In the preview, with fictional buyers, each case gave the expected result: no calls yet; calling #3; an ID that disagrees with a stale rank (the ID wins); an ID not in the list (no guess, the button keeps the server's ID); rank only; a call on another item.
+
+# Round 28: a steady transcript, and one click moves one ladder step, by Claude (2026-10-15)
+
+- **Transcript:** it was `min-height: 300px; max-height: 420px`, so it grew with each message and the call panel got taller mid-call before a scrollbar appeared. It now has a fixed height from the start (420 px; 360 px at ≤760 px) and scrolls inside. Each new message still scrolls to the bottom (checked: 0 px from the bottom; smooth in a visible browser).
+- **"Next step: find charities":**
+  - the server already moves a step only when the current one is used up (otherwise 409);
+  - but the call result's button was never redrawn after a click. After the first click moved the batch to Donate, it still said "find charities", and if the charity search found nobody usable, a second click legitimately moved on to animal feed;
+  - now the click disables the button at once ("Finding charities…"), scrolls up to Buyers where the new list appears, and, after the move and the search, redraws that row from the fresh batch (for example "Next buyer · #1 …");
+  - if the server refuses, the row shows the batch's current state instead of the old button. `advanceBatchStep` returns whether it moved.
+- **Checked** in the preview, with the server's step responses stubbed on the page:
+  - a fast triple click sent one step change, scrolled to Buyers, and redrew the row as the next buyer;
+  - a 409 redrew the row from the current batch;
+  - the transcript is 420 px empty and after 12 messages (360 px on a phone), with no sideways scroll.
+- **Refactor:** the "scroll a section into view, smooth unless reduced motion" logic was in `reading.js` (the reading after Inspect) and `buyers.js` (this button). It is now one helper, `scrollToSection(el)` in `ui.js`, also used when a call starts (`call.js`), which used to scroll smoothly even with reduced motion. In the preview, the reading reveal and the next-step button both go through the helper (smooth, `block: start`); the page's only console error was the test's own stubbed 404.
+- **Checked:** the fixed 420 px transcript beside the deal sheet. The deal sheet is 382 px typically and 402 px with an unusually long pickup text, and the column bottoms line up.

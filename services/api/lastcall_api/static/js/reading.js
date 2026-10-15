@@ -8,7 +8,7 @@ import {
   rankItems, formatQuantity, formatChange, formatStockBasis, freshnessPosition, readingSummary,
   FRESHNESS_STAGES, STAFF_REASON_LABELS,
 } from './format.js';
-import { icon, showToast } from './ui.js';
+import { icon, showToast, scrollToSection } from './ui.js';
 import { updateShelfLock } from './lock.js';
 import { triggerDecide, renderActiveDecision } from './decision.js';
 import { renderActiveBuyers } from './buyers.js';
@@ -129,8 +129,7 @@ function revealReading(scrollYAtStart) {
   if (Math.abs(window.scrollY - scrollYAtStart) > 40) return;
   const top = dom.sectionAiReading.getBoundingClientRect().top;
   if (top < 0 || top > 120) {  // 120: already just under the sticky header (scroll-margin-top 80 px)
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    dom.sectionAiReading.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    scrollToSection(dom.sectionAiReading);
   }
   dom.readingHeading.focus({ preventScroll: true });
 }

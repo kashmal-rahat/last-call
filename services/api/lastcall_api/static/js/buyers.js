@@ -4,7 +4,7 @@ import { state } from './state.js';
 import * as dom from './dom.js';
 import { apiFetch, errorMessage, requireAccessCode } from './api.js';
 import { getFindBuyersLabel, getNextStepTargetLabel } from './format.js';
-import { icon, showToast } from './ui.js';
+import { icon, showToast, scrollToSection } from './ui.js';
 import { batchIdFor, loadBatchesForBranch } from './lock.js';
 import { renderResults } from './reading.js';
 import { startCallForItem } from './call.js';
@@ -101,8 +101,24 @@ export function renderNextActionRow(container, batch, itemKey, buyers = [], show
       const label = getNextStepTargetLabel(batch);
       btnStep.textContent = `Next step: find ${label}`;
       btnStep.disabled = state.isCallInProgress;
-      btnStep.addEventListener('click', () => {
-        advanceBatchStep(batch.batch_id, itemKey);
+      btnStep.addEventListener('click', async () => {
+        // One click moves one step: the button is off until the move and the new search finish, and this row
+        // is then redrawn from the fresh batch, so a stale "find charities" can't move on to animal feed
+        btnStep.disabled = true;
+        btnStep.textContent = `Finding ${label}…`;
+        scrollToSection(dom.sectionBuyers);  // where the new buyers appear
+        const moved = await advanceBatchStep(batch.batch_id, itemKey);
+        if (!moved) {
+          // Refused (e.g. the step already moved elsewhere): show what the batch says now, not this old button
+          try {
+            const res = await apiFetch(`/demo/batches/${encodeURIComponent(batch.batch_id)}`);
+            if (res.ok) state.currentBatchesMap[itemKey] = await res.json();
+          } catch (e) {
+            console.warn('next step refresh', e);
+          }
+        }
+        const fresh = state.scoutResultsMap[itemKey];
+        renderNextActionRow(container, state.currentBatchesMap[itemKey] || batch, itemKey, fresh ? (fresh.buyers || []) : [], showCallButton);
       });
       container.appendChild(btnStep);
     } else if (act.kind === 'sold') {
@@ -159,20 +175,22 @@ export function renderNextActionRow(container, batch, itemKey, buyers = [], show
   }
 }
 
+// Moves the batch to its next ladder step and searches that step's buyers. Returns whether it moved.
 export async function advanceBatchStep(batchId, itemKey) {
-  if (!requireAccessCode()) return;
+  if (!requireAccessCode()) return false;
   try {
     const res = await apiFetch(`/demo/batches/${encodeURIComponent(batchId)}/next-step`, { method: 'POST' });
     if (res.ok) {
       const updated = await res.json();
       state.currentBatchesMap[itemKey] = updated;
       await fetchScoutBuyers(itemKey, false);
-    } else {
-      showToast(await errorMessage(res, 'Failed to advance step'), 'error');
+      return true;
     }
+    showToast(await errorMessage(res, 'Failed to advance step'), 'error');
   } catch (e) {
     showToast(e.message || 'Failed to advance step', 'error');
   }
+  return false;
 }
 
 export function renderActiveBuyers() {

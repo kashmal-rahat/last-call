@@ -91,6 +91,14 @@ export function icon(name) {
   return svg;
 }
 
+// Brings a section to the top of the screen, below the sticky header (its CSS scroll-margin-top);
+// smooth, or instant when the visitor has asked for reduced motion
+export function scrollToSection(el) {
+  if (!el) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+}
+
 export function showToast(message, kind = 'info') {
   let container = document.getElementById('toastContainer');
   if (!container) {

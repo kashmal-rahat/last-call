@@ -129,8 +129,7 @@
 .transcript-box {
   scrollbar-width: thin;
   scrollbar-color: #334155 transparent;
-  min-height: 300px;
-  max-height: 420px;
+  height: 420px; /* fixed from the first message, so the panel never grows mid-call; longer talks scroll */
   overflow-y: auto;
   padding: 20px;
   border-radius: 14px;
@@ -214,7 +213,7 @@
   .deal-sheet { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; padding: 16px; }
   .deal-row, .deal-row:first-child { padding: 10px 0; }
   .call-hint { grid-column: 1 / -1; margin-top: 8px; }
-  .transcript-box { min-height: 240px; padding: 16px; }
+  .transcript-box { height: 360px; padding: 16px; }
 }
 
 /* WhatsApp messages the agent sends the buyer during a call (D62) */
