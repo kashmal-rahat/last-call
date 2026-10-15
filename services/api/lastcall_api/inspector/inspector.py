@@ -81,10 +81,11 @@ FORBIDDEN_CONFIG_KEYS = {
 class InspectorError(Exception):
     """Raised when an inspection fails after retries or due to budget."""
 
-    def __init__(self, reason: str, original_exc: Exception | None = None):
+    def __init__(self, reason: str, original_exc: Exception | None = None, *, overloaded: bool = False):
         super().__init__(reason)
         self.reason = reason
         self.original_exc = original_exc
+        self.overloaded = overloaded  # Gemini was busy or slow (GeminiCallError.overloaded)
 
 
 def build_config(thinking_level: str = THINKING_LEVEL) -> types.GenerateContentConfig:
@@ -133,7 +134,7 @@ async def _call(
         )
         return out, usage, attempts, was_hedged  # type: ignore[return-value]
     except GeminiCallError as exc:
-        raise InspectorError(exc.reason, original_exc=exc.original_exc) from exc
+        raise InspectorError(exc.reason, original_exc=exc.original_exc, overloaded=exc.overloaded) from exc
 
 
 async def inspect_photo(

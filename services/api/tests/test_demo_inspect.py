@@ -305,6 +305,23 @@ def test_post_demo_inspect_inspector_error():
     assert "Inspection failed, please try again" in resp.json()["detail"]
 
 
+def test_post_demo_inspect_gemini_busy_is_503():
+    """Only an overloaded Gemini (InspectorError.overloaded) gets the "busy, try again" answer."""
+    client = TestClient(app)
+    headers = {"X-Demo-Access-Code": CODE}
+
+    async def fake_inspect(*args, **kwargs):
+        raise InspectorError("Inspection call failed after retries", overloaded=True)
+
+    app.state.inspect_fn = fake_inspect
+
+    files = {"photo": ("busy.jpg", b"good-data", "image/jpeg")}
+    resp = client.post("/demo/inspect", headers=headers, files=files, data={"shelf_id": "shelf_1"})
+    assert resp.status_code == 503
+    assert resp.headers["retry-after"] == "60"
+    assert resp.json()["detail"] == "Gemini is busy or slow right now. Please try again in a minute."
+
+
 @pytest.mark.asyncio
 async def test_post_demo_inspect_concurrency_semaphore():
     import asyncio

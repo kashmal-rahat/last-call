@@ -96,6 +96,9 @@ export async function handleInspect() {
       throw new Error('Image exceeds maximum upload size (8\u00A0MB).');
     } else if (res.status === 429) {
       throw new Error(await errorMessage(res, 'Rate limit reached. Please try again later.'));
+    } else if (res.status === 503) {
+      // Gemini busy or slow (the server says so); a 503 from elsewhere gets a neutral message, not a guess
+      throw new Error(await errorMessage(res, 'The service is busy right now. Please try again in a minute.'));
     } else if (res.status === 502) {
       throw new Error('Inspection failed, please try again.');
     } else if (!res.ok) {

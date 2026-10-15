@@ -516,7 +516,7 @@ async def test_run_scout_gemini_fallback_on_error(monkeypatch):
             return [c1]
 
     async def mock_call_structured_fail(*args, **kwargs):
-        raise GeminiCallError("Quota exhausted", status_code=429)
+        raise GeminiCallError("Quota exhausted", overloaded=True)
 
     monkeypatch.setattr("lastcall_api.scout.fit.call_structured", mock_call_structured_fail)
 

@@ -19,12 +19,30 @@ logger = logging.getLogger("lastcall_api.gemini_call")
 
 
 class GeminiCallError(Exception):
-    """Raised when a Gemini call fails after retries or due to budget."""
+    """Raised when a Gemini call fails after retries or due to budget.
 
-    def __init__(self, reason: str, original_exc: Exception | None = None):
+    `overloaded` is True only when the last attempt itself showed Gemini busy or too slow (`_is_overload`:
+    a timeout, or 429/503/504), also when the time budget then ran out, so the page can say "try again in a
+    minute" without false alarms (D70).
+    """
+
+    def __init__(self, reason: str, original_exc: Exception | None = None, *, overloaded: bool = False):
         super().__init__(reason)
         self.reason = reason
         self.original_exc = original_exc
+        self.overloaded = overloaded
+
+
+# Gemini's own signals of load or slowness: 429 RESOURCE_EXHAUSTED, 503 UNAVAILABLE, 504 DEADLINE_EXCEEDED.
+# 500 INTERNAL and request errors (4xx) are not evidence of load, so they stay plain failures.
+OVERLOAD_STATUS_CODES = {429, 503, 504}
+
+
+def _is_overload(exc: Exception | None) -> bool:
+    """Whether a failed attempt was Gemini being busy or slow (not a bad request or a bad answer)."""
+    if isinstance(exc, (asyncio.TimeoutError, TimeoutError)):
+        return True
+    return isinstance(exc, APIError) and getattr(exc, "code", None) in OVERLOAD_STATUS_CODES
 
 
 class CallUsage(NamedTuple):
@@ -85,7 +103,11 @@ async def call_structured(
         now = time.monotonic()
         remaining = deadline - now
         if remaining < 5.0:
-            raise GeminiCallError(f"{label} budget exceeded", original_exc=last_error)
+            # Busy only if the last attempt itself timed out or was refused for load; a bad answer, or a budget
+            # spent before Gemini was asked at all, is not evidence that Gemini is busy
+            raise GeminiCallError(
+                f"{label} budget exceeded", original_exc=last_error, overloaded=_is_overload(last_error)
+            )
 
         attempt_timeout = min(per_attempt_timeout, remaining)
         attempts += 1
@@ -215,4 +237,6 @@ async def call_structured(
                 break
             await asyncio.sleep(sleep_sec)
 
-    raise GeminiCallError(f"{label} call failed after retries", original_exc=last_error)
+    raise GeminiCallError(
+        f"{label} call failed after retries", original_exc=last_error, overloaded=_is_overload(last_error)
+    )

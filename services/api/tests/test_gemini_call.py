@@ -119,3 +119,50 @@ async def test_call_structured_timeout_raises_gemini_call_error():
         )
 
     assert "ProfileCall call failed after retries" in str(exc_info.value)
+    assert exc_info.value.overloaded is True  # timing out is Gemini being slow
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("failure", "overloaded"),
+    [
+        (errors.APIError(429, "Resource exhausted"), True),  # quota or rate: busy
+        (errors.APIError(503, "Unavailable"), True),  # overloaded: busy
+        (errors.APIError(504, "Deadline exceeded"), True),  # too slow: busy
+        (errors.APIError(500, "Internal"), False),  # an internal error is not evidence of load
+        (errors.APIError(400, "Invalid argument"), False),  # a request Gemini rejects
+        (FakeResponse(parsed=None, text=""), False),  # an empty or invalid answer
+    ],
+)
+async def test_overloaded_only_on_real_signs_of_load(failure, overloaded):
+    """The page says "Gemini is busy" only when Gemini itself said so (no false alarms)."""
+    client = FakeGenAIClient([failure])
+    with pytest.raises(GeminiCallError) as exc_info:
+        await call_structured(
+            client=client,
+            contents=["test-prompt"],
+            config=types.GenerateContentConfig(response_schema=DummyTarget),
+            schema=DummyTarget,
+            deadline=asyncio.get_event_loop().time() + 10.0,
+            max_attempts=1,
+            label="TestGemini",
+        )
+    assert exc_info.value.overloaded is overloaded
+
+
+@pytest.mark.asyncio
+async def test_budget_spent_before_asking_gemini_is_not_overload():
+    """A time budget gone before any attempt is ours, not Gemini being busy."""
+    client = FakeGenAIClient([])
+    with pytest.raises(GeminiCallError) as exc_info:
+        await call_structured(
+            client=client,
+            contents=["test-prompt"],
+            config=types.GenerateContentConfig(response_schema=DummyTarget),
+            schema=DummyTarget,
+            deadline=asyncio.get_event_loop().time() + 1.0,  # under the 5 s floor
+            label="TestGemini",
+        )
+    assert "budget exceeded" in str(exc_info.value)
+    assert exc_info.value.overloaded is False
+    assert client.call_count == 0

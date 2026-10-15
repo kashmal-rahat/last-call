@@ -526,6 +526,25 @@ async def test_next_step_then_demo_scout_charity(setup_api_test):
         delattr(app.state, "scout_fn")
 
 
+def test_root_opens_the_demo_page():
+    client = TestClient(app)
+    r = client.get("/", follow_redirects=False)
+    assert r.status_code == 307
+    assert r.headers["location"] == "/demo"
+
+
+def test_favicon_is_the_page_icon():
+    """The tab icon is declared by the page and also answers /favicon.ico (no 404 in the console)."""
+    client = TestClient(app)
+    page = client.get("/demo").text
+    assert '<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">' in page
+    for path in ("/static/favicon.svg", "/favicon.ico"):
+        r = client.get(path)
+        assert r.status_code == 200, path
+        assert r.headers["content-type"].startswith("image/svg+xml"), path
+        assert r.content.startswith(b"<svg"), path
+
+
 def test_static_and_demo_cache_control():
     client = TestClient(app)
     r_demo = client.get("/demo")

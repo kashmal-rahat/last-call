@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 
 from lastcall_api.deps import demo_rules
 from lastcall_shared.config import get_settings
@@ -32,6 +32,18 @@ async def get_demo_page() -> FileResponse:
     if not html_path.exists():
         raise HTTPException(status_code=404, detail="Demo page not found")
     return FileResponse(html_path)
+
+
+@router.get("/", include_in_schema=False)
+async def root() -> RedirectResponse:
+    """The bare service address opens the demo page (it would otherwise be a JSON 404)."""
+    return RedirectResponse("/demo")
+
+
+@router.get("/favicon.ico", include_in_schema=False)
+async def favicon() -> FileResponse:
+    """Browsers ask for /favicon.ico even when the page names its icon; answer with the same SVG."""
+    return FileResponse(STATIC_DIR / "favicon.svg", media_type="image/svg+xml")
 
 
 @router.get("/demo/samples")
