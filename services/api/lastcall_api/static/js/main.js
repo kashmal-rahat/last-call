@@ -3,7 +3,7 @@
 import * as dom from './dom.js';
 import { state } from './state.js';
 import { getStoredItem, setStoredItem, getOrCreateShelfId, resetShelfId } from './storage.js';
-import { showToast, initInfoTips } from './ui.js';
+import { showToast, initInfoTips, scrollToSection } from './ui.js';
 import {
   updateClock,
   syncClosingTimeButtons,
@@ -21,6 +21,21 @@ import { renderImpact } from './impact.js';
 import { initPhoneDemo } from './phone.js';
 
 // Setup Event Listeners
+
+// "Try the live demo": the page scrolls to the setup itself, with the same helper as its other scrolls, and
+// leaves the address as /demo. Following the link's #inspectorSection (kept for a page without JS) put the
+// fragment in the address, so every refresh, back or forward made the browser scroll again while loading.
+if (dom.heroDemoLink) {
+  dom.heroDemoLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    scrollToSection(dom.inspectorSection);
+  });
+}
+// An address that still carries the fragment (from before this change, or shared) opens at the setup as
+// before; the fragment is then dropped, so a refresh starts like any other visit
+if (location.hash === '#inspectorSection') {
+  history.replaceState(null, '', location.pathname + location.search);
+}
 
 if (dom.btnNewShelf) {
   dom.btnNewShelf.addEventListener('click', (e) => {

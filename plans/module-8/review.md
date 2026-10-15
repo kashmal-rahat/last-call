@@ -900,3 +900,14 @@ From the user's iPhone screenshots of the deployed page:
   - A real call-back names the day: "Call back 19:30", "Call back tomorrow 09:00", or "Call back Sat 17 Oct 09:00" (`formatCallbackTime` in `format.js`, Lahore time, with tests including just after midnight in Lahore).
   - The outcome and its retry time on the server are unchanged.
 - **Checks:** ruff clean; pytest 441 passed, 20 skipped; `node --test` 32 passed. In the preview, the result card reads "Ended early · 2.5 of 2.5 dozen left" for a dropped call and "Buyer asked for a call back · Call back tomorrow 09:00 · …" for a real one.
+
+# Round 38: "Try the live demo" scrolls without touching the address, by Claude (2026-10-15)
+
+- **Reported (laptop):** after "Try the live demo" the screen sometimes flickered or went back to the top, and every refresh showed `/demo#inspectorSection`.
+- **Cause:** the button was a plain link to `#inspectorSection`, animated by the page-wide `html { scroll-behavior: smooth }`. The fragment stayed in the address, so from then on the browser scrolled by itself on every refresh, back or forward, while the page loaded and while it restored the previous position. Page-wide smooth scrolling turned each of those into an animation that the trackpad's momentum or the restore could cut short.
+- **Measured** in the preview at 1024 × 768: on a settled page the click scrolled cleanly (83 frames, never backwards, the section 80 px from the top), so the link's target was right; the trouble is the fragment and the animated browser scrolls around it.
+- **Fix:**
+  - The button keeps its `href` (it works without JS), but `main.js` handles the click with the page's own `scrollToSection`, as after Inspect, for Buyers and when a call starts: smooth, instant with reduced motion, and **no fragment in the address**.
+  - An address that still carries `#inspectorSection` (bookmarked or shared from before) opens at the setup as before; the fragment is then removed with `history.replaceState`, so a refresh starts like any visit.
+  - `html { scroll-behavior: smooth }` is removed: with no in-page links left, it only animated the browser's own scrolls (reload, find in page). The transcript keeps its own smooth scrolling.
+- **Checked** in the preview: an old `#inspectorSection` address becomes `/demo`; the button scrolls the setup to 80 px from the top, never backwards, and the address stays `/demo`. ruff clean; pytest 465 passed, 20 skipped; `node --test` 32 passed.

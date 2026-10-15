@@ -1,5 +1,9 @@
 // services/api/lastcall_api/static/js/dom.js
 
+// Hero
+export const heroDemoLink = document.getElementById('heroDemoLink');
+export const inspectorSection = document.getElementById('inspectorSection');
+
 // Section 1 / Header / Shelf elements
 export const inspectAccessCodeEl = document.getElementById('inspectAccessCode');
 export const shelfPhotoInput = document.getElementById('shelfPhotoInput');
