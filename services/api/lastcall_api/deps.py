@@ -12,7 +12,7 @@ from lastcall_api.item_photos import PhotoStore, default_photo_store
 from lastcall_shared.config import get_settings
 from lastcall_shared.firestore_store import default_store
 from lastcall_shared.marts.loader import load_mart_rules
-from lastcall_shared.models import BatchRecord, CallRecord, LadderDecision, MartRules
+from lastcall_shared.models import BatchRecord, CallRecord, LadderDecision, LadderResult, MartRules
 from lastcall_shared.store import CallStore
 
 logger = logging.getLogger("lastcall_api.deps")
@@ -99,14 +99,22 @@ async def consume_daily_cap(store: CallStore, counter: str, cap: int, detail: st
 # --- Lookups -------------------------------------------------------------------------------
 
 
-async def get_decision(store: CallStore, inspection_id: str, item_key: str) -> LadderDecision:
+async def get_ladder_result(store: CallStore, inspection_id: str) -> LadderResult:
     result = await store.get_decisions(inspection_id)
     if not result or result.mart_id != DEMO_MART_ID:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Decisions for '{inspection_id}' not found")
+    return result
+
+
+def decision_in(result: LadderResult, item_key: str) -> LadderDecision:
     decision = next((d for d in result.decisions if d.item_key == item_key), None)
     if decision is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No decision for item '{item_key}'")
     return decision
+
+
+async def get_decision(store: CallStore, inspection_id: str, item_key: str) -> LadderDecision:
+    return decision_in(await get_ladder_result(store, inspection_id), item_key)
 
 
 async def get_demo_batch(store: CallStore, batch_id: str) -> BatchRecord:

@@ -161,6 +161,19 @@ def hours_until_closing(rules: MartRules, now: datetime, override: float | None 
     return max(0.1, min(24.0, hours))
 
 
+def clock_offset(rules: MartRules, now: datetime, override: float | None = None) -> float:
+    """The mart's time minus the real time, in seconds (D74): 0 for "Now"; for a Time until closing preset, the
+    time it stands for (today's closing minus the preset hours, on today's date in the mart's timezone, so
+    "today" and "tomorrow" keep their meaning). Calls, pickup windows and call-backs then run on that time."""
+    if override is None:
+        return 0.0
+    now_local = now.astimezone(ZoneInfo(rules.timezone))
+    closing_today = now_local.replace(
+        hour=rules.closing_time.hour, minute=rules.closing_time.minute, second=0, microsecond=0
+    )
+    return (closing_today - timedelta(hours=override) - now_local).total_seconds()
+
+
 def compute_sellable_hours(item: ItemAssessment, profile: ProduceProfile) -> float | None:
     """Computes expected sellable shelf-life hours for the item's stage and level."""
     if item.stage in ("spoiled", "unsafe"):

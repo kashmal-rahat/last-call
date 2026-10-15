@@ -1,13 +1,16 @@
 """Tests for pure Ladder decision engine (Step 4)."""
 
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import pytest
+from pydantic import ValidationError
 
 from lastcall_api.inspector.guardrails import names_match
 from lastcall_api.ladder.engine import (
     DESCRIPTIVE_WORDS,
     allowed_steps,
+    clock_offset,
     decide_item,
     find_price,
     hours_until_closing,
@@ -15,10 +18,13 @@ from lastcall_api.ladder.engine import (
     round_estimate,
     selling_time,
 )
+from lastcall_shared.clock import mart_now
 from lastcall_shared.marts.loader import load_mart_rules
 from lastcall_shared.models import (
+    BatchRecord,
     BoundingBox,
     ItemAssessment,
+    LadderResult,
     ObservedQuantity,
     ProduceProfile,
     QuantityEstimate,
@@ -283,6 +289,49 @@ def test_hours_until_closing():
     # After closing: 23:30 PKT -> counts to tomorrow's 23:00 -> 23.5 hours
     t2 = datetime(2026, 10, 10, 23, 30, 0, tzinfo=tz)
     assert abs(hours_until_closing(rules, t2) - 23.5) < 0.01
+
+
+# D74: a Time until closing preset stands for a time of day, on the real date in Lahore, whatever the real time
+@pytest.mark.parametrize("real_hour,real_minute", [(2, 0), (11, 0), (23, 30)])
+@pytest.mark.parametrize("preset,mart_hour", [(12.0, 11), (4.0, 19), (1.0, 22)])
+def test_clock_offset_puts_the_mart_at_the_presets_time_of_day(real_hour, real_minute, preset, mart_hour):
+    rules = load_mart_rules("demo_mart")  # closes 23:00
+    pkt = ZoneInfo("Asia/Karachi")
+    real = datetime(2026, 10, 16, real_hour, real_minute, tzinfo=pkt)
+
+    mart = mart_now(clock_offset(rules, real, override=preset), real)
+
+    assert mart == datetime(2026, 10, 16, mart_hour, 0, tzinfo=pkt)  # same calendar day: "today" keeps its meaning
+
+
+_MINIMAL = {
+    LadderResult: {
+        "mart_id": "demo_mart",
+        "inspection_id": "insp_1",
+        "decided_at": NOW,
+        "hours_until_closing": 4.0,
+        "decisions": [],
+        "meta": {"latency_ms": 1},
+    },
+    BatchRecord: {
+        "batch_id": "b",
+        "mart_id": "demo_mart",
+        "inspection_id": "insp_1",
+        "item_key": "item_1",
+        "item": "banana",
+        "unit": "dozen",
+        "total_quantity": 1.0,
+        "remaining_quantity": 1.0,
+    },
+}
+
+
+def test_clock_offset_is_zero_for_now_and_bounded_in_the_models():
+    rules = load_mart_rules("demo_mart")
+    assert clock_offset(rules, NOW, override=None) == 0.0
+    for model in (LadderResult, BatchRecord):
+        with pytest.raises(ValidationError):
+            model.model_validate({**_MINIMAL[model], "clock_offset_s": 24 * 3600 + 1})
 
 
 @pytest.mark.parametrize(

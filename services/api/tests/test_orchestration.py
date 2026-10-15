@@ -317,6 +317,63 @@ def test_build_call_record(demo_rules):
     assert call_don.brief.floor_price_per_unit == 0
 
 
+def test_build_call_record_runs_the_pickup_window_on_the_batchs_mart_time(demo_rules):
+    """D74: real 02:00, batch at "4 h left" (mart 19:00): pickup today 19:00–23:00; the record stays in real time."""
+    real = datetime(2026, 10, 16, 2, 0, tzinfo=PKT)
+    batch = BatchRecord(
+        batch_id="batch_banana_1",
+        mart_id="demo_mart",
+        inspection_id="insp_1",
+        item_key="item_banana_1",
+        item="banana",
+        unit="dozen",
+        total_quantity=10.0,
+        remaining_quantity=10.0,
+        clock_offset_s=17 * 3600,
+    )
+    plan = StepPlan(step="bulk_sale", buyer_types=["juice_shop"], opening_price=110, floor_price=65)
+    decision = LadderDecision(
+        item_key="item_banana_1",
+        name="banana",
+        unit="dozen",
+        shelf_price=180,
+        step="bulk_sale",
+        allowed_steps=["bulk_sale"],
+        opening_price=110,
+        floor_price=65,
+        buyer_types=["juice_shop"],
+        buyer_condition="Very ripe",
+        reason="Overripe: juice shops can use it.",
+    )
+    candidate = ScoutCandidate(
+        rank=1,
+        buyer_id="places:ChIJ_a",
+        place_id="ChIJ_a",
+        name="Sample Juice",
+        buyer_type="juice_shop",
+        phone="+920000000000",
+        distance_km=1.0,
+        open_now=None,
+        fit="likely",
+        reason="Juice shop",
+    )
+
+    call = build_call_record(
+        batch=batch,
+        plan=plan,
+        candidate=candidate,
+        decision=decision,
+        rules=demo_rules,
+        branch=demo_rules.branches[0],
+        now=real,
+    )
+
+    assert call.brief.pickup_deadline == datetime(2026, 10, 16, 23, 0, tzinfo=PKT)
+    assert call.brief.pickup_window == "16 October, 7 PM to 16 October, 11 PM"
+    assert call.clock_offset_s == 17 * 3600  # the voice service runs the call on the same time
+    assert call.created_at == real
+
+
 def test_next_action_table_driven(demo_rules):
     now = datetime(2026, 10, 11, 14, 0, 0, tzinfo=PKT)
     candidate1 = ScoutCandidate(

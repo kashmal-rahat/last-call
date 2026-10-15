@@ -28,7 +28,7 @@ from google.genai import types
 from pydantic import AwareDatetime
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
 
-from lastcall_shared.clock import PKT
+from lastcall_shared.clock import PKT, mart_now
 from lastcall_shared.config import get_settings
 from lastcall_shared.firestore_store import default_store
 from lastcall_shared.genai_client import get_genai_client
@@ -237,11 +237,19 @@ async def handle_live_call_websocket(
             if websocket.client_state == WebSocketState.CONNECTED:
                 await websocket.send_json(event)
 
+        # Two clocks (D74): `now_fn` is the real time (the token, the lock, record timestamps); the agent's
+        # "current time" and the pickup and call-back times the buyer agrees to are on the mart's time
+        clock_offset_s = call.clock_offset_s
+
+        def mart_now_fn() -> datetime:
+            return mart_now(clock_offset_s, now_fn())
+
         ctx = CallContext(
             store=actual_store,
             call_id=call_id,
             mode="voice",
             clock=now_fn,
+            mart_clock=mart_now_fn,
             negotiation=call.negotiation,
             notify=notify_buyer,
         )
@@ -263,7 +271,7 @@ async def handle_live_call_websocket(
             mode="voice",
             agent_gender=agent_gender,  # type: ignore[arg-type]
             city_style=city_style,  # type: ignore[arg-type]
-            clock=now_fn,
+            clock=mart_now_fn,
         )
 
         if runner_factory:
@@ -609,23 +617,13 @@ async def handle_live_call_websocket(
                 pass
 
             try:
-                now_dt = now_fn()
                 if ctx.outcome_set and ctx.outcome:
                     final_outcome = ctx.outcome
                 elif not ctx.buyer_spoke:
                     final_outcome = "no_answer"
                 else:
                     final_outcome = "call_back"
-                    target_dt = now_dt + timedelta(hours=2)
-                    ch = call.brief.calling_hours
-                    t = target_dt.time()
-                    if t < ch.start:
-                        target_dt = target_dt.replace(hour=ch.start.hour, minute=ch.start.minute, second=0)
-                    elif t > ch.end:
-                        target_dt = (target_dt + timedelta(days=1)).replace(
-                            hour=ch.start.hour, minute=ch.start.minute, second=0
-                        )
-                    ctx.callback_at = target_dt
+                    ctx.callback_at = ctx.retry_after_drop(call.brief.calling_hours)
                     if "dropped" not in ctx.flags:
                         ctx.flags.append("dropped")
 

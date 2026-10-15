@@ -99,7 +99,8 @@ async def confirm_deal(
 
     call = await ctx.store.get_call(call_id)
     batch = await ctx.store.get_batch(call.batch_id)
-    now = ctx.clock() if ctx.clock else datetime.now(PKT)
+    # The pickup time is the buyer's, so it is checked on the mart's time, like the brief's deadline (D74)
+    now = ctx.mart_now()
 
     # 1. Parse ISO time without rewrites or defaults (C0)
     if not pickup_time_iso or not isinstance(pickup_time_iso, str):
@@ -173,7 +174,7 @@ async def confirm_deal(
         pickup_deadline=call.brief.pickup_deadline,
         payment_terms=call.brief.payment_terms,
         status="agreed",
-        created_at=now,
+        created_at=ctx.now(),
     )
     ok, err = await ctx.store.save_deal_tx(call_id, deal, quantity)
     if not ok:
@@ -230,7 +231,7 @@ async def schedule_callback(
     if ctx.outcome_set:
         return {"ok": False, "reason": "Outcome already recorded for this call."}
 
-    now = ctx.clock() if ctx.clock else datetime.now(PKT)
+    now = ctx.mart_now()  # "call me at 5" is on the mart's time (D74)
     try:
         if len(when_iso.strip()) <= 8 and ":" in when_iso:
             # Time only string like "11:00" or "11:00:00"
@@ -322,7 +323,7 @@ async def record_outcome(
         return {"ok": False, "reason": "outcome already recorded"}
 
     call = await ctx.store.get_call(call_id)
-    now = ctx.clock() if ctx.clock else datetime.now(PKT)
+    now = ctx.now()
 
     if outcome == "do_not_call":
         if getattr(call, "channel", "browser") == "browser" and call.brief.buyer.buyer_id.startswith("places:"):

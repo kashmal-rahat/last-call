@@ -14,6 +14,7 @@ import { triggerDecide, renderActiveDecision } from './decision.js';
 import { renderActiveBuyers } from './buyers.js';
 import { renderImpact } from './impact.js';
 import { resetCallPanel } from './call.js';
+import { updateClock } from './setup.js';
 
 export async function handleInspect() {
   const code = requireAccessCode();
@@ -61,6 +62,7 @@ export async function handleInspect() {
 
   state.currentInspection = null;
   state.currentLadderResult = null;
+  updateClock();  // back to the real time until the new decision
   state.priceOverrides = {};
   state.isDeciding = false;
   state.scoutResultsMap = {};

@@ -8,7 +8,7 @@ from typing import Any
 
 from google import genai
 
-from lastcall_api.ladder.engine import decide_item, find_price, hours_until_closing
+from lastcall_api.ladder.engine import clock_offset, decide_item, find_price, hours_until_closing
 from lastcall_api.ladder.profiles import resolve_profiles
 from lastcall_shared.models import (
     FreshnessResult,
@@ -34,6 +34,7 @@ async def decide_inspection(
     """Decides clearance ladder steps for all items in a freshness inspection."""
     start_t = time.monotonic()
     H = hours_until_closing(rules, now, override=hours_override)
+    offset_s = clock_offset(rules, now, override=hours_override)
 
     # photo_status != "ok" -> no decisions
     if result.photo_status != "ok":
@@ -52,6 +53,7 @@ async def decide_inspection(
             inspection_id=result.inspection_id,
             decided_at=now,
             hours_until_closing=H,
+            clock_offset_s=offset_s,
             decisions=[],
             meta=meta,
         )
@@ -124,6 +126,7 @@ async def decide_inspection(
         inspection_id=result.inspection_id,
         decided_at=now,
         hours_until_closing=H,
+        clock_offset_s=offset_s,
         decisions=decisions,
         meta=meta,
     )

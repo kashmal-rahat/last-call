@@ -13,7 +13,7 @@ from lastcall_api.scout.rank import sanitise_name
 from lastcall_api.scout.scout import ScoutNotApplicable
 from lastcall_shared import ids
 from lastcall_shared.buyer_keys import mask_phone
-from lastcall_shared.clock import time_words
+from lastcall_shared.clock import mart_now, time_words
 from lastcall_shared.models import (
     BatchRecord,
     Branch,
@@ -147,11 +147,14 @@ def build_call_record(
     branch: Branch,
     now: datetime,
 ) -> CallRecord:
-    """Constructs a CallRecord for a browser role-play call."""
+    """Constructs a CallRecord for a browser role-play call.
+
+    `now` is the real time (record timestamps); the pickup window is on the batch's mart time, which the call
+    carries for the voice service (D74)."""
     call_id = ids.new_call_id()
     nonce = uuid.uuid4().hex
 
-    start, deadline = pickup_window(rules, now)
+    start, deadline = pickup_window(rules, mart_now(batch.clock_offset_s, now))
     window_str = f"{time_words(start)} to {time_words(deadline)}"
 
     raw_buyer = candidate.to_buyer_info()
@@ -211,4 +214,5 @@ def build_call_record(
         expire_at=expire_at,
         channel="browser",
         city_style=rules.city_style,
+        clock_offset_s=batch.clock_offset_s,
     )

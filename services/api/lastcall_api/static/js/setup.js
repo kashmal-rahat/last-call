@@ -1,24 +1,24 @@
 // services/api/lastcall_api/static/js/setup.js
 
-import { state } from './state.js';
+import { state, martNow } from './state.js';
 import * as dom from './dom.js';
 import { getStoredItem } from './storage.js';
 import { icon } from './ui.js';
+import { formatPktClock } from './format.js';
 
-// Clock update (Karachi PKT, UTC+5)
+const SET_BY_PRESET = 'Set by Time until closing';
+
+// The header clock: the mart's time (D74). With a Time until closing preset that is the time the preset stands
+// for, still ticking; with "Now" the real time. Called every minute and whenever the decision changes.
 export function updateClock() {
-  try {
-    const now = new Date();
-    const formatter = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Karachi',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-    dom.headerTime.textContent = `${formatter.format(now)} PKT`;
-  } catch (e) {
-    const d = new Date();
-    dom.headerTime.textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} PKT`;
+  const simulated = Boolean(state.currentLadderResult && state.currentLadderResult.clock_offset_s);
+  dom.headerTime.textContent = `${formatPktClock(martNow())} PKT`;
+  dom.headerTime.title = simulated ? SET_BY_PRESET : '';
+  if (simulated) {
+    const note = document.createElement('span');
+    note.className = 'visually-hidden';
+    note.textContent = ` (${SET_BY_PRESET})`;
+    dom.headerTime.appendChild(note);
   }
 }
 

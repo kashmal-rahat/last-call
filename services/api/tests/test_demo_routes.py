@@ -427,6 +427,77 @@ async def test_second_call_offers_rank_2(setup_api_test):
     assert data2["buyer"]["buyer_id"] == "places:ChIJ_buyer_2"
 
 
+# --- D74: the call runs on the mart's time set by Time until closing ------------------------------
+
+REAL_2AM = datetime(2026, 10, 16, 2, 0, tzinfo=PKT)  # a judge in another time zone: night in Lahore
+EVENING = 17 * 3600  # "4 h left": the mart at 19:00 that day
+
+
+async def _decided_with_offset(store: InMemoryStore, clock_offset_s: float) -> None:
+    result = await store.get_decisions("insp_1")
+    await store.save_decisions(result.model_copy(update={"clock_offset_s": clock_offset_s}))
+
+
+def _finish(store: InMemoryStore, call_id: str):
+    return store.finish_call(
+        call_id,
+        CallResult(
+            mart_id="demo_mart",
+            batch_id="insp_1__item_banana_1__johar_town",
+            call_id=call_id,
+            status="completed",
+            outcome="declined",
+        ),
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_preset_runs_the_call_on_the_mart_time(monkeypatch, setup_api_test):
+    store = setup_api_test
+    await seed_demo_data(store)
+    await _decided_with_offset(store, EVENING)
+    monkeypatch.setattr("lastcall_api.routes.calls.now_pkt", lambda: REAL_2AM)
+    client = TestClient(app)
+    headers = {"X-Demo-Access-Code": CODE}
+    body = {"inspection_id": "insp_1", "item_key": "item_banana_1"}
+
+    data = client.post("/demo/calls", headers=headers, json=body).json()
+
+    # The mart's world is at 19:00: pickup this evening, and inside calling hours (09:00–21:00)
+    assert data["deal"]["pickup_window"] == "16 October, 7 PM to 16 October, 11 PM"
+    assert data["notes"]["outside_calling_hours"] is False
+    call = await store.get_call(data["call_id"])
+    assert call.clock_offset_s == EVENING
+    assert call.created_at == REAL_2AM  # records stay in real time
+    batch = client.get(f"/demo/batches/{data['batch_id']}", headers=headers).json()
+    assert batch["outside_calling_hours"] is False
+
+    # The batch keeps its time: a new decision (here "Now") doesn't move calls already under way
+    await _finish(store, data["call_id"])
+    await _decided_with_offset(store, 0.0)
+    second = client.post("/demo/calls", headers=headers, json=body).json()
+    assert (await store.get_call(second["call_id"])).clock_offset_s == EVENING
+    assert second["deal"]["pickup_window"] == data["deal"]["pickup_window"]
+
+
+@pytest.mark.asyncio
+async def test_now_keeps_the_real_time(monkeypatch, setup_api_test):
+    """With "Now" (offset 0) nothing changes: at real 02:00 the mart is closed, pickup is at opening."""
+    store = setup_api_test
+    await seed_demo_data(store)
+    monkeypatch.setattr("lastcall_api.routes.calls.now_pkt", lambda: REAL_2AM)
+    client = TestClient(app)
+    headers = {"X-Demo-Access-Code": CODE}
+
+    data = client.post(
+        "/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_banana_1"}
+    ).json()
+
+    assert data["deal"]["pickup_window"] == "16 October, 9 AM to 16 October, 1 PM"
+    assert data["notes"]["outside_calling_hours"] is True
+    assert (await store.get_call(data["call_id"])).clock_offset_s == 0.0
+
+
 @pytest.mark.asyncio
 async def test_get_batch_no_phones(setup_api_test):
     store = setup_api_test

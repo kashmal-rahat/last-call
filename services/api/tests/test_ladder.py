@@ -212,6 +212,21 @@ async def test_decide_inspection_price_and_hours_overrides():
     dec = res.decisions[0]
     assert dec.shelf_price == 200
     assert res.hours_until_closing == 12.0
+    # D74: the mart's time is the preset's: 14:00 UTC is 19:00 in Lahore, and "12 h left" stands for 11:00
+    assert res.clock_offset_s == -8 * 3600
+
+
+@pytest.mark.asyncio
+async def test_decide_inspection_clock_offset_on_every_path():
+    """The shift is set wherever a result is made, including a photo with no produce; "Now" is 0."""
+    rules = load_mart_rules("demo_mart")
+    empty = _make_inspection(status="no_produce", items=[])
+
+    preset = await decide_inspection(empty, rules=rules, store=InMemoryStore(), now=NOW, hours_override=1.0)
+    now_ = await decide_inspection(empty, rules=rules, store=InMemoryStore(), now=NOW)
+
+    assert preset.clock_offset_s == 3 * 3600  # 19:00 in Lahore → "1 h left" stands for 22:00
+    assert now_.clock_offset_s == 0.0
 
 
 @pytest.mark.asyncio

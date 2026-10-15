@@ -14,6 +14,7 @@ from pydantic import (
 
 from lastcall_shared import ids
 from lastcall_shared.buyer_keys import mask_phone
+from lastcall_shared.clock import MAX_CLOCK_OFFSET_S
 
 # All timestamps are timezone-aware (e.g. "2026-10-06T18:00:00+05:00") so that
 # deadlines and calling hours can be enforced in code without guessing the zone.
@@ -507,6 +508,10 @@ class BatchAttempt(BaseModel):
     created_at: AwareDatetime
 
 
+# The mart's time minus the real time (D74): set by the Time until closing preset, 0 for "Now"
+ClockOffset = Annotated[float, Field(ge=-MAX_CLOCK_OFFSET_S, le=MAX_CLOCK_OFFSET_S)]
+
+
 class BatchRecord(BaseModel):
     batch_id: str
     mart_id: str
@@ -534,6 +539,7 @@ class BatchRecord(BaseModel):
     quantity_confirmed: bool = False
     attempts: list[BatchAttempt] = Field(default_factory=list)
     created_at: AwareDatetime | None = None
+    clock_offset_s: ClockOffset = 0.0  # copied from the decision at the first call; every call on the batch uses it
 
 
 class DealRecord(BaseModel):
@@ -591,6 +597,7 @@ class CallRecord(BaseModel):
     usage: UsageRecord = Field(default_factory=UsageRecord)
     channel: Literal["browser", "phone"] = "browser"
     city_style: str | None = None  # None → CITY_STYLE env (scenarios unchanged)
+    clock_offset_s: ClockOffset = 0.0  # the batch's mart-time shift (D74), for the voice service
 
     @model_validator(mode="after")
     def set_default_expire_at(self) -> "CallRecord":
@@ -866,6 +873,7 @@ class LadderResult(BaseModel):
     inspection_id: str
     decided_at: AwareDatetime
     hours_until_closing: float
+    clock_offset_s: ClockOffset = 0.0  # the mart's time for this decision (D74): set by a preset, 0 for "Now"
     decisions: list[LadderDecision]
     meta: LadderMeta
 

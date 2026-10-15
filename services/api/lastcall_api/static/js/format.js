@@ -190,7 +190,14 @@ export function getFindBuyersLabel(types) {
   return phrase ? `Find ${phrase}` : 'Find buyers';
 }
 
-// When a call-back is due, in Lahore time: "19:30" today, "tomorrow 09:00", else "Sat 17 Oct 09:00"
+// "19:05": a moment in Pakistan time. Pakistan has no daylight saving, so it is always UTC+5.
+export function formatPktClock(date) {
+  const pk = new Date(date.getTime() + 5 * 3600 * 1000);
+  return `${String(pk.getUTCHours()).padStart(2, '0')}:${String(pk.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+// When a call-back is due, in Lahore time: "19:30" today, "tomorrow 09:00", else "Sat 17 Oct 09:00".
+// `now` is the mart's time (martNow), so "today" is the mart's day (D74).
 export function formatCallbackTime(iso, now = new Date()) {
   const tz = 'Asia/Karachi';  // no daylight saving, so "tomorrow" is exactly 24 h on
   const at = new Date(iso);

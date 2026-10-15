@@ -1,6 +1,6 @@
 // services/api/lastcall_api/static/js/buyers.js
 
-import { state } from './state.js';
+import { state, martNow } from './state.js';
 import * as dom from './dom.js';
 import { apiFetch, errorMessage, requireAccessCode } from './api.js';
 import { buyerTypesPhrase, formatCallbackTime, getFindBuyersLabel, getNextStepTargetLabel } from './format.js';
@@ -618,7 +618,7 @@ function buyerStatusChip(att, unit) {
       chip.textContent = 'Ended early';
     } else {
       chip.className = 'chip chip-amber';
-      chip.textContent = att.callback_at ? `Call back ${formatCallbackTime(att.callback_at)}` : 'Call back';
+      chip.textContent = att.callback_at ? `Call back ${formatCallbackTime(att.callback_at, martNow())}` : 'Call back';
     }
   } else if (att.outcome === 'do_not_call') {
     chip.className = 'chip chip-rose';

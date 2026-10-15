@@ -6,6 +6,7 @@ import { accessCode, apiFetch, errorMessage } from './api.js';
 import { formatDecisionLine, formatProfileLine, STAFF_ACTION_LABELS } from './format.js';
 import { icon } from './ui.js';
 import { renderResults } from './reading.js';
+import { updateClock } from './setup.js';
 
 // One cell of the price strip: a quiet label over the price, "Rs 180 /dozen"
 function priceCell(label, value, unit = '', iconName = null) {
@@ -94,6 +95,7 @@ export async function triggerDecide() {
   } finally {
     if (thisRequestId === state.decideRequestCounter) {
       state.isDeciding = false;
+      updateClock();
       renderResults(state.currentInspection, state.currentDisplayUrl);
     }
   }

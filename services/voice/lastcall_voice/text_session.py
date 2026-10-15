@@ -133,7 +133,7 @@ async def run_text_turn(
     if not call:
         raise ValueError(f"Call {call_id} not found in store")
 
-    at_time = turn_time or (ctx.clock() if ctx.clock else datetime.now(PKT))
+    at_time = turn_time or ctx.now()
     runner: Runner = session_data["runner"]
 
     if session_data["first_turn"]:
@@ -199,8 +199,6 @@ async def end_text_call(call_id: str) -> CallResult:
     if not call:
         raise ValueError(f"Call {call_id} not found in store")
 
-    now_dt = ctx.clock() if ctx.clock else datetime.now(PKT)
-
     # Determine final outcome
     if ctx.outcome_set and ctx.outcome:
         outcome = ctx.outcome
@@ -209,16 +207,7 @@ async def end_text_call(call_id: str) -> CallResult:
             outcome = "no_answer"
         else:
             outcome = "call_back"
-            target_dt = now_dt + timedelta(hours=2)
-            ch = call.brief.calling_hours
-            t = target_dt.time()
-            if t < ch.start:
-                target_dt = target_dt.replace(hour=ch.start.hour, minute=ch.start.minute, second=0)
-            elif t > ch.end:
-                target_dt = (target_dt + timedelta(days=1)).replace(
-                    hour=ch.start.hour, minute=ch.start.minute, second=0
-                )
-            ctx.callback_at = target_dt
+            ctx.callback_at = ctx.retry_after_drop(call.brief.calling_hours)
             if "dropped" not in ctx.flags:
                 ctx.flags.append("dropped")
 

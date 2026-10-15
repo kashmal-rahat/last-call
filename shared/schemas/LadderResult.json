@@ -333,6 +333,13 @@
       "title": "Hours Until Closing",
       "type": "number"
     },
+    "clock_offset_s": {
+      "default": 0.0,
+      "maximum": 86400,
+      "minimum": -86400,
+      "title": "Clock Offset S",
+      "type": "number"
+    },
     "decisions": {
       "items": {
         "$ref": "#/$defs/LadderDecision"

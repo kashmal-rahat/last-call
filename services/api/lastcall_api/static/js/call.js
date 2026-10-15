@@ -1,6 +1,6 @@
 // services/api/lastcall_api/static/js/call.js
 
-import { state } from './state.js';
+import { state, martNow } from './state.js';
 import * as dom from './dom.js';
 import { setStoredItem } from './storage.js';
 import { ACCESS_CODE_REFUSED, apiFetch, errorMessage, requireAccessCode, showAccessCodeError } from './api.js';
@@ -493,7 +493,7 @@ export function renderCallResult(batchData, callId) {
     sub.className = 'result-sub';
     const parts = [`${batchData.remaining_quantity} of ${batchData.total_quantity}\u00A0${unit} left`];
     if (attempt.outcome === 'call_back' && attempt.callback_at && !attempt.dropped) {
-      parts.unshift(`Call back ${formatCallbackTime(attempt.callback_at)}`);
+      parts.unshift(`Call back ${formatCallbackTime(attempt.callback_at, martNow())}`);
     }
     if (isDeal && attempt.pickup_time) {
       parts.unshift(`Pickup ${new Date(attempt.pickup_time).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Karachi' })}`);

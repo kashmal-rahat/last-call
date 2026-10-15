@@ -76,6 +76,7 @@ if (dom.btnNewShelf) {
 
     state.currentInspection = null;
     state.currentLadderResult = null;
+    updateClock();  // back to the real time
     state.currentDisplayUrl = null;
     state.activeItemKey = null;
     state.priceOverrides = {};

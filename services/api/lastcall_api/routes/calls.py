@@ -16,9 +16,10 @@ from lastcall_api.deps import (
     batch_calls,
     check_ip_limit,
     consume_daily_cap,
+    decision_in,
     demo_rules,
-    get_decision,
     get_demo_batch,
+    get_ladder_result,
     get_store,
     require_access_code,
 )
@@ -26,7 +27,7 @@ from lastcall_api.orchestration.handoff import NeedsPrice, build_call_record, bu
 from lastcall_api.orchestration.loop import NextAction, next_action, outside_calling_hours
 from lastcall_api.scout.scout import ScoutNotApplicable
 from lastcall_shared import ids
-from lastcall_shared.clock import now_pkt
+from lastcall_shared.clock import mart_now, now_pkt
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import (
     BatchAttempt,
@@ -109,12 +110,13 @@ async def _get_or_create_batch(
     store: CallStore,
     body: CreateCallRequest,
     decision: LadderDecision,
+    clock_offset_s: float,
     item: ItemAssessment,
     rules: MartRules,
     branch: Branch,
     now: datetime,
 ) -> BatchRecord:
-    """An existing batch keeps its plans and quantity (D54); a new one snapshots them now."""
+    """An existing batch keeps its plans, quantity and mart time (D54, D74); a new one snapshots them now."""
     inspection_id, item_key = body.inspection_id.strip(), body.item_key.strip()
     batch_id = ids.make_batch_id(inspection_id, item_key, branch.branch_id)
     batch = await store.get_batch(batch_id)
@@ -153,6 +155,7 @@ async def _get_or_create_batch(
             then_compost=then_compost,
             quantity_confirmed=confirmed,
             created_at=now,
+            clock_offset_s=clock_offset_s,
         )
     )
 
@@ -199,13 +202,14 @@ async def demo_create_call(request: Request, body: CreateCallRequest, store: Cal
     await check_ip_limit(request, "call", limit, detail=f"Hourly IP limit reached (max {limit} calls per hour)")
 
     inspection_id, item_key = body.inspection_id.strip(), body.item_key.strip()
-    decision = await get_decision(store, inspection_id, item_key)
+    ladder = await get_ladder_result(store, inspection_id)
+    decision = decision_in(ladder, item_key)
     item = await _get_item(store, inspection_id, item_key)
     rules = demo_rules()
     branch = _branch(rules, body.branch_id.strip() if body.branch_id else None)
 
     now = now_pkt()
-    batch = await _get_or_create_batch(store, body, decision, item, rules, branch, now)
+    batch = await _get_or_create_batch(store, body, decision, ladder.clock_offset_s, item, rules, branch, now)
     scout = await store.get_scout_result(batch.batch_id)
     _, call_statuses = await batch_calls(store, batch)
     candidate = _choose_buyer(body, next_action(batch, scout, call_statuses, rules, now), batch, scout, call_statuses)
@@ -260,7 +264,7 @@ async def demo_create_call(request: Request, body: CreateCallRequest, store: Cal
         },
         "notes": {
             "buyer_closed_now": candidate.open_now is False,
-            "outside_calling_hours": outside_calling_hours(rules, now),
+            "outside_calling_hours": outside_calling_hours(rules, mart_now(batch.clock_offset_s, now)),
         },
     }
 
@@ -269,7 +273,9 @@ async def demo_create_call(request: Request, body: CreateCallRequest, store: Cal
 
 
 async def _batch_view(store: CallStore, batch: BatchRecord, rules: MartRules, now: datetime) -> dict:
-    """The batch as the page shows it: stock, plans, every attempt and what happens next. No phones."""
+    """The batch as the page shows it: stock, plans, every attempt and what happens next. No phones.
+
+    `now` is the real time (locks); the calling-hours note is on the batch's mart time (D74)."""
     scout = await store.get_scout_result(batch.batch_id)
     names = {b.buyer_id: b.name for b in scout.buyers} if scout else {}
     calls, call_statuses = await batch_calls(store, batch)
@@ -315,7 +321,7 @@ async def _batch_view(store: CallStore, batch: BatchRecord, rules: MartRules, no
             # The page matches on the ID; the rank is for display and older pages
             "buyer_id": action.buyer.buyer_id if action.buyer else None,
         },
-        "outside_calling_hours": outside_calling_hours(rules, now),
+        "outside_calling_hours": outside_calling_hours(rules, mart_now(batch.clock_offset_s, now)),
     }
 
 
