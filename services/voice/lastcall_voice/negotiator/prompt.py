@@ -10,7 +10,7 @@ from lastcall_shared.clock import pickup_by_words, time_words
 from lastcall_shared.condition_words import FEED_ONLY
 from lastcall_shared.models import AgentDealBrief, BuyerType
 
-PROMPT_VERSION = "1.21"
+PROMPT_VERSION = "1.22"
 TEMPLATE_DIR = Path(__file__).parent
 
 _GENDER_TABLE = {

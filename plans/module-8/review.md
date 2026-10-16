@@ -1099,3 +1099,11 @@ From the user's iPhone screenshots of the deployed page:
 - **Known trade-off:** if the agent says a word ("Zabardast!") before confirm_deal after a real yes, the guard refuses and the agent asks "Pakka?" once more; never a wrong deal. Not applied to schedule_callback (no stock held, and "Ji zaroor" before it is natural).
 - **Tests:** the tool refuses after speech in the turn and accepts after the turn ends; through the live loop, a chained call is refused and a call after the turn ends (`turn_complete`, the usual case) or the buyer cuts in (`interrupted`) is a deal, checked to fail when the `turn_complete` reset is removed; prompt 1.21 wording.
 
+# Round 60: no laugh direction on the slang lines (prompt 1.22), by Claude (2026-10-16)
+
+- **Reported (live testing):** the voice's tone shifts a little on the fixed lines; the agent never laughed on the two slang lines.
+- **Assessed with the user:** native-audio models tend to perform a quoted, word-for-word line rather than say it in their own flow; the stage direction "with a short, natural laugh" asks for a performance outright, and it wasn't followed anyway. The banter is already set by the "Slang and humour" section ("half business, half banter", "At most one playful line per turn") and by the lines' own words, so no replacement word ("playfully") was added. The fixed wording itself stays (it was chosen to fix earlier problems, D77, and the user's slang lines); judges speaking English hear paraphrases, not the Urdu lines.
+- **Change:** the lowball and Bismillah lines read "use this line: …" without "with a short, natural laugh". Prompt 1.22.
+- **Tests:** the voice prompt has no "laugh" and keeps the banter framing.
+- **If the tone still shifts:** it comes from the fixed wording; left as is.
+

@@ -334,10 +334,10 @@ def test_price_guard_classify():
     assert classify([160], floor, approved, current) == "ok"
 
 
-def test_prompt_template_v1_21_male_voice_consistency():
+def test_prompt_template_v1_22_male_voice_consistency():
     from lastcall_voice.negotiator.prompt import PROMPT_VERSION, render_instruction
 
-    assert PROMPT_VERSION == "1.21"
+    assert PROMPT_VERSION == "1.22"
     brief = make_test_brief()
     view = brief.agent_view()
 
@@ -427,6 +427,9 @@ def test_prompt_template_v1_21_male_voice_consistency():
     assert "as the first thing you do in your next turn, before you say anything" in male_voice
     assert "Once they name a time, call schedule_callback before you say anything" in male_voice
     assert "offer a smaller quantity and wait for their answer; if they refuse that too" in male_voice
+    # 1.22: no laugh direction on the two slang lines (the agent didn't laugh, and it acted the lines out); the
+    # "Slang and humour" section already frames them as banter
+    assert "laugh" not in male_voice and "Bargaining here is half business, half banter." in male_voice
     assert 'Say the unit as "kilo" in Urdu and "kilo" in English' in male_voice
     assert "Punjabi" not in male_voice and '"Ji, main' not in male_voice
     assert "[the price verify_offer returned] ke hisaab se," in male_voice  # 1.18
