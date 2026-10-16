@@ -172,7 +172,10 @@ def build_call_record(
         opening_price_unit=decision.unit,
         floor_price_per_unit=plan.floor_price,
         floor_price_unit=decision.unit,
-        market_rate_per_unit=decision.shelf_price,
+        # No market rate: we have none, only the mart's own shelf price for fresh stock, which is not one. Given as a
+        # "market rate", it was an unbacked claim to a real business and a second price the agent once quoted
+        # instead of verify_offer's (round 58). Every price the agent says comes from verify_offer.
+        market_rate_per_unit=None,
         currency="PKR",
         pickup_window=window_str,
         pickup_deadline=deadline,

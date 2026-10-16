@@ -316,3 +316,75 @@ def test_ws_transcription_entries_saved(monkeypatch):
     assert updated.transcript[0].speaker == "buyer"
     assert updated.transcript[0].text == "Aam kitnay kay hain?"
     assert updated.transcript[1].speaker == "agent"
+
+
+def _live_event(*, audio: bytes | None = None, turn_complete: bool = False, interrupted: bool = False):
+    content = None
+    if audio is not None:
+        part = type("Part", (), {"inline_data": type("Blob", (), {"data": audio})()})()
+        content = type("Content", (), {"parts": [part]})()
+    return type(
+        "Ev",
+        (),
+        {
+            "content": content,
+            "input_transcription": None,
+            "output_transcription": None,
+            "turn_complete": turn_complete,
+            "interrupted": interrupted,
+            "usage_metadata": None,
+        },
+    )()
+
+
+@pytest.mark.parametrize("turn_end", ["turn_complete", "interrupted"])
+def test_ws_confirm_deal_waits_for_the_buyers_answer(monkeypatch, turn_end):
+    """D80, through the live loop: ADK runs a tool between events, after the turn's audio has passed through. A
+    confirm_deal right after the agent's "…Pakka?" audio is refused; once the turn has ended (the usual case:
+    turn_complete, then the buyer says yes) or the buyer cut in, the same call is a deal."""
+    store = app.state.store
+    call, batch = build_call("easy_yes", now=datetime.now(PKT))
+    call.negotiation.approved_prices = [call.negotiation.ladder[0]]
+    asyncio.run(store.create_call(call, batch))
+    token = mint(call_id=call.call_id, nonce=call.session_nonce, key=KEY)
+    results: list[dict] = []
+
+    from lastcall_voice import live_session
+    from lastcall_voice.negotiator.tools import confirm_deal
+
+    class ToolContext:
+        state = {"call_id": call.call_id}
+
+    async def confirm():
+        results.append(
+            await confirm_deal(
+                price_per_unit=call.negotiation.ladder[0],
+                quantity=call.brief.quantity,
+                buyer_confirmed=True,
+                tool_context=ToolContext(),
+            )
+        )
+
+    class MockLiveRunner:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def run_live(self, *args, **kwargs):
+            yield _live_event(audio=b"\x00\x00")  # "Toh do darjan … Pakka?"
+            await confirm()  # chained in the same turn
+            yield _live_event(audio=b"\x00\x00")  # the agent asks again after the refusal
+            yield _live_event(**{turn_end: True})  # the turn ends, or the buyer cuts in: "haan pakka"
+            await confirm()
+            yield _live_event(audio=b"\x00\x00")  # "Chalein phir, sauda pakka!"
+            yield _live_event(turn_complete=True)
+
+    monkeypatch.setattr(live_session, "Runner", MockLiveRunner)
+
+    client = TestClient(app)
+    with client.websocket_connect("/ws/call") as ws:
+        ws.send_json({"type": "auth", "token": token})
+        ws.send_json({"type": "hangup"})
+
+    assert results[0]["ok"] is False and "has not answered the confirmation" in results[0]["reasons"][0]
+    assert results[1]["ok"] is True, results[1]
+    assert asyncio.run(store.get_deal(call.call_id)) is not None

@@ -290,6 +290,8 @@ def test_build_call_record(demo_rules):
 
     # 1. Quantity matches batch.remaining_quantity
     assert call_rec.brief.quantity == 35.0
+    # No market rate reaches the agent: the only price it sees is the one verify_offer gives (round 58)
+    assert call_rec.brief.market_rate_per_unit is None
     # The agent says the condition in Urdu (D77); the English stays for the page and WhatsApp
     assert call_rec.brief.condition_spoken == "thoray pakke huay aur daaghi"
     assert call_rec.brief.condition == "Slightly bruised, very sweet"

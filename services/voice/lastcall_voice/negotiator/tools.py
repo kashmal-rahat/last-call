@@ -98,6 +98,17 @@ async def confirm_deal(
     if ctx.outcome_set:
         return {"ok": False, "reason": "outcome already recorded", "reasons": ["outcome already recorded"]}
 
+    # 0. The buyer's yes must come after the confirmation question (D80). A tool runs only after the model's earlier
+    # events have reached the live loop (ADK live flow), so speech in this turn means the buyer hasn't answered yet.
+    if ctx.agent_spoke_this_turn:
+        return {
+            "ok": False,
+            "reasons": [
+                "You spoke in this turn, so the buyer has not answered the confirmation yet. Stop and wait for "
+                "their yes, then call confirm_deal before you say anything."
+            ],
+        }
+
     call = await ctx.store.get_call(call_id)
     batch = await ctx.store.get_batch(call.batch_id)
     # 1. Pickup is by the deadline, set by the mart, not chosen in the call (D76). It is checked on the mart's time,

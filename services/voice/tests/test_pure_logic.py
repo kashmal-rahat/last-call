@@ -334,10 +334,10 @@ def test_price_guard_classify():
     assert classify([160], floor, approved, current) == "ok"
 
 
-def test_prompt_template_v1_18_male_voice_consistency():
+def test_prompt_template_v1_21_male_voice_consistency():
     from lastcall_voice.negotiator.prompt import PROMPT_VERSION, render_instruction
 
-    assert PROMPT_VERSION == "1.18"
+    assert PROMPT_VERSION == "1.21"
     brief = make_test_brief()
     view = brief.agent_view()
 
@@ -418,10 +418,22 @@ def test_prompt_template_v1_18_male_voice_consistency():
     assert male_voice.index("# How to speak\n- Language:") >= 0
     assert "Everyday market language." in male_voice and "everyday Urdu" not in male_voice
     assert "don't repeat the whole introduction" in male_voice
+    # 1.21 (D80): ask, stop, and only on the buyer's answer call the tool, before speaking (a live call chained
+    # "Pakka?" with confirm_deal in one turn)
+    assert (
+        "Then stop and wait for their answer. When they say yes, call confirm_deal before you say anything"
+        in male_voice
+    )
+    assert "as the first thing you do in your next turn, before you say anything" in male_voice
+    assert "Once they name a time, call schedule_callback before you say anything" in male_voice
+    assert "offer a smaller quantity and wait for their answer; if they refuse that too" in male_voice
     assert 'Say the unit as "kilo" in Urdu and "kilo" in English' in male_voice
     assert "Punjabi" not in male_voice and '"Ji, main' not in male_voice
     assert "[the price verify_offer returned] ke hisaab se," in male_voice  # 1.18
-    assert "[the payment terms]. Pakka?" in male_voice and "cash par" not in male_voice  # from the brief (1.16)
+    assert "[the payment terms]. Pakka?" in male_voice
+    assert (
+        "collected by [the deadline], [the payment terms]. Deal?" in male_voice
+    )  # English, not "Pakka?" (1.19) and "cash par" not in male_voice  # from the brief (1.16)
     assert "Current time: 7 October, 12 PM" in male_voice  # no leading zero
     assert '"Soch lein, par maal [the deadline] tak hi ruk sakta hai."' in male_voice
     assert '(In English: "Come on, at that price even we\'d lose money.")' in male_voice
@@ -771,6 +783,11 @@ def test_prompt_says_the_condition_in_urdu_and_never_reads_the_english():
     assert '"Bahar se thoray pakke huay aur daaghi hain, andar se maal theek hai.' in prompt
     assert "dark spots" not in prompt and "Very ripe" not in prompt
     assert "say the Pitching line, or the same in English if the call is in English" in prompt  # 1.17
+    # 1.20: the price is fetched before the pitch starts, so it isn't paused (or restarted) mid-sentence
+    assert (
+        "first call verify_offer with no offer, before you say anything, so the price is ready. Then, in one go, say the Pitching line"
+        in prompt
+    )
 
     feed = render_instruction(
         make_test_brief().model_copy(update={"condition_spoken": FEED_ONLY}).agent_view(), mode="voice", now=NOW

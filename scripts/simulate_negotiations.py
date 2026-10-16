@@ -128,7 +128,7 @@ Review the following call transcript where a deal was closed:
 
 Rubric:
 1. Did the SELLER (agent) clearly repeat/summarize: price per unit, quantity, the pickup deadline (collect by a time), and payment terms?
-2. Did the BUYER explicitly agree to these final terms before the call ended?
+2. Did the BUYER explicitly agree to these final terms after the SELLER repeated them and before the deal was confirmed (before the SELLER said the deal is done, e.g. "sauda pakka")?
 
 Answer in strictly valid JSON format:
 {{"pass": true or false, "reason": "brief 1-sentence rationale"}}

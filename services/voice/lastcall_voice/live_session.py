@@ -364,6 +364,7 @@ async def handle_live_call_websocket(
                 if event.content and event.content.parts:
                     for part in event.content.parts:
                         if part.inline_data and part.inline_data.data:
+                            ctx.agent_spoke_this_turn = True  # D80: confirm_deal waits for the buyer's answer
                             if measuring_latency and last_buyer_turn_end > 0.0:
                                 lat_ms = round((now_curr - last_buyer_turn_end) * 1000, 1)
                                 logger.info(
@@ -491,6 +492,10 @@ async def handle_live_call_websocket(
                 if getattr(event, "interrupted", False):
                     if websocket.client_state == WebSocketState.CONNECTED:
                         await websocket.send_json({"type": "interrupted"})
+
+                # The agent's turn is over (it finished, or the buyer cut in): what it says next is a new turn (D80)
+                if event.turn_complete or getattr(event, "interrupted", False):
+                    ctx.agent_spoke_this_turn = False
 
                 # Usage accumulation by modality (C4)
                 if event.usage_metadata:

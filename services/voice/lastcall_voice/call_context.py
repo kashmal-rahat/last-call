@@ -25,6 +25,9 @@ class CallContext:
     pickup_time: AwareDatetime | None = None
     callback_at: AwareDatetime | None = None
     buyer_spoke: bool = False
+    # The agent has spoken in its current turn (D80): set on its audio, cleared when the turn ends or is interrupted.
+    # Set only by the live session; text sessions and the simulator leave it False.
+    agent_spoke_this_turn: bool = False
     flags: list[str] = None
     clock: Callable[[], AwareDatetime] | None = None  # the real time: record timestamps
     # The mart's time (D74): pickup and call-back times. None → the same as `clock` (text sessions, the simulator)

@@ -179,3 +179,20 @@ def test_live_session_gives_the_agent_the_mart_time_and_retries_a_dropped_call_o
     assert result.outcome == "call_back" and "dropped" in result.flags
     # Retry 2 h later in the mart's day (13:00), not after the real 22:00 (which would be tomorrow 09:00)
     assert result.callback_at == MART + timedelta(hours=2)
+
+
+async def test_confirm_deal_waits_for_the_buyer_after_the_agent_spoke_in_this_turn():
+    """D80: "…Pakka?" and confirm_deal in one turn is refused; the same call after the buyer answers is a deal."""
+    store, call, ctx = await _call_on_mart_time()
+    try:
+        ctx.agent_spoke_this_turn = True  # the agent asked "Pakka?" and called the tool without waiting
+        refused = await _confirm(call)
+        ctx.agent_spoke_this_turn = False  # its turn ended; the buyer said yes
+        accepted = await _confirm(call)
+    finally:
+        unregister_context(call.call_id)
+
+    assert refused["ok"] is False
+    assert "has not answered the confirmation" in refused["reasons"][0]
+    assert accepted["ok"] is True, accepted
+    assert (await store.get_deal(call.call_id)) is not None
