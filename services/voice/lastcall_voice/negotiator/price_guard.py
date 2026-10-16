@@ -8,6 +8,7 @@ deterministic, and free of false positives.
 
 import asyncio
 import re
+import unicodedata
 from typing import Any, Literal
 
 from pydantic import BaseModel
@@ -29,7 +30,17 @@ URDU_DIGITS = {
 
 PREFIX_REGEX = re.compile(r"(?i)^(?:rs|₨|₹|pkr)$")
 SUFFIX_WORDS = {"rupay", "rupaye", "rupees", "روپے", "روپیہ"}
-SPOKEN_PRICE_CUES = {"rupay", "rupaye", "rupees", "روپے", "روپیہ", "sau", "سو", "hazaar", "ہزار"}
+# Spoken-price cues in the scripts the agent's transcript comes in: Roman Urdu, Urdu script, and Hindi script, which
+# the transcriber sometimes writes for the same Urdu speech (plans/module-8/results/transcription-script.md).
+# Compared after NFC normalisation, so "हज़ार" matches whether its dot is stored as one character or two.
+SPOKEN_PRICE_CUES = {
+    unicodedata.normalize("NFC", cue)
+    for cue in (
+        "rupay", "rupaye", "rupees", "sau", "hazaar",  # Roman Urdu
+        "روپے", "روپیہ", "سو", "ہزار",  # Urdu script
+        "रुपये", "रुपए", "सौ", "हज़ार", "हजार",  # Hindi script
+    )
+}  # fmt: skip
 
 
 def normalise_urdu_digits(text: str) -> str:
@@ -108,7 +119,7 @@ def classify(
 
 def has_spoken_price_cue(text: str) -> bool:
     """Checks whether text contains a spoken price cue."""
-    lower = text.lower()
+    lower = unicodedata.normalize("NFC", text).lower()
     return any(cue in lower for cue in SPOKEN_PRICE_CUES)
 
 

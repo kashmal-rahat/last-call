@@ -27,4 +27,5 @@ Run from the repository root with `uv run python scripts/<name>.py`. Scripts tha
 | `latency_probe.py` | How fast is Gemini Flash for an inspection call? |
 | `smoke_inspector.py` | Does the two-pass Inspector work on sample photos? |
 | `probe_live_3_8.py` | What can Gemini Live do in Urdu through ADK (voices, latency, interruptions)? |
+| `probe_transcription_script.py` | Which script does Live write Urdu speech in, per transcription language setting? (round 57; results in `plans/module-8/results/transcription-script.md`) |
 | `probe_places.py`, `probe_p1_p2.py` | How dense and reliable are Google Places results for buyers in Lahore? |

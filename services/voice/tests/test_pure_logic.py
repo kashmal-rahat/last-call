@@ -334,10 +334,10 @@ def test_price_guard_classify():
     assert classify([160], floor, approved, current) == "ok"
 
 
-def test_prompt_template_v1_16_male_voice_consistency():
+def test_prompt_template_v1_18_male_voice_consistency():
     from lastcall_voice.negotiator.prompt import PROMPT_VERSION, render_instruction
 
-    assert PROMPT_VERSION == "1.16"
+    assert PROMPT_VERSION == "1.18"
     brief = make_test_brief()
     view = brief.agent_view()
 
@@ -410,10 +410,17 @@ def test_prompt_template_v1_16_male_voice_consistency():
     assert '"Arey jaane dein, itna to humein bhi wara nahi khaata."' in male_voice
     assert "Haha" not in male_voice and "jaane do yaar" not in male_voice
     # 1.15: Urdu is the product; English only for a buyer speaking English sentences (a judge)
-    assert "You call local vendors in Urdu. Open in Urdu and stay in Urdu." in male_voice
-    assert "Only if the buyer speaks to you in English sentences, switch to English" in male_voice
+    assert "Language: you call local vendors in Urdu, so open in Urdu." in male_voice
+    # 1.17: once in English, every later turn stays English, the pitch included (a live call fell back to Urdu)
+    assert "switch to English and stay in English for the rest of the call: every later turn" in male_voice
+    assert "stay in Urdu" not in male_voice
+    # The language rule comes first in "How to speak", and the tone lines don't pull towards Urdu
+    assert male_voice.index("# How to speak\n- Language:") >= 0
+    assert "Everyday market language." in male_voice and "everyday Urdu" not in male_voice
+    assert "don't repeat the whole introduction" in male_voice
     assert 'Say the unit as "kilo" in Urdu and "kilo" in English' in male_voice
     assert "Punjabi" not in male_voice and '"Ji, main' not in male_voice
+    assert "[the price verify_offer returned] ke hisaab se," in male_voice  # 1.18
     assert "[the payment terms]. Pakka?" in male_voice and "cash par" not in male_voice  # from the brief (1.16)
     assert "Current time: 7 October, 12 PM" in male_voice  # no leading zero
     assert '"Soch lein, par maal [the deadline] tak hi ruk sakta hai."' in male_voice
@@ -614,7 +621,7 @@ def test_prompt_h5_cleanups():
 
     # 4. City style mapping
     prompt_lahore = render_instruction(view_sale, city_style="lahore", now=NOW)
-    assert "Lahore market style: warm, friendly everyday Urdu" in prompt_lahore
+    assert "Lahore market style: warm and friendly" in prompt_lahore
     assert "- lahore" not in prompt_lahore
 
     prompt_karachi = render_instruction(view_sale, city_style="karachi", now=NOW)
@@ -639,7 +646,8 @@ def test_input_audio_transcription_vocabulary_h5():
 
     cfg_default = build_input_transcription_config()
     assert "Sindhri" not in cfg_default.custom_vocabulary
-    assert cfg_default.language_hints.language_codes == ["ur", "en"]  # Urdu, and English for judges (1.15)
+    assert cfg_default.language_codes == ["ur", "en"]  # Urdu, and English for judges (D78)
+    assert cfg_default.language_hints is None  # the deprecated field is no longer used
 
     cfg_sindhri = build_input_transcription_config(item_words=["Sindhri", "Mangoes"])
     assert "Sindhri" in cfg_sindhri.custom_vocabulary
@@ -762,6 +770,7 @@ def test_prompt_says_the_condition_in_urdu_and_never_reads_the_english():
     )
     assert '"Bahar se thoray pakke huay aur daaghi hain, andar se maal theek hai.' in prompt
     assert "dark spots" not in prompt and "Very ripe" not in prompt
+    assert "say the Pitching line, or the same in English if the call is in English" in prompt  # 1.17
 
     feed = render_instruction(
         make_test_brief().model_copy(update={"condition_spoken": FEED_ONLY}).agent_view(), mode="voice", now=NOW
@@ -810,3 +819,19 @@ def test_prompt_unit_words_follow_the_item_and_the_language():
     prompt = render_instruction(brief.agent_view(), mode="voice", now=NOW)
     assert 'Say the unit as "darjan" in Urdu and "dozen" in English' in prompt
     assert 'for example "aik sau bees rupay darjan"' in prompt
+
+
+def test_spoken_price_cue_in_every_script_the_transcriber_writes():
+    """The safety net's trigger also reads Hindi script, which the transcriber sometimes writes for Urdu speech
+    (round 57 probe), in either Unicode form of the dotted letter; a price-free sentence doesn't trigger it."""
+    import unicodedata
+
+    assert has_spoken_price_cue("Aik sau das rupay darjan")
+    assert has_spoken_price_cue("ایک سو دس روپے درجن")
+    assert has_spoken_price_cue("एक सौ दस रुपये दर्जन")
+    assert has_spoken_price_cue("दो हजार")
+    one_char = "दो ह\u095bार"  # the dotted letter as one character (U+095B ज़)
+    two_chars = "दो ह\u091c\u093cार"  # ज (U+091C) and a separate dot (U+093C)
+    assert one_char != two_chars and unicodedata.normalize("NFC", one_char) == two_chars
+    assert has_spoken_price_cue(one_char) and has_spoken_price_cue(two_chars)
+    assert not has_spoken_price_cue("सोच लें, माल आज रात दस बजे तक रुक सकता है")

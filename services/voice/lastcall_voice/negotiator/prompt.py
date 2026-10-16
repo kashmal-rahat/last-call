@@ -10,7 +10,7 @@ from lastcall_shared.clock import pickup_by_words, time_words
 from lastcall_shared.condition_words import FEED_ONLY
 from lastcall_shared.models import AgentDealBrief, BuyerType
 
-PROMPT_VERSION = "1.16"
+PROMPT_VERSION = "1.18"
 TEMPLATE_DIR = Path(__file__).parent
 
 _GENDER_TABLE = {
@@ -122,7 +122,7 @@ def buyer_type_words(buyer_type: str) -> str:
 CITY_STYLES: dict[str, str] = {
     # How to address the buyer is one rule in the prompt ("aap", then "Bhai" or "Baji" once clear), not per city
     "karachi": "- Karachi market style: polite, friendly, business-minded.",
-    "lahore": "- Lahore market style: warm, friendly everyday Urdu, relaxed and confident bargaining.",
+    "lahore": "- Lahore market style: warm and friendly, relaxed and confident bargaining.",
     "islamabad": "- Islamabad style: polite, formal and courteous market tone.",
 }
 

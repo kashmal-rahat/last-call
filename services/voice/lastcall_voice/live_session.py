@@ -70,7 +70,11 @@ CUSTOM_VOCABULARY = BASE_MARKET_VOCABULARY
 def build_input_transcription_config(
     item_words: list[str] | None = None,
 ) -> types.AudioTranscriptionConfig:
-    """Builds input transcription config with Urdu/Punjabi/English language hints and market vocabulary."""
+    """The buyer's transcription: Urdu and English language codes (D78) and market vocabulary.
+
+    `language_codes` is the current field; the nested `language_hints` is deprecated in google-genai and will be
+    removed. The agent's own transcription stays unset: no setting makes its script consistent, and codes made
+    transcripts go missing (plans/module-8/results/transcription-script.md)."""
     vocab = list(BASE_MARKET_VOCABULARY)
     if item_words:
         for w in item_words:
@@ -79,7 +83,7 @@ def build_input_transcription_config(
                 vocab.append(cleaned)
     try:
         return types.AudioTranscriptionConfig(
-            language_hints=types.LanguageHints(language_codes=["ur", "en"]),
+            language_codes=["ur", "en"],
             custom_vocabulary=vocab,
         )
     except Exception as exc:
