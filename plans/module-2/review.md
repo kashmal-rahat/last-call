@@ -151,6 +151,7 @@ The earlier criticals (C0–C4) are verified fixed. The "Updated the Limit" comm
   - No offer, `buyer_asks_lower=False`: return the current price **without moving**. Use `quote` the first time, then `repeat`. If a price was already accepted, return `accepted_price`.
   - No offer, `buyer_asks_lower=True`, and nothing accepted yet: move to the next rung (`counter`, or `final` at the last rung).
   - After an accept, nothing moves the price any more.
+    - (Module 8 round 69) The price still never moves; a lower offer or `buyer_asks_lower` after an accept now returns `final` at the accepted price (it returned `accept`), so the agent's "aakhri rate" matches the v1.4 rule.
 - **Prompt v1.6:** "To repeat a price, call verify_offer with no arguments. Only set buyer_asks_lower=true when the buyer asks for a lower price without naming a number."
 - **Tests:**
   - Repeated calls with no offer return the same price.

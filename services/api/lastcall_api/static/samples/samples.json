@@ -32,11 +32,11 @@
     "default": false
   },
   {
-    "id": "day10_banana_tomato_ai",
-    "label": "Day 10 · Banana Tomato · AI",
-    "url": "/static/samples/Day-10-Banana-Tomato-AI.jpg",
-    "thumb": "/static/samples/thumbs/Day-10-Banana-Tomato-AI.jpg",
-    "ai_generated": true,
+    "id": "day10_banana_tomato",
+    "label": "Day 10 · Banana Tomato",
+    "url": "/static/samples/Day-10-Banana-Tomato.jpg",
+    "thumb": "/static/samples/thumbs/Day-10-Banana-Tomato.jpg",
+    "ai_generated": false,
     "default": false
   }
 ]

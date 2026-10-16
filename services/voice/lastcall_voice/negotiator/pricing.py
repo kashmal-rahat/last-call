@@ -26,7 +26,8 @@ def verify_offer(
 
     Evaluation rules apply in strict order:
     1. Donation -> donation, price 0.
-    2. Already accepted -> price never moves, returns accepted_price.
+    2. Already accepted -> price never moves, returns accepted_price: repeat with no offer, accept for an offer at or
+       above it, final for a lower offer or buyer_asks_lower (the agreed price is the last one).
     3. No offer:
        - buyer_asks_lower=True: moves exactly one rung (counter or final).
        - buyer_asks_lower=False: returns current price without moving (quote first time, repeat after).
@@ -49,8 +50,15 @@ def verify_offer(
         price = 0
         state.accepted_price = 0
     elif state.accepted_price is not None:
+        # After an agreement nothing moves the price (Module 2 K1). Asking for less gets "final", so the agent can say
+        # it is the last rate ("aakhri" only on final, prompt v1.4), which is true here: no rule lowers it any more
         price = state.accepted_price
-        decision = "repeat" if buyer_offer is None else "accept"
+        if buyer_offer is None:
+            decision = "final" if buyer_asks_lower else "repeat"
+        elif buyer_offer >= price:
+            decision = "accept"
+        else:
+            decision = "final"
     elif buyer_offer is None:
         if buyer_asks_lower:
             state.quoted = True

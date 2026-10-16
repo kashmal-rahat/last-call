@@ -13,6 +13,7 @@ from lastcall_shared.models import (
     DealBrief,
     MartInfo,
     NegotiationPolicy,
+    NegotiationState,
     build_ladder,
     init_negotiation,
 )
@@ -729,6 +730,31 @@ def test_verify_offer_no_numeric_offer_ladder_progression():
     # 8. After accept, even buyer_asks_lower=True returns accepted price 140 without moving
     d_try_lower = verify_offer(state, policy, "sale", None, buyer_asks_lower=True)
     assert d_try_lower.price_per_unit == 140
+    assert d_try_lower.decision == "final"  # asking for less after the agreement: the agreed price is the last one
+
+
+def test_after_an_agreement_a_lower_offer_is_final_at_the_agreed_price():
+    """A live call agreed 70, then the buyer asked for 65 (the floor): verify_offer answered "accept, 70", so the agent
+    could only say "aakhri rate" against the prompt's rule (final only). The price never moves (Module 2 K1); only
+    the label says so now."""
+    policy = NegotiationPolicy()
+    state = NegotiationState(ladder=[110, 90, 75, 65], rung=2, approved_prices=[110, 90, 75], quoted=True)
+
+    agreed = verify_offer(state, policy, "sale", 70)  # within one step of 75
+    assert (agreed.decision, agreed.price_per_unit, state.accepted_price) == ("accept", 70, 70)
+
+    lower = verify_offer(state, policy, "sale", 65)
+    assert (lower.decision, lower.price_per_unit, lower.offer_band) == ("final", 70, "close")
+    lowball = verify_offer(state, policy, "sale", 30)
+    assert (lowball.decision, lowball.price_per_unit, lowball.offer_band) == ("final", 70, "lowball")
+    assert (verify_offer(state, policy, "sale", 70).decision, verify_offer(state, policy, "sale", 80).decision) == (
+        "accept",
+        "accept",
+    )
+    assert verify_offer(state, policy, "sale", None).decision == "repeat"  # the confirmation repeats it
+
+    # Nothing moved: the price, the rung and what confirm_deal may accept
+    assert (state.accepted_price, state.rung, state.approved_prices) == (70, 2, [110, 90, 75, 70])
 
 
 def test_fallback_config_and_parsing():
