@@ -14,6 +14,7 @@ from lastcall_api.scout.scout import ScoutNotApplicable
 from lastcall_shared import ids
 from lastcall_shared.buyer_keys import mask_phone
 from lastcall_shared.clock import mart_now, time_words
+from lastcall_shared.condition_words import spoken_condition
 from lastcall_shared.models import (
     BatchRecord,
     Branch,
@@ -130,6 +131,7 @@ def build_call_record(
     plan: StepPlan,
     candidate: ScoutCandidate,
     decision: LadderDecision,
+    item: ItemAssessment,
     rules: MartRules,
     branch: Branch,
     now: datetime,
@@ -161,6 +163,7 @@ def build_call_record(
         deal_type=deal_type,
         item=decision.name,
         condition=decision.buyer_condition,
+        condition_spoken=spoken_condition(item.stage, item.issues),
         quantity=batch.remaining_quantity,
         quantity_unit=decision.unit,
         quantity_confirmed_by_staff=batch.quantity_confirmed,

@@ -19,6 +19,7 @@ from lastcall_voice.negotiator.buyer_messages import (
 )
 from lastcall_voice.negotiator.deals import validate_deal_terms
 from lastcall_voice.negotiator.pricing import verify_offer as verify_offer_logic
+from lastcall_voice.negotiator.prompt import unit_words
 
 logger = logging.getLogger("lastcall_voice.tools")
 
@@ -69,7 +70,7 @@ async def verify_offer(
     return {
         "decision": decision.decision,
         "price_per_unit": decision.price_per_unit,
-        "unit": decision.unit,
+        "unit": unit_words(decision.unit),  # "darjan" / "kilo", the word the prompt uses, so the agent says one
         "offer_band": decision.offer_band,
     }
 
@@ -114,7 +115,7 @@ async def confirm_deal(
     # 2. Check quantity vs remaining stock (C0)
     if quantity > batch.remaining_quantity:
         rem_q = int(batch.remaining_quantity) if batch.remaining_quantity.is_integer() else batch.remaining_quantity
-        unit_str = call.brief.quantity_unit
+        unit_str = unit_words(call.brief.quantity_unit)
         return {
             "ok": False,
             "reasons": [f"Only {rem_q} {unit_str} is available"],

@@ -7,9 +7,10 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from pydantic import AwareDatetime
 
 from lastcall_shared.clock import pickup_by_words, time_words
+from lastcall_shared.condition_words import FEED_ONLY
 from lastcall_shared.models import AgentDealBrief
 
-PROMPT_VERSION = "1.7"
+PROMPT_VERSION = "1.11"
 TEMPLATE_DIR = Path(__file__).parent
 
 _GENDER_TABLE = {
@@ -121,10 +122,29 @@ CITY_STYLES: dict[str, str] = {
 
 
 def generate_pitch(view: AgentDealBrief) -> str:
+    """The pitch, one short sentence: what, how much and, when it has the spoken words (D77), the condition; for a
+    sale the agent adds the price from verify_offer. An English description stays out of it (too long to say)."""
     q = quantity_words(view.quantity, view.quantity_unit, view.quantity_confirmed_by_staff)
+    what = (
+        f"Humare paas {q} {view.item} hain, {view.condition}"
+        if view.condition_spoken
+        else f"Humare paas {q} {view.item} hain"
+    )
     if view.deal_type == "donation":
-        return f"Humare paas {q} {view.item} hain jo abhi theek hain, aap ke idaare ke liye bilkul free dene ko tayyar hain."
-    return f"Humare paas {q} {view.item} hain, condition {view.condition} hai, aur rate bohat munasib hai."
+        return f"{what}, aap ke idaare ke liye bilkul free."
+    return f"{what}, rate bohat munasib hai."
+
+
+def quality_line(view: AgentDealBrief) -> str:
+    """What the agent says to a quality doubt before sending the photo. Feed-only stock is never called fine inside."""
+    if view.condition_spoken and view.condition == FEED_ONLY:
+        return "Yeh maal chaare ke liye hai, khane ke liye nahi. Photo bhej deta hoon, khud dekh lein."
+    if view.condition_spoken:
+        return f"Bahar se {view.condition} hain, andar se maal theek hai. Photo bhej deta hoon, khud tasalli kar lein."
+    condition_short = view.condition.split(",")[0].strip().lower()
+    return (
+        f"Bahar se thora {condition_short} hai, andar se maal theek hai. Photo bhej deta hoon, khud tasalli kar lein."
+    )
 
 
 def render_instruction(
@@ -157,8 +177,6 @@ def render_instruction(
         market_rate_w = price_words(view.market_rate_per_unit, view.opening_price_unit)
 
     resolved_city_style = CITY_STYLES.get(city_style, city_style)
-    condition_short = view.condition.split(",")[0].strip().lower()
-
     rendered = template.render(
         mart_name=view.mart.name,
         mart_location=view.mart.location,
@@ -166,7 +184,7 @@ def render_instruction(
         buyer_type_words=buyer_type_words(view.buyer.type),
         item=view.item,
         condition=view.condition,
-        condition_short=condition_short,
+        quality_line=quality_line(view),
         quantity_words=quantity_words(view.quantity, view.quantity_unit, view.quantity_confirmed_by_staff),
         pickup_window_words=pickup_window_words,
         pickup_deadline_words=pickup_deadline_words,
@@ -179,6 +197,7 @@ def render_instruction(
         buyer_honorific="Bhai",
         mode=mode,
         deal_type=view.deal_type,
+        condition_spoken=view.condition_spoken,
         pitch_line=generate_pitch(view),
         unit_words=unit_words(view.quantity_unit),
     )

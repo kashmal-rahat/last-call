@@ -108,6 +108,11 @@
       "title": "Condition",
       "type": "string"
     },
+    "condition_spoken": {
+      "default": false,
+      "title": "Condition Spoken",
+      "type": "boolean"
+    },
     "quantity": {
       "exclusiveMinimum": 0,
       "title": "Quantity",

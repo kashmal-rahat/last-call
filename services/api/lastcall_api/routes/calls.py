@@ -218,7 +218,7 @@ async def demo_create_call(request: Request, body: CreateCallRequest, store: Cal
 
     plan = batch.plans[batch.step_index]
     call = build_call_record(
-        batch=batch, plan=plan, candidate=candidate, decision=decision, rules=rules, branch=branch, now=now
+        batch=batch, plan=plan, candidate=candidate, decision=decision, item=item, rules=rules, branch=branch, now=now
     )
     await store.create_call(call, batch)
     await store.add_batch_attempt(

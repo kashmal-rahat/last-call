@@ -309,7 +309,7 @@ async def handle_live_call_websocket(
                 role="user",
                 parts=[
                     types.Part.from_text(
-                        text="[SYSTEM] The buyer has answered. Greet, disclose you are an AI, ask for a minute."
+                        text="[SYSTEM] The buyer has answered. Greet, say you are the AI assistant, ask for a minute, then stop and wait."
                     )
                 ],
             )

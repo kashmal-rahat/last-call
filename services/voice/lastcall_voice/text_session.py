@@ -137,7 +137,7 @@ async def run_text_turn(
     runner: Runner = session_data["runner"]
 
     if session_data["first_turn"]:
-        input_text = "[SYSTEM] The buyer has answered. Greet, disclose you are an AI, ask for a minute."
+        input_text = "[SYSTEM] The buyer has answered. Greet, say you are the AI assistant, ask for a minute, then stop and wait."
         session_data["first_turn"] = False
     else:
         clean_text = re.sub(r"^\[SYSTEM\]\s*", "", buyer_text).strip()

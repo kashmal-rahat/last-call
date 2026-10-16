@@ -256,7 +256,8 @@ class AgentDealBrief(BaseModel):
     call_id: str
     deal_type: DealType = "sale"
     item: str
-    condition: str
+    condition: str  # the spoken words when the brief has them (D77), else the English description
+    condition_spoken: bool = False  # whether `condition` is the spoken words
     quantity: Annotated[float, Field(gt=0)]
     quantity_unit: Unit
     quantity_confirmed_by_staff: bool = False
@@ -280,7 +281,8 @@ class DealBrief(BaseModel):
     call_id: str
     deal_type: DealType = "sale"
     item: str
-    condition: str
+    condition: str  # English, for the page, WhatsApp and the photo caption
+    condition_spoken: str | None = None  # how the agent says it (D77); None in older records and test scenarios
     # Staff-confirmed amount, or the low end of the photo estimate when False.
     quantity: Annotated[float, Field(gt=0)]
     quantity_unit: Unit
@@ -331,7 +333,10 @@ class DealBrief(BaseModel):
         return self
 
     def agent_view(self) -> AgentDealBrief:
-        dump = self.model_dump(exclude={"floor_price_per_unit", "floor_price_unit"})
+        dump = self.model_dump(exclude={"floor_price_per_unit", "floor_price_unit", "condition_spoken"})
+        # The agent never sees the English description when there are spoken words, so it can't read it out (D77)
+        if self.condition_spoken:
+            dump["condition"], dump["condition_spoken"] = self.condition_spoken, True
         if "buyer" in dump and isinstance(dump["buyer"], dict):
             dump["buyer"].pop("phone", None)
             dump["buyer"].pop("buyer_id", None)  # R2: agent does not need internal buyer_id

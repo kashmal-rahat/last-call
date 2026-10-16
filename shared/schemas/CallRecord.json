@@ -274,6 +274,18 @@
           "title": "Condition",
           "type": "string"
         },
+        "condition_spoken": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Condition Spoken"
+        },
         "quantity": {
           "exclusiveMinimum": 0,
           "title": "Quantity",

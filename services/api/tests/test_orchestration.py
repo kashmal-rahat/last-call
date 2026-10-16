@@ -225,6 +225,11 @@ def test_pickup_window_words_are_times_people_say(demo_rules):
     assert f"{time_words(s)} to {time_words(d)}" == "12 October, 9 AM to 12 October, 12 PM"
 
 
+OVERRIPE_SPOTTED = _make_item(10, 12).model_copy(
+    update={"stage": "overripe", "worst_stage": "overripe", "issues": ["dark_spots", "browning"]}
+)
+
+
 def test_build_call_record(demo_rules):
     now = datetime(2026, 10, 11, 14, 0, 0, tzinfo=PKT)
     branch = demo_rules.branches[0]
@@ -277,6 +282,7 @@ def test_build_call_record(demo_rules):
         plan=plan,
         candidate=candidate,
         decision=decision,
+        item=OVERRIPE_SPOTTED,
         rules=demo_rules,
         branch=branch,
         now=now,
@@ -284,6 +290,10 @@ def test_build_call_record(demo_rules):
 
     # 1. Quantity matches batch.remaining_quantity
     assert call_rec.brief.quantity == 35.0
+    # The agent says the condition in Urdu (D77); the English stays for the page and WhatsApp
+    assert call_rec.brief.condition_spoken == "thoray pakke huay aur daaghi"
+    assert call_rec.brief.condition == "Slightly bruised, very sweet"
+    assert call_rec.brief.agent_view().condition == "thoray pakke huay aur daaghi"
     assert call_rec.brief.quantity_confirmed_by_staff is True
 
     # 2. Stored brief has NO full E.164 phone digits (+923001234567)
@@ -309,6 +319,7 @@ def test_build_call_record(demo_rules):
         plan=plan_don,
         candidate=candidate,
         decision=decision,
+        item=OVERRIPE_SPOTTED,
         rules=demo_rules,
         branch=branch,
         now=now,
@@ -364,6 +375,7 @@ def test_build_call_record_runs_the_pickup_window_on_the_batchs_mart_time(demo_r
         plan=plan,
         candidate=candidate,
         decision=decision,
+        item=OVERRIPE_SPOTTED,
         rules=demo_rules,
         branch=demo_rules.branches[0],
         now=real,

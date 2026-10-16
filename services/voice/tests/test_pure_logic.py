@@ -334,10 +334,10 @@ def test_price_guard_classify():
     assert classify([160], floor, approved, current) == "ok"
 
 
-def test_prompt_template_v1_7_male_voice_consistency():
+def test_prompt_template_v1_11_male_voice_consistency():
     from lastcall_voice.negotiator.prompt import PROMPT_VERSION, render_instruction
 
-    assert PROMPT_VERSION == "1.7"
+    assert PROMPT_VERSION == "1.11"
     brief = make_test_brief()
     view = brief.agent_view()
 
@@ -347,6 +347,11 @@ def test_prompt_template_v1_7_male_voice_consistency():
     # D76: pickup is by the deadline; the agent states it and never asks for or chooses a time
     pickup_rule = "Say only this deadline: never a start time, and never ask for or choose a pickup time."
     confirm_tool = "confirm_deal(price_per_unit, quantity, buyer_confirmed)"
+    # A live call ended with "I have recorded the outcome as declined…" spoken to the buyer
+    no_narration = "Never mention your tools, what you recorded or the call's outcome."
+    # Short turns (1.9): the opening only asks for a minute; the agent waits after every question
+    opening_waits = "Then stop and wait for their answer. Say nothing about the produce yet."
+    short_turns = "Keep turns short, usually one or two sentences; say more only when the buyer asks for detail."
     repeat_rule = "To repeat a price, call verify_offer with no arguments. Only set buyer_asks_lower=true when the buyer asks for a lower price without naming a number."
 
     # Male rendering in text mode
@@ -373,6 +378,7 @@ def test_prompt_template_v1_7_male_voice_consistency():
     assert sauda_rule in male_text
     assert repeat_rule in male_text
     assert pickup_rule in male_text and confirm_tool in male_text
+    assert no_narration in male_text
     assert "pickup_time_iso" not in male_text
 
     # Voice mode: also consistently male
@@ -398,6 +404,10 @@ def test_prompt_template_v1_7_male_voice_consistency():
     assert qty_rule in male_voice
     assert sauda_rule in male_voice
     assert repeat_rule in male_voice
+    assert no_narration in male_voice
+    assert 'Always say "kilo" for the unit, never another word for it, even if the buyer does.' in male_voice
+    assert opening_waits in male_voice and short_turns in male_voice
+    assert "Do minute milenge? Kaam ki baat hai." in male_voice
 
 
 @pytest.mark.asyncio
@@ -434,7 +444,7 @@ async def test_confirm_deal_c0_validations():
     )
     assert res_qty["ok"] is False
     assert res_qty["available_quantity"] == 50.0
-    assert any("Only 50" in r for r in res_qty["reasons"])
+    assert any("Only 50 kilo is available" in r for r in res_qty["reasons"])  # the prompt's unit word
     assert not ctx.outcome_set
     assert await store.get_deal(call.call_id) is None
 
@@ -479,6 +489,7 @@ async def test_fresh_state_in_price_guard_c1():
     # Concession 1
     ans1 = await verify_offer(buyer_offer_per_unit=130, tool_context=tc)
     c1_price = ans1["price_per_unit"]
+    assert ans1["unit"] in ("kilo", "darjan")  # the prompt's word, never "kg" / "dozen", so the agent says one word
 
     # Concession 2
     ans2 = await verify_offer(buyer_offer_per_unit=130, tool_context=tc)
@@ -569,16 +580,16 @@ def test_prompt_h5_cleanups():
     brief_donation = make_test_brief(deal_type="donation")
     view_donation = brief_donation.agent_view()
     pitch_donation = generate_pitch(view_donation)
-    assert "aap ke idaare ke liye bilkul free" in pitch_donation
+    assert pitch_donation == "Humare paas 50 kilo Sindhri Mangoes hain, aap ke idaare ke liye bilkul free."
     assert "shelter" not in pitch_donation
 
     # 2. Pitch: sale case drops "taaza"
     brief_sale = make_test_brief()
     view_sale = brief_sale.agent_view()
     pitch_sale = generate_pitch(view_sale)
+    # One short sentence: what and how much; the condition only when the buyer asks (1.9)
+    assert pitch_sale == "Humare paas 50 kilo Sindhri Mangoes hain, rate bohat munasib hai."
     assert "taaza" not in pitch_sale
-    assert "condition Ripe, minor spots" in pitch_sale
-    assert "rate bohat munasib hai" in pitch_sale
 
     # 3. Quality doubt line in prompt uses condition_short
     rendered_sale = render_instruction(view_sale, now=NOW)
@@ -717,3 +728,32 @@ def test_fallback_config_and_parsing():
 
     for bad in ('{"agent_offered_prices": ["sau"]}', '{"prices": [145]}', "not json"):
         assert asyncio.run(fallback_extract_prices("ek sau rupay", Client(bad), model="m")) == ([], True), bad
+
+
+def test_prompt_says_the_condition_in_urdu_and_never_reads_the_english():
+    """D77: with spoken words in the brief, the pitch and the quality line use them and the English never reaches
+    the prompt; feed-only stock is never called fine inside. Briefs without them (scenarios) keep the old lines."""
+    from lastcall_shared.condition_words import FEED_ONLY
+    from lastcall_voice.negotiator.prompt import generate_pitch, render_instruction
+
+    english = "Very ripe; dark spots, browning. Yellow peels with heavy dark spotting."
+    brief = make_test_brief().model_copy(
+        update={"condition": english, "condition_spoken": "thoray pakke huay aur daaghi"}
+    )
+    view = brief.agent_view()
+    prompt = render_instruction(view, mode="voice", now=NOW)
+
+    assert (
+        generate_pitch(view)
+        == "Humare paas 50 kilo Sindhri Mangoes hain, thoray pakke huay aur daaghi, rate bohat munasib hai."
+    )
+    assert '"Bahar se thoray pakke huay aur daaghi hain, andar se maal theek hai.' in prompt
+    assert "dark spots" not in prompt and "Very ripe" not in prompt
+
+    feed = render_instruction(
+        make_test_brief().model_copy(update={"condition_spoken": FEED_ONLY}).agent_view(), mode="voice", now=NOW
+    )
+    assert "Yeh maal chaare ke liye hai, khane ke liye nahi." in feed and "andar se maal theek hai" not in feed
+
+    old = render_instruction(make_test_brief().agent_view(), mode="voice", now=NOW)
+    assert "Bahar se thora ripe hai, andar se maal theek hai." in old
