@@ -188,6 +188,14 @@
   display: none;
   margin-bottom: 0.75rem;
 }
+/* A call was asked for before the staff check: the box to tick (call.js) */
+#buyerStaffCheckRow.needs-check {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--amber-border);
+  border-radius: 8px;
+  background: var(--amber-light);
+  color: var(--amber-text);
+}
 #buyerHoursBanner {
   display: none;
   margin-bottom: 1rem;

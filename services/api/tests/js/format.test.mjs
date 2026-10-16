@@ -18,7 +18,8 @@ import {
   formatProfileLine,
   getFindBuyersLabel,
   getNextStepTargetLabel,
-  formatCallbackTime
+  formatCallbackTime,
+  staffCheckPending
 } from '../../lastcall_api/static/js/format.js';
 
 test('computeImpact: zero batches -> zero metrics', () => {
@@ -327,4 +328,13 @@ test('formatCallbackTime: Lahore time, with the day when it is not today', () =>
   assert.equal(formatCallbackTime('2026-10-17T09:00:00+05:00', now), 'Sat 17 Oct 09:00');
   // Just after midnight in Lahore, 09:00 is today there, though it is still the 15th in UTC
   assert.equal(formatCallbackTime('2026-10-16T09:00:00+05:00', new Date('2026-10-15T19:30:00Z')), '09:00');
+});
+
+test('staffCheckPending: only an unticked item on hold, before its batch exists', () => {
+  const held = { on_hold: true };
+  assert.equal(staffCheckPending(held, undefined, false), true);
+  assert.equal(staffCheckPending(held, undefined, true), false);  // ticked
+  assert.equal(staffCheckPending(held, { batch_id: 'b' }, false), false);  // the batch exists: the hold is behind it
+  assert.equal(staffCheckPending({ on_hold: false }, undefined, false), false);
+  assert.equal(staffCheckPending(null, undefined, false), false);  // no decision: the server decides
 });

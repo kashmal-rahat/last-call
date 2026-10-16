@@ -272,11 +272,18 @@ export function renderActiveBuyers() {
     dom.buyerStaffCheckRow.style.display = 'block';
     dom.buyerStaffCheck.checked = !!state.staffCheckedMap[state.activeItemKey];
     dom.buyerStaffCheck.disabled = state.isCallInProgress;
+    // Highlighted after a call was asked for unticked (call.js), for that item only, until it is ticked
+    const highlight = () => dom.buyerStaffCheckRow.classList.toggle('needs-check',
+      dom.buyerStaffCheckRow.dataset.needsCheck === `${state.currentInspection.inspection_id}__${state.activeItemKey}`
+      && !dom.buyerStaffCheck.checked);
+    highlight();
     dom.buyerStaffCheck.onchange = () => {
       state.staffCheckedMap[state.activeItemKey] = dom.buyerStaffCheck.checked;
+      highlight();
     };
   } else {
     dom.buyerStaffCheckRow.style.display = 'none';
+    dom.buyerStaffCheckRow.classList.remove('needs-check');
   }
 
   // Error banner

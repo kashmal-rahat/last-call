@@ -8,7 +8,7 @@ import { showToast, scriptClass, icon, initials, scrollToSection } from './ui.js
 import { updateShelfLock } from './lock.js';
 import { renderResults } from './reading.js';
 import { renderNextActionRow } from './buyers.js';
-import { formatCallbackTime } from './format.js';
+import { formatCallbackTime, staffCheckPending } from './format.js';
 import { isPhoneMode, startPhoneCall } from './phone.js';
 
 export function setStatus(text, type = '') {
@@ -155,6 +155,17 @@ export function triggerWaveformAnimation() {
   }, 500);
 }
 
+// Brings the "Staff checked this item" box into view and highlights it until it is ticked (buyers.js)
+function pointToStaffCheck(itemKey) {
+  if (state.activeItemKey !== itemKey || !dom.buyerStaffCheckRow) return;  // the box shows the active item only
+  // The box is shared by every item and shelf photo (item keys repeat across photos): the highlight is this one's
+  dom.buyerStaffCheckRow.dataset.needsCheck = `${state.currentInspection.inspection_id}__${itemKey}`;
+  dom.buyerStaffCheckRow.classList.add('needs-check');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  dom.buyerStaffCheckRow.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+  if (dom.buyerStaffCheck) dom.buyerStaffCheck.focus({ preventScroll: true });
+}
+
 export async function startCallForItem(itemKey, buyerId) {
   state.retryCount = 0;
   const code = requireAccessCode();
@@ -163,6 +174,16 @@ export async function startCallForItem(itemKey, buyerId) {
 
   if (!state.currentInspection || !state.currentInspection.inspection_id) {
     showToast('Please run a shelf inspection first.', 'error');
+    return;
+  }
+
+  // On hold and unticked: point at the box instead of opening the call panel only for the server to refuse it
+  const decision = state.currentLadderResult && state.currentLadderResult.decisions
+    ? state.currentLadderResult.decisions.find(d => d.item_key === itemKey)
+    : null;
+  if (staffCheckPending(decision, state.currentBatchesMap[itemKey], !!state.staffCheckedMap[itemKey])) {
+    showToast('Tick “Staff checked this item” first. The AI asked for a person to check this item.', 'info');
+    pointToStaffCheck(itemKey);
     return;
   }
 

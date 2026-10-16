@@ -79,6 +79,9 @@ function reset() {
     isCallInProgress: false,
     ws: null,
     retryCount: 0,
+    currentBatchesMap: {},
+    staffCheckedMap: {},
+    activeItemKey: null,
   });
   // Every request is recorded; /demo/calls answers when the test releases it
   let releaseCall;
@@ -199,3 +202,39 @@ test('a missing access code is asked for at the code field, with no request sent
   assert.match(dom.accessCodeError.textContent, /Enter the access code/);
   assert.equal(log.requests.length, 0);
 });
+
+test('an item on hold and unticked: no call is started, so the call panel never opens for a refusal', async () => {
+  const { answerCall } = reset();
+  answerCall();
+  state.currentLadderResult = { decisions: [{ item_key: 'item_banana', on_hold: true }] };
+
+  await startCallForItem('item_banana', 'places:a');
+  assert.equal(log.requests.length, 0, 'nothing sent to the server');
+  assert.equal(state.isCallInProgress, false);
+  assert.equal(state.currentActiveCall, null);
+
+  state.staffCheckedMap.item_banana = true;  // staff ticked it
+  await startCallForItem('item_banana', 'places:a');
+  assert.deepEqual(log.requests, ['/demo/calls']);
+
+  // End the call that started, as a hang-up while its connection opens does
+  hangup();
+  log.sockets[0].onclose({ code: 1006 });
+  await settle();
+});
+
+test('an item on hold whose batch exists: the call goes ahead (the hold was cleared at its first call)', async () => {
+  const { answerCall } = reset();
+  answerCall();
+  state.currentLadderResult = { decisions: [{ item_key: 'item_banana', on_hold: true }] };
+  state.currentBatchesMap.item_banana = { batch_id: 'batch_1' };
+
+  await startCallForItem('item_banana', 'places:a');
+  assert.deepEqual(log.requests, ['/demo/calls']);
+
+  // End the call that started, as a hang-up while its connection opens does
+  hangup();
+  log.sockets[0].onclose({ code: 1006 });
+  await settle();
+});
+

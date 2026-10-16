@@ -190,6 +190,13 @@ export function getFindBuyersLabel(types) {
   return phrase ? `Find ${phrase}` : 'Find buyers';
 }
 
+// The item is on hold for a staff check (the AI wasn't sure, Module 3) and unticked, so the server would refuse its
+// first call ("Waiting for staff check"). The hold is checked only when the batch is created: once the item has a
+// batch, the tick no longer matters.
+export function staffCheckPending(decision, batch, staffChecked) {
+  return !!(decision && decision.on_hold) && !batch && !staffChecked;
+}
+
 // "19:05": a moment in Pakistan time. Pakistan has no daylight saving, so it is always UTC+5.
 export function formatPktClock(date) {
   const pk = new Date(date.getTime() + 5 * 3600 * 1000);
