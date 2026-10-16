@@ -1121,3 +1121,15 @@ From the user's iPhone screenshots of the deployed page:
 - **How often:** every photo estimate under 10 that isn't whole, since D71 rounds those down to the half; from 10 up quantities are whole.
 - **Change (code, voice calls only):** `prompt.spoken_amount` says halves in their own words, 0.5 "aadha", 1.5 "dedh", 2.5 "dhaai", n.5 "saadhe n" (the agent says "saadhe chaar"); any other amount (whole, or a rare 0.4 or 2.3 typed by staff) stays in digits. The pitch and the brief's quantity line use it; the brief keeps the number for the tool, "saadhe 4 kilo (4.5 in confirm_deal)", so the deal's quantity is still exact and checked. Text mode and the simulator keep digits; in English the agent says "four and a half kilos" on its own. Quarters (sawa, paune) left out: D71 never makes them, and "sawa 1" or a quarter dozen would need special cases. Prompt 1.24.
 - **Tests:** every half case, whole and other amounts in digits, the voice brief line and pitch, text mode unchanged, and no "(… in confirm_deal)" note for a whole quantity.
+
+# Round 63: the call hint asks the judge to request English, by Claude (2026-10-16)
+
+- **Found (user's testing):** answering in English only sometimes switched the agent; asking it to speak English always did.
+- **Change:** the call panel hint "…You can answer in English to test it." becomes "The AI speaks Urdu with local vendors. To test it in English, ask it to speak English." (D78 updated). No prompt change: a request in English is an English sentence, which the language rule already switches on, and it stays in English for the rest of the call.
+
+# Round 64: no "Search again" in the next-action row, by Claude (2026-10-16)
+
+- **Found (user):** after a bulk sale left stock and "Next step: find charities", the Buyers section showed "Searching…" and a "Search again" button at once. The new step has no buyer list, so its next action is `needs_search`, which the row drew as "Search again" (for a step never searched) while the step's search was already running; a click would start a duplicate search.
+- **Checked before removing:** the Buyers section's Find button (labelled by the batch's step, "Find charities") runs the same search. "Search again" forced `refresh=true`, but `needs_search` means no reusable list exists by the server's own rule (under 1 h, same step and buyer types; `loop.py` rule 5 and `routes/scout.py`), so the Find button's `refresh=false` also searches fresh. The button shows on every step that has a batch, and `needs_search` can't occur during a call (`busy`). The Next step flow searches itself. The server's `needs_search` (orchestration tests, the call refusal message) is unchanged. Same reason as D6 (one button per action).
+- **Change:** `renderNextActionRow` draws nothing for `needs_search` (buyers.js), in the Buyers section and the call result card; the module 8 plan's row list is updated.
+

@@ -144,7 +144,7 @@ The user deploys the API (`./scripts/deploy.sh api`) and checks Sections 1–3 o
   - "View on Google Maps ↗" (`https://` only, `target="_blank" rel="noopener"`)
   - the call button **"Start call · you play the buyer"**
 - **The other buyers** are compact rows with the same facts, plus "Play this buyer" or their status chip (Declined · Deal … @ Rs … · Donated … · Call back … · No answer · Asked not to be called).
-- **The next-action row** (`renderNextActionRow`, restyled): Next buyer, Next step, All stock placed, compost approval, no buyers, Search again, Call in progress.
+- **The next-action row** (`renderNextActionRow`, restyled): Next buyer, Next step, All stock placed, compost approval, no buyers, Call in progress. (Search again was removed in round 64: the Find buyers button runs the same search.)
 - **Footer** (required by Places policy and D50): **"Results from Google Maps"**, skipped counts in plain words, "Near <branch> · within 10 km", "Searched N min ago" (+ "· reused"), Refresh.
 - **"Screened out by Gemini (n)"** collapsible list: name · type · distance — reason.
 - Error banner and empty state ("No suitable buyers found nearby") as today.
@@ -374,7 +374,7 @@ No commits, no deploy. If the same test fails twice for the same reason, stop an
   - The item details become a small definition grid of label/value pairs (see the spec).
 - **D5. The stray "L" before the level** ("Lmid", "Llate"). Show the level as muted text: "mid stage", "late stage", "early stage".
 - **D6. Two call buttons for the same buyer.** "Start calling #1 B4 Bakers" sits above the card that has "Start call · you play the buyer".
-  - When the highlighted card is shown, the next-action row shows **no** call button; it shows only non-call actions (Next step, Search again, All stock placed…).
+  - When the highlighted card is shown, the next-action row shows **no** call button; it shows only non-call actions (Next step, All stock placed…).
 - **D7. "Confidence: 90%" looks like invented precision.** Show `confidence_level` in words: "High confidence", "Medium confidence", "Low confidence".
 - **D8. Monospace overused** (levels, scores, the footer, "Screened out by Gemini" at 18 px). Mono is only for the shelf ID and prices inside price cards. Numbers elsewhere use Inter with `font-variant-numeric: tabular-nums`.
 

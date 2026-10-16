@@ -76,6 +76,7 @@ export function renderNextActionRow(container, batch, itemKey, buyers = [], show
 
   if (batch && batch.next_action) {
     const act = batch.next_action;
+    // needs_search shows nothing: the Buyers section's Find button runs that search, under the same list rules
     if (act.kind === 'call') {
       const fallbackRank = act.buyer_rank || ((batch.attempts ? batch.attempts.length : 0) + 1);
       const targetB = findNextBuyer(act, buyers) || (act.buyer_id ? null : buyers[fallbackRank - 1] || null);
@@ -141,16 +142,6 @@ export function renderNextActionRow(container, batch, itemKey, buyers = [], show
       chip.className = 'chip chip-slate';
       chip.textContent = 'No more buyers nearby';
       container.appendChild(chip);
-    } else if (act.kind === 'needs_search') {
-      const btnSearch = document.createElement('button');
-      btnSearch.type = 'button';
-      btnSearch.className = 'btn-secondary';
-      btnSearch.textContent = 'Search again';
-      btnSearch.disabled = state.isCallInProgress;
-      btnSearch.addEventListener('click', () => {
-        fetchScoutBuyers(itemKey, true);
-      });
-      container.appendChild(btnSearch);
     } else if (act.kind === 'busy') {
       const chip = document.createElement('span');
       chip.className = 'chip chip-amber';
