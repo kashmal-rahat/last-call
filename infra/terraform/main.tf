@@ -385,11 +385,11 @@ resource "google_cloud_run_v2_service" "api" {
       }
       env {
         name  = "DEMO_DAILY_SESSION_CAP"
-        value = "50"
+        value = "100" # testing; lower again after testing (D21)
       }
       env {
         name  = "IP_RATE_LIMIT_PER_HOUR"
-        value = "20"
+        value = "50" # testing; lower again after testing (D21)
       }
       env {
         name  = "SHELF_PHOTO_BUCKET"
