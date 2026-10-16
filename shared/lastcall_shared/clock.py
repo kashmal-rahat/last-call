@@ -31,8 +31,8 @@ def clock_words(dt: datetime) -> str:
 
 
 def time_words(dt: datetime) -> str:
-    """'13 October, 6 PM': the date and time the agent says and the brief shows."""
-    return f"{dt.strftime('%d %B')}, {clock_words(dt)}"
+    """'13 October, 6 PM' ('7 October', not '07'): the date and time the agent says and the brief shows."""
+    return f"{dt.day} {dt.strftime('%B')}, {clock_words(dt)}"
 
 
 def day_words(dt: datetime, now: datetime) -> str:

@@ -334,10 +334,10 @@ def test_price_guard_classify():
     assert classify([160], floor, approved, current) == "ok"
 
 
-def test_prompt_template_v1_11_male_voice_consistency():
+def test_prompt_template_v1_16_male_voice_consistency():
     from lastcall_voice.negotiator.prompt import PROMPT_VERSION, render_instruction
 
-    assert PROMPT_VERSION == "1.11"
+    assert PROMPT_VERSION == "1.16"
     brief = make_test_brief()
     view = brief.agent_view()
 
@@ -351,7 +351,8 @@ def test_prompt_template_v1_11_male_voice_consistency():
     no_narration = "Never mention your tools, what you recorded or the call's outcome."
     # Short turns (1.9): the opening only asks for a minute; the agent waits after every question
     opening_waits = "Then stop and wait for their answer. Say nothing about the produce yet."
-    short_turns = "Keep turns short, usually one or two sentences; say more only when the buyer asks for detail."
+    # Natural sentences, no count (1.13): only "not everything at once" and the stop after a question
+    short_turns = "in natural, complete sentences. Say what this moment of the call needs, not everything at once"
     repeat_rule = "To repeat a price, call verify_offer with no arguments. Only set buyer_asks_lower=true when the buyer asks for a lower price without naming a number."
 
     # Male rendering in text mode
@@ -405,7 +406,18 @@ def test_prompt_template_v1_11_male_voice_consistency():
     assert sauda_rule in male_voice
     assert repeat_rule in male_voice
     assert no_narration in male_voice
-    assert 'Always say "kilo" for the unit, never another word for it, even if the buyer does.' in male_voice
+    # 1.14: the laugh is an instruction, not a spoken "Haha"; "jaane dein" (aap), no "yaar" in the lowball line
+    assert '"Arey jaane dein, itna to humein bhi wara nahi khaata."' in male_voice
+    assert "Haha" not in male_voice and "jaane do yaar" not in male_voice
+    # 1.15: Urdu is the product; English only for a buyer speaking English sentences (a judge)
+    assert "You call local vendors in Urdu. Open in Urdu and stay in Urdu." in male_voice
+    assert "Only if the buyer speaks to you in English sentences, switch to English" in male_voice
+    assert 'Say the unit as "kilo" in Urdu and "kilo" in English' in male_voice
+    assert "Punjabi" not in male_voice and '"Ji, main' not in male_voice
+    assert "[the payment terms]. Pakka?" in male_voice and "cash par" not in male_voice  # from the brief (1.16)
+    assert "Current time: 7 October, 12 PM" in male_voice  # no leading zero
+    assert '"Soch lein, par maal [the deadline] tak hi ruk sakta hai."' in male_voice
+    assert '(In English: "Come on, at that price even we\'d lose money.")' in male_voice
     assert opening_waits in male_voice and short_turns in male_voice
     assert "Do minute milenge? Kaam ki baat hai." in male_voice
 
@@ -602,7 +614,7 @@ def test_prompt_h5_cleanups():
 
     # 4. City style mapping
     prompt_lahore = render_instruction(view_sale, city_style="lahore", now=NOW)
-    assert "Lahori style: Punjabi-flavoured words where natural" in prompt_lahore
+    assert "Lahore market style: warm, friendly everyday Urdu" in prompt_lahore
     assert "- lahore" not in prompt_lahore
 
     prompt_karachi = render_instruction(view_sale, city_style="karachi", now=NOW)
@@ -627,6 +639,7 @@ def test_input_audio_transcription_vocabulary_h5():
 
     cfg_default = build_input_transcription_config()
     assert "Sindhri" not in cfg_default.custom_vocabulary
+    assert cfg_default.language_hints.language_codes == ["ur", "en"]  # Urdu, and English for judges (1.15)
 
     cfg_sindhri = build_input_transcription_config(item_words=["Sindhri", "Mangoes"])
     assert "Sindhri" in cfg_sindhri.custom_vocabulary
@@ -743,9 +756,9 @@ def test_prompt_says_the_condition_in_urdu_and_never_reads_the_english():
     view = brief.agent_view()
     prompt = render_instruction(view, mode="voice", now=NOW)
 
-    assert (
-        generate_pitch(view)
-        == "Humare paas 50 kilo Sindhri Mangoes hain, thoray pakke huay aur daaghi, rate bohat munasib hai."
+    assert generate_pitch(view) == (
+        "Humare paas 50 kilo Sindhri Mangoes hain, bas thoray pakke huay aur daaghi hain, "
+        "lekin juice aur shake ke liye bilkul theek."
     )
     assert '"Bahar se thoray pakke huay aur daaghi hain, andar se maal theek hai.' in prompt
     assert "dark spots" not in prompt and "Very ripe" not in prompt
@@ -757,3 +770,43 @@ def test_prompt_says_the_condition_in_urdu_and_never_reads_the_english():
 
     old = render_instruction(make_test_brief().agent_view(), mode="voice", now=NOW)
     assert "Bahar se thora ripe hai, andar se maal theek hai." in old
+
+
+def test_pitch_frames_the_condition_with_what_it_suits():
+    """1.13: every kind of buyer has a use phrase; fresh stock isn't excused, feed-only stock is said plainly."""
+    from typing import get_args
+
+    from lastcall_shared.condition_words import FEED_ONLY
+    from lastcall_shared.models import BuyerType
+    from lastcall_voice.negotiator.prompt import USE_FOR, generate_pitch
+
+    assert set(USE_FOR) == set(get_args(BuyerType))
+
+    def pitch(condition: str, buyer_type: str = "bakery", deal_type: str = "sale") -> str:
+        brief = make_test_brief(deal_type=deal_type).model_copy(update={"condition_spoken": condition})
+        brief.buyer.type = buyer_type
+        return generate_pitch(brief.agent_view())
+
+    assert pitch("thoray pakke huay") == (
+        "Humare paas 50 kilo Sindhri Mangoes hain, bas thoray pakke huay hain, lekin bakery items ke liye bilkul theek."
+    )
+    assert pitch("taaza") == "Humare paas 50 kilo Sindhri Mangoes hain, bilkul taaza."
+    assert pitch(FEED_ONLY, "dairy_farm") == (
+        "Humare paas 50 kilo Sindhri Mangoes hain, khane ke liye nahi, lekin chaare ke liye bilkul theek."
+    )
+    assert pitch("thoray pakke huay", "charity", "donation") == (
+        "Humare paas 50 kilo Sindhri Mangoes hain, bas thoray pakke huay hain, lekin bilkul khane ke qabil, "
+        "aap ke idaare ke liye bilkul free."
+    )
+
+
+def test_prompt_unit_words_follow_the_item_and_the_language():
+    """1.15: an item sold by the dozen is "darjan" in Urdu and "dozen" in English; the price example matches."""
+    from lastcall_voice.negotiator.prompt import render_instruction
+
+    brief = make_test_brief().model_copy(
+        update={"quantity_unit": "dozen", "opening_price_unit": "dozen", "floor_price_unit": "dozen"}
+    )
+    prompt = render_instruction(brief.agent_view(), mode="voice", now=NOW)
+    assert 'Say the unit as "darjan" in Urdu and "dozen" in English' in prompt
+    assert 'for example "aik sau bees rupay darjan"' in prompt

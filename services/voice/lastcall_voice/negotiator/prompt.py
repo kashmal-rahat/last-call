@@ -8,9 +8,9 @@ from pydantic import AwareDatetime
 
 from lastcall_shared.clock import pickup_by_words, time_words
 from lastcall_shared.condition_words import FEED_ONLY
-from lastcall_shared.models import AgentDealBrief
+from lastcall_shared.models import AgentDealBrief, BuyerType
 
-PROMPT_VERSION = "1.11"
+PROMPT_VERSION = "1.16"
 TEMPLATE_DIR = Path(__file__).parent
 
 _GENDER_TABLE = {
@@ -88,6 +88,11 @@ def unit_words(unit: str) -> str:
     return "kilo" if unit == "kg" else "darjan"
 
 
+def unit_words_en(unit: str) -> str:
+    """The unit for an English-speaking buyer (a judge testing the call): "kilo" or "dozen"."""
+    return "kilo" if unit == "kg" else "dozen"
+
+
 def price_words(amount: int, unit: str) -> str:
     w = number_to_words(amount)
     u = unit_words(unit)
@@ -115,24 +120,45 @@ def buyer_type_words(buyer_type: str) -> str:
 
 
 CITY_STYLES: dict[str, str] = {
-    "karachi": "- Karachi market style: polite, friendly, business-minded. Call the buyer 'Bhai'.",
-    "lahore": "- Lahori style: Punjabi-flavoured words where natural, vigorous and warm bargaining. Call the buyer 'Paaji' or 'Bhai'.",
+    # How to address the buyer is one rule in the prompt ("aap", then "Bhai" or "Baji" once clear), not per city
+    "karachi": "- Karachi market style: polite, friendly, business-minded.",
+    "lahore": "- Lahore market style: warm, friendly everyday Urdu, relaxed and confident bargaining.",
     "islamabad": "- Islamabad style: polite, formal and courteous market tone.",
 }
 
 
+# What the stock suits, by the kind of buyer called: the reason the Scout searched that kind (D46, D52), so it is true
+# for any produce it is offered to
+USE_FOR: dict[BuyerType, str] = {
+    "juice_shop": "juice aur shake ke liye bilkul theek",
+    "restaurant": "khana banane ke liye bilkul theek",
+    "bakery": "bakery items ke liye bilkul theek",
+    "charity": "bilkul khane ke qabil",
+    "dairy_farm": "chaare ke liye bilkul theek",
+    "other": "aap ke kaam ke liye bilkul theek",
+}
+
+
 def generate_pitch(view: AgentDealBrief) -> str:
-    """The pitch, one short sentence: what, how much and, when it has the spoken words (D77), the condition; for a
-    sale the agent adds the price from verify_offer. An English description stays out of it (too long to say)."""
+    """The pitch: what, how much and, with the spoken words (D77), the condition framed as a shopkeeper would ("bas
+    thoray pakke huay aur daaghi hain, lekin juice aur shake ke liye bilkul theek"). For a sale the agent adds the
+    price from verify_offer. An English description stays out of it (too long to say)."""
     q = quantity_words(view.quantity, view.quantity_unit, view.quantity_confirmed_by_staff)
-    what = (
-        f"Humare paas {q} {view.item} hain, {view.condition}"
-        if view.condition_spoken
-        else f"Humare paas {q} {view.item} hain"
-    )
+    head = f"Humare paas {q} {view.item} hain"
+    if not view.condition_spoken:
+        if view.deal_type == "donation":
+            return f"{head}, aap ke idaare ke liye bilkul free."
+        return f"{head}, rate bohat munasib hai."
+
+    if view.condition == FEED_ONLY:
+        what = f"{head}, khane ke liye nahi, lekin {USE_FOR['dairy_farm']}"
+    elif view.condition == "taaza":
+        what = f"{head}, bilkul taaza"
+    else:  # ripe, marked or wilted: said plainly, then why it still suits this buyer
+        what = f"{head}, bas {view.condition} hain, lekin {USE_FOR[view.buyer.type]}"
     if view.deal_type == "donation":
         return f"{what}, aap ke idaare ke liye bilkul free."
-    return f"{what}, rate bohat munasib hai."
+    return f"{what}."
 
 
 def quality_line(view: AgentDealBrief) -> str:
@@ -194,11 +220,11 @@ def render_instruction(
         gender_words=f"{agent_gender} shopkeeper",
         g=g,
         city_style=resolved_city_style,
-        buyer_honorific="Bhai",
         mode=mode,
         deal_type=view.deal_type,
         condition_spoken=view.condition_spoken,
         pitch_line=generate_pitch(view),
         unit_words=unit_words(view.quantity_unit),
+        unit_words_en=unit_words_en(view.quantity_unit),
     )
     return rendered

@@ -22,7 +22,7 @@ async def seed_demo():
         "name": "Fresh Mart Clifton",
         "location": "Clifton Block 2, Karachi",
         "city": "Karachi",
-        "city_style": "- Karachi market style: polite, friendly, business-minded. Call the buyer 'Bhai'.",
+        "city_style": "- Karachi market style: polite, friendly, business-minded.",
         "calling_hours": {
             "start": "09:00:00",
             "end": "21:00:00",

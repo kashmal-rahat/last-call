@@ -78,8 +78,14 @@ def test_city_style_lahore_renders_lahori_line():
         agent_gender="female",
         city_style="lahore",
     )
-    assert "Lahori style" in prompt_lahore
-    assert "Paaji" in prompt_lahore
+    assert "Lahore market style: warm, friendly everyday Urdu, relaxed and confident bargaining." in prompt_lahore
+    assert "Paaji" not in prompt_lahore
+    # One address rule for any buyer: "aap", then "Bhai" or "Baji" once clear; no fixed "Bhai" in the lines
+    assert (
+        'Speak to the buyer as "aap". Add "Bhai" for a man or "Baji" for a woman only once it is clear' in prompt_lahore
+    )
+    assert "Koi baat nahi, phir kabhi sahi. Allah Hafiz." in prompt_lahore
+    assert "Assalam-o-Alaikum, main" in prompt_lahore
 
     prompt_karachi = render_instruction(
         view=agent_view,

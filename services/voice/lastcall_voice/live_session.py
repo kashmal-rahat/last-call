@@ -79,7 +79,7 @@ def build_input_transcription_config(
                 vocab.append(cleaned)
     try:
         return types.AudioTranscriptionConfig(
-            language_hints=types.LanguageHints(language_codes=["ur", "pa", "en"]),
+            language_hints=types.LanguageHints(language_codes=["ur", "en"]),
             custom_vocabulary=vocab,
         )
     except Exception as exc:
