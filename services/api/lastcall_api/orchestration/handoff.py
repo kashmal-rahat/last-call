@@ -100,9 +100,9 @@ def pickup_window(rules: MartRules, now: datetime) -> tuple[datetime, datetime]:
 
     While the mart is open with at least `bulk_pickup_hours` left, pickup runs from now, rounded down to the quarter
     hour so it reads and sounds like a time people say ("1:15 PM", not "1:16 PM", and "7 PM" for a call made just
-    after 19:00), for `pickup_window_hours`, never past closing. Rounding down keeps now inside the window; a deal
-    only needs a pickup after now and by the deadline. Otherwise pickup runs from the next opening. `now` is the
-    mart's time (D74).
+    after 19:00), for `pickup_window_hours`, never past closing. Rounding down keeps now inside the window. Otherwise
+    pickup runs from the next opening. A deal's pickup is the deadline (D76); the start is background for the
+    agent. `now` is the mart's time (D74).
     """
     tz = ZoneInfo(rules.timezone)
     now_local = now.astimezone(tz)

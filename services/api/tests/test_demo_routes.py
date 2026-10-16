@@ -503,6 +503,39 @@ async def test_a_preset_runs_the_call_on_the_mart_time(monkeypatch, setup_api_te
 
 
 @pytest.mark.asyncio
+async def test_a_deal_reads_pickup_by_the_same_words_as_the_call_panel(monkeypatch, setup_api_test):
+    """D76: the result card (from the batch) and the call panel give the deadline in the same words."""
+    store = setup_api_test
+    await seed_demo_data(store)
+    await _decided_with_offset(store, EVENING)
+    monkeypatch.setattr("lastcall_api.routes.calls.now_pkt", lambda: REAL_2AM)
+    client = TestClient(app)
+    headers = {"X-Demo-Access-Code": CODE}
+    data = client.post(
+        "/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_banana_1"}
+    ).json()
+    call = await store.get_call(data["call_id"])
+    await store.finish_call(
+        call.call_id,
+        CallResult(
+            mart_id="demo_mart",
+            batch_id=data["batch_id"],
+            call_id=call.call_id,
+            status="completed",
+            outcome="deal",
+            agreed_price_per_unit=110,
+            agreed_price_unit="dozen",
+            agreed_quantity=5.0,
+            agreed_quantity_unit="dozen",
+            pickup_time=call.brief.pickup_deadline,
+        ),
+    )
+
+    (attempt,) = client.get(f"/demo/batches/{data['batch_id']}", headers=headers).json()["attempts"]
+    assert attempt["pickup_by"] == data["deal"]["pickup_by"] == "today, 10 PM"
+
+
+@pytest.mark.asyncio
 async def test_now_keeps_the_real_time(monkeypatch, setup_api_test):
     """With "Now" (offset 0) nothing changes: at real 02:00 the mart is closed, pickup is at opening."""
     store = setup_api_test

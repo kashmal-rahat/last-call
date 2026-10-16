@@ -495,8 +495,8 @@ export function renderCallResult(batchData, callId) {
     if (attempt.outcome === 'call_back' && attempt.callback_at && !attempt.dropped) {
       parts.unshift(`Call back ${formatCallbackTime(attempt.callback_at, martNow())}`);
     }
-    if (isDeal && attempt.pickup_time) {
-      parts.unshift(`Pickup by ${new Date(attempt.pickup_time).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Karachi' })}`);
+    if (isDeal && attempt.pickup_by) {
+      parts.unshift(`Pickup by ${attempt.pickup_by}`);  // the panel's and WhatsApp's words (D76)
     }
     sub.textContent = parts.join(' · ');
     text.appendChild(sub);

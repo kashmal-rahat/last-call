@@ -281,6 +281,7 @@ async def _batch_view(store: CallStore, batch: BatchRecord, rules: MartRules, no
     names = {b.buyer_id: b.name for b in scout.buyers} if scout else {}
     calls, call_statuses = await batch_calls(store, batch)
     action = next_action(batch, scout, call_statuses, rules, now)
+    mart_time = mart_now(batch.clock_offset_s, now)
 
     attempts = []
     for a in batch.attempts:
@@ -299,6 +300,10 @@ async def _batch_view(store: CallStore, batch: BatchRecord, rules: MartRules, no
                 "agreed_price": result.agreed_price_per_unit if result else None,
                 "agreed_quantity": result.agreed_quantity if result else None,
                 "pickup_time": result.pickup_time.isoformat() if (result and result.pickup_time) else None,
+                # The words the call panel and WhatsApp use: "today, 4:30 PM" (D76)
+                "pickup_by": pickup_by_words(result.pickup_time, mart_time)
+                if (result and result.pickup_time)
+                else None,
                 "callback_at": result.callback_at.isoformat() if (result and result.callback_at) else None,
                 # The call ended mid-conversation with no answer (the voice service then plans a retry,
                 # outcome call_back), as opposed to a buyer who asked to be called back
@@ -322,7 +327,7 @@ async def _batch_view(store: CallStore, batch: BatchRecord, rules: MartRules, no
             # The page matches on the ID; the rank is for display and older pages
             "buyer_id": action.buyer.buyer_id if action.buyer else None,
         },
-        "outside_calling_hours": outside_calling_hours(rules, mart_now(batch.clock_offset_s, now)),
+        "outside_calling_hours": outside_calling_hours(rules, mart_time),
     }
 
 
