@@ -334,10 +334,10 @@ def test_price_guard_classify():
     assert classify([160], floor, approved, current) == "ok"
 
 
-def test_prompt_template_v1_22_male_voice_consistency():
+def test_prompt_template_v1_24_male_voice_consistency():
     from lastcall_voice.negotiator.prompt import PROMPT_VERSION, render_instruction
 
-    assert PROMPT_VERSION == "1.22"
+    assert PROMPT_VERSION == "1.24"
     brief = make_test_brief()
     view = brief.agent_view()
 
@@ -430,6 +430,9 @@ def test_prompt_template_v1_22_male_voice_consistency():
     # 1.22: no laugh direction on the two slang lines (the agent didn't laugh, and it acted the lines out); the
     # "Slang and humour" section already frames them as banter
     assert "laugh" not in male_voice and "Bargaining here is half business, half banter." in male_voice
+    # 1.23: the new price only; a live call said "saath rupay kam hokar saath rupay" (70 → 60), and a spoken
+    # difference ("das rupay kam") would read to the price guard as a price below the floor
+    assert "say only the new price, never how much you lowered it" in male_voice
     assert 'Say the unit as "kilo" in Urdu and "kilo" in English' in male_voice
     assert "Punjabi" not in male_voice and '"Ji, main' not in male_voice
     assert "[the price verify_offer returned] ke hisaab se," in male_voice  # 1.18
@@ -855,3 +858,32 @@ def test_spoken_price_cue_in_every_script_the_transcriber_writes():
     assert one_char != two_chars and unicodedata.normalize("NFC", one_char) == two_chars
     assert has_spoken_price_cue(one_char) and has_spoken_price_cue(two_chars)
     assert not has_spoken_price_cue("सोच लें, माल आज रात दस बजे तक रुक सकता है")
+
+
+def test_quantities_are_said_as_people_say_them_on_a_voice_call():
+    """1.24: a live call read "4.5 kilo" as "chaar ishariya paanch". Voice calls say halves in their own words; the
+    brief keeps the number for confirm_deal; text mode keeps digits."""
+    from lastcall_voice.negotiator.prompt import generate_pitch, render_instruction, spoken_amount
+
+    assert [spoken_amount(q) for q in (0.5, 1.5, 2.5, 3.5, 4.5, 9.5)] == [
+        "aadha",
+        "dedh",
+        "dhaai",
+        "saadhe 3",
+        "saadhe 4",
+        "saadhe 9",
+    ]
+    assert [spoken_amount(q) for q in (4.0, 23.0, 0.4, 2.3)] == ["4", "23", "0.4", "2.3"]  # whole, or digits
+
+    brief = make_test_brief().model_copy(update={"quantity": 4.5})
+    view = brief.agent_view()
+    voice = render_instruction(view, mode="voice", now=NOW)
+    assert "- Quantity available: saadhe 4 kilo (4.5 in confirm_deal)" in voice
+    assert generate_pitch(view, spoken=True).startswith("Humare paas saadhe 4 kilo Sindhri Mangoes hain")
+    assert "4.5 kilo" not in voice.replace("(4.5 in confirm_deal)", "")
+
+    text = render_instruction(view, mode="text", now=NOW)
+    assert "- Quantity available: 4.5 kilo\n" in text and "saadhe" not in text
+
+    whole = render_instruction(make_test_brief().agent_view(), mode="voice", now=NOW)
+    assert "- Quantity available: 50 kilo\n" in whole and "in confirm_deal)" not in whole

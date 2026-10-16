@@ -1107,3 +1107,17 @@ From the user's iPhone screenshots of the deployed page:
 - **Tests:** the voice prompt has no "laugh" and keeps the banter framing.
 - **If the tone still shifts:** it comes from the fixed wording; left as is.
 
+# Round 61: the new price only, never the difference (prompt 1.23), by Claude (2026-10-16)
+
+- **Found (live test):** verify_offer countered 70 → 60 per kilo; the agent said "Yeh aapko saath rupay kam hokar saath rupay kilo mil jayenge" (it meant "das rupay kam"), then corrected itself when the buyer asked. The price was right; the wording wasn't.
+- **Cause:** nothing asked for the reduction; the model added it and did the subtraction while speaking (saath / sattar sound alike). The difference is a number verify_offer never gave, and said correctly ("das rupay kam") the spoken-price backstop could read it as a price of 10, below the floor, and send a needless "[SYSTEM] You said a wrong price" correction and a `floor_correction` flag.
+- **Change:** the verify_offer tool line, once for every counter (lowball, counter, asks lower): "…Never invent, round or adjust a price yourself, and say only the new price, never how much you lowered it." Prompt 1.23.
+- **Tests:** the rule is in the voice prompt.
+
+
+# Round 62: half quantities said as people say them (prompt 1.24), by Claude (2026-10-16)
+
+- **Found (live test):** the pitch said "hamare paas 4 ishariya 5 kilo tamatar hain" for 4.5 kilo: the brief and the pitch carried the quantity in digits, and the voice rule "say quantities plainly in words" read the decimal point out. The amount was right; no shopkeeper says it that way.
+- **How often:** every photo estimate under 10 that isn't whole, since D71 rounds those down to the half; from 10 up quantities are whole.
+- **Change (code, voice calls only):** `prompt.spoken_amount` says halves in their own words, 0.5 "aadha", 1.5 "dedh", 2.5 "dhaai", n.5 "saadhe n" (the agent says "saadhe chaar"); any other amount (whole, or a rare 0.4 or 2.3 typed by staff) stays in digits. The pitch and the brief's quantity line use it; the brief keeps the number for the tool, "saadhe 4 kilo (4.5 in confirm_deal)", so the deal's quantity is still exact and checked. Text mode and the simulator keep digits; in English the agent says "four and a half kilos" on its own. Quarters (sawa, paune) left out: D71 never makes them, and "sawa 1" or a quarter dozen would need special cases. Prompt 1.24.
+- **Tests:** every half case, whole and other amounts in digits, the voice brief line and pitch, text mode unchanged, and no "(… in confirm_deal)" note for a whole quantity.

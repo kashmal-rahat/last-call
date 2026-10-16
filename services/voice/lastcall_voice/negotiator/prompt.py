@@ -10,7 +10,7 @@ from lastcall_shared.clock import pickup_by_words, time_words
 from lastcall_shared.condition_words import FEED_ONLY
 from lastcall_shared.models import AgentDealBrief, BuyerType
 
-PROMPT_VERSION = "1.22"
+PROMPT_VERSION = "1.24"
 TEMPLATE_DIR = Path(__file__).parent
 
 _GENDER_TABLE = {
@@ -99,9 +99,24 @@ def price_words(amount: int, unit: str) -> str:
     return f"{w} rupay per {u}"
 
 
-def quantity_words(quantity: float, unit: str, confirmed: bool = True) -> str:
+def _digits(quantity: float) -> str:
+    return f"{int(quantity)}" if quantity.is_integer() else f"{quantity}"
+
+
+def spoken_amount(quantity: float) -> str:
+    """A quantity as people say it on a call: halves in their own words (0.5 "aadha", 1.5 "dedh", 2.5 "dhaai",
+    4.5 "saadhe 4", which the agent says "saadhe chaar"), the only fractions a photo estimate gives (D71). Any
+    other amount stays in digits."""
+    whole = int(quantity)
+    if quantity - whole == 0.5:
+        return {0: "aadha", 1: "dedh", 2: "dhaai"}.get(whole, f"saadhe {whole}")
+    return _digits(quantity)
+
+
+def quantity_words(quantity: float, unit: str, confirmed: bool = True, spoken: bool = False) -> str:
+    """ "4.5 kilo", or on a voice call "saadhe 4 kilo" (a decimal is read out as "chaar ishariya paanch")."""
     u = unit_words(unit)
-    q_str = f"{int(quantity)}" if quantity.is_integer() else f"{quantity}"
+    q_str = spoken_amount(quantity) if spoken else _digits(quantity)
     if confirmed:
         return f"{q_str} {u}"
     return f"taqreeban {q_str} {u}"
@@ -139,11 +154,11 @@ USE_FOR: dict[BuyerType, str] = {
 }
 
 
-def generate_pitch(view: AgentDealBrief) -> str:
+def generate_pitch(view: AgentDealBrief, spoken: bool = False) -> str:
     """The pitch: what, how much and, with the spoken words (D77), the condition framed as a shopkeeper would ("bas
     thoray pakke huay aur daaghi hain, lekin juice aur shake ke liye bilkul theek"). For a sale the agent adds the
     price from verify_offer. An English description stays out of it (too long to say)."""
-    q = quantity_words(view.quantity, view.quantity_unit, view.quantity_confirmed_by_staff)
+    q = quantity_words(view.quantity, view.quantity_unit, view.quantity_confirmed_by_staff, spoken)
     head = f"Humare paas {q} {view.item} hain"
     if not view.condition_spoken:
         if view.deal_type == "donation":
@@ -203,6 +218,7 @@ def render_instruction(
         market_rate_w = price_words(view.market_rate_per_unit, view.opening_price_unit)
 
     resolved_city_style = CITY_STYLES.get(city_style, city_style)
+    spoken = mode == "voice"  # quantities as people say them; text mode keeps digits
     rendered = template.render(
         mart_name=view.mart.name,
         mart_location=view.mart.location,
@@ -211,7 +227,11 @@ def render_instruction(
         item=view.item,
         condition=view.condition,
         quality_line=quality_line(view),
-        quantity_words=quantity_words(view.quantity, view.quantity_unit, view.quantity_confirmed_by_staff),
+        quantity_words=quantity_words(view.quantity, view.quantity_unit, view.quantity_confirmed_by_staff, spoken),
+        # The number confirm_deal takes, when the words aren't digits ("saadhe 4 kilo" → 4.5)
+        quantity_number=_digits(view.quantity)
+        if spoken and spoken_amount(view.quantity) != _digits(view.quantity)
+        else None,
         pickup_window_words=pickup_window_words,
         pickup_deadline_words=pickup_deadline_words,
         payment_terms=view.payment_terms,
@@ -223,7 +243,7 @@ def render_instruction(
         mode=mode,
         deal_type=view.deal_type,
         condition_spoken=view.condition_spoken,
-        pitch_line=generate_pitch(view),
+        pitch_line=generate_pitch(view, spoken),
         unit_words=unit_words(view.quantity_unit),
         unit_words_en=unit_words_en(view.quantity_unit),
     )
