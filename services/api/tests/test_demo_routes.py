@@ -321,7 +321,7 @@ async def test_demo_call_success_contract(setup_api_test):
     assert data["deal"]["quantity"] == 20.0
     assert data["deal"]["unit"] == "dozen"
     assert "Demo Mart" in data["deal"]["mart_name"]
-    assert "pickup_window" in data["deal"]
+    assert "pickup_by" in data["deal"] and "pickup_window" not in data["deal"]  # the deadline only (D76)
 
     # 3. Token verification
     token = data["token"]
@@ -486,7 +486,7 @@ async def test_a_preset_runs_the_call_on_the_mart_time(monkeypatch, setup_api_te
     data = client.post("/demo/calls", headers=headers, json=body).json()
 
     # The mart's world is at 19:00: pickup this evening, and inside calling hours (09:00–21:00)
-    assert data["deal"]["pickup_window"] == "16 October, 7 PM to 16 October, 11 PM"
+    assert data["deal"]["pickup_by"] == "today, 10 PM"
     assert data["notes"]["outside_calling_hours"] is False
     call = await store.get_call(data["call_id"])
     assert call.clock_offset_s == EVENING
@@ -499,7 +499,7 @@ async def test_a_preset_runs_the_call_on_the_mart_time(monkeypatch, setup_api_te
     await _decided_with_offset(store, 0.0)
     second = client.post("/demo/calls", headers=headers, json=body).json()
     assert (await store.get_call(second["call_id"])).clock_offset_s == EVENING
-    assert second["deal"]["pickup_window"] == data["deal"]["pickup_window"]
+    assert second["deal"]["pickup_by"] == data["deal"]["pickup_by"]
 
 
 @pytest.mark.asyncio
@@ -515,7 +515,7 @@ async def test_now_keeps_the_real_time(monkeypatch, setup_api_test):
         "/demo/calls", headers=headers, json={"inspection_id": "insp_1", "item_key": "item_banana_1"}
     ).json()
 
-    assert data["deal"]["pickup_window"] == "16 October, 9 AM to 16 October, 1 PM"
+    assert data["deal"]["pickup_by"] == "today, 12 PM"
     assert data["notes"]["outside_calling_hours"] is True
     assert (await store.get_call(data["call_id"])).clock_offset_s == 0.0
 

@@ -45,6 +45,7 @@
     "timezone": "Asia/Karachi"
   },
   "bulk_pickup_hours": 2.0,
+  "pickup_window_hours": 3.0,
   "discount_window_hours": 6.0,
   "max_discount_pct": 40,
   "min_discount_pct": 10,

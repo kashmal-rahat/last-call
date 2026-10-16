@@ -9,7 +9,7 @@ import math
 from datetime import datetime
 from typing import Any, Literal
 
-from lastcall_shared.clock import clock_words
+from lastcall_shared.clock import clock_words, day_words
 from lastcall_shared.config import get_settings
 from lastcall_shared.item_photos import sign_item_photo_url
 from lastcall_shared.models import CallRecord
@@ -53,8 +53,7 @@ def deal_confirmation_text(
     mart_tz = brief.pickup_deadline.tzinfo  # the mart's local time
     pickup, now = pickup.astimezone(mart_tz), now.astimezone(mart_tz)
     goods = f"{quantity:g} {brief.quantity_unit} {brief.item}"
-    day = "today" if pickup.date() == now.date() else pickup.strftime("%a %d %b")
-    pickup_line = f"Pickup: {day}, by {clock_words(pickup)}"
+    pickup_line = f"Pickup: {day_words(pickup, now)}, by {clock_words(pickup)}"
 
     if brief.deal_type == "donation":
         lines = [f"Donation confirmed · {brief.mart.name}", f"{goods}, free of charge", pickup_line]

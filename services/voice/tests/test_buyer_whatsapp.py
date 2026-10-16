@@ -108,12 +108,10 @@ async def test_confirm_deal_sends_the_whatsapp_confirmation():
     call.negotiation.approved_prices = [price]
     await store.save_negotiation(call.call_id, call.negotiation)
     await store.lock_batch(call.batch_id, call.call_id, datetime.now(timezone.utc) + timedelta(minutes=10))
-    pickup = (NOW + timedelta(hours=1)).isoformat()
     try:
         result = await confirm_deal(
             price_per_unit=price,
             quantity=call.brief.quantity,
-            pickup_time_iso=pickup,
             buyer_confirmed=True,
             tool_context=FakeToolContext(call.call_id),
         )
@@ -125,6 +123,7 @@ async def test_confirm_deal_sends_the_whatsapp_confirmation():
     assert event["whatsapp"] == "confirmation" and event["media_url"] is None
     assert event["text"].startswith(f"Deal confirmed · {call.brief.mart.name}")
     assert f"at Rs {price} / {call.brief.quantity_unit}" in event["text"]
+    assert "Pickup: today, by 6 PM" in event["text"]  # the deadline (NOW + 4 h), not a time chosen in the call (D76)
     (outbox,) = await store.get_outbox(call.call_id)
     assert outbox.kind == "whatsapp_confirmation" and outbox.status == "sent_in_call"
 
@@ -140,7 +139,9 @@ def test_confirmation_text_uses_mart_time_and_totals():
     assert lines[2] == "Pickup: today, by 6 PM"
     assert lines[3] == f"Payment: {call.brief.payment_terms}"
     tomorrow = deal_confirmation_text(call, quantity=1, price_per_unit=105, pickup=NOW + timedelta(days=1), now=NOW)
-    assert "Pickup: Thu 15 Oct, by 2 PM" in tomorrow
+    assert "Pickup: tomorrow, by 2 PM" in tomorrow
+    later = deal_confirmation_text(call, quantity=1, price_per_unit=105, pickup=NOW + timedelta(days=2), now=NOW)
+    assert "Pickup: Fri 16 Oct, by 2 PM" in later
 
 
 def test_donation_confirmation_has_no_price():

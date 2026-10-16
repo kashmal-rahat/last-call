@@ -41,40 +41,41 @@ async def _call_on_mart_time():
     return store, call, ctx
 
 
-async def _confirm(call, pickup: datetime) -> dict:
+async def _confirm(call) -> dict:
     return await confirm_deal(
         price_per_unit=call.negotiation.ladder[0],
         quantity=call.brief.quantity,
-        pickup_time_iso=pickup.isoformat(),
         buyer_confirmed=True,
         tool_context=FakeToolContext(call.call_id),
     )
 
 
-async def test_confirm_deal_accepts_a_pickup_later_in_the_mart_day():
+async def test_confirm_deal_holds_the_stock_until_the_deadline_on_the_mart_day():
+    """D76: the pickup is the deadline (mart 15:00), which is past on the real clock (22:00) but not the mart's."""
     store, call, _ = await _call_on_mart_time()
     try:
-        result = await _confirm(call, MART.replace(hour=14))  # "aaj 2 baje": past on the real clock
+        result = await _confirm(call)
     finally:
         unregister_context(call.call_id)
 
     assert result["ok"] is True, result
     deal = await store.get_deal(call.call_id)
-    assert deal.pickup_time == MART.replace(hour=14)
+    assert deal.pickup_time == call.brief.pickup_deadline == MART.replace(hour=15)
     assert deal.created_at == REAL  # the record keeps the real time
     (outbox,) = await store.get_outbox(call.call_id)
-    assert "Pickup: today, by 2 PM" in outbox.payload["text"]  # "today" on the mart's day
+    assert "Pickup: today, by 3 PM" in outbox.payload["text"]  # "today" on the mart's day
 
 
-@pytest.mark.parametrize("pickup_hour,why", [(10, "in the past"), (16, "after the 15:00 deadline")])
-async def test_confirm_deal_still_refuses_bad_times_on_the_mart_clock(pickup_hour, why):
+async def test_confirm_deal_refuses_once_the_deadline_has_passed_on_the_mart_clock():
     store, call, ctx = await _call_on_mart_time()
+    ctx.mart_clock = lambda: MART.replace(hour=15, minute=5)  # the call ran past 15:00
     try:
-        result = await _confirm(call, MART.replace(hour=pickup_hour))
+        result = await _confirm(call)
     finally:
         unregister_context(call.call_id)
 
-    assert result["ok"] is False, why
+    assert result["ok"] is False
+    assert "deadline has passed" in result["reasons"][0]
     assert not ctx.outcome_set
     assert await store.get_deal(call.call_id) is None
 

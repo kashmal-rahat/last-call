@@ -27,7 +27,7 @@ from lastcall_api.orchestration.handoff import NeedsPrice, build_call_record, bu
 from lastcall_api.orchestration.loop import NextAction, next_action, outside_calling_hours
 from lastcall_api.scout.scout import ScoutNotApplicable
 from lastcall_shared import ids
-from lastcall_shared.clock import mart_now, now_pkt
+from lastcall_shared.clock import mart_now, now_pkt, pickup_by_words
 from lastcall_shared.config import get_settings
 from lastcall_shared.models import (
     BatchAttempt,
@@ -258,7 +258,8 @@ async def demo_create_call(request: Request, body: CreateCallRequest, store: Cal
             "deal_type": brief.deal_type,
             "opening": brief.opening_price_per_unit,
             "floor": brief.floor_price_per_unit,  # shown to the judge; never given to the agent
-            "pickup_window": brief.pickup_window,
+            # Pickup is by the deadline (D76), worded as the agent and WhatsApp say it: "today, 4:30 PM"
+            "pickup_by": pickup_by_words(brief.pickup_deadline, mart_now(batch.clock_offset_s, now)),
             "pickup_deadline": brief.pickup_deadline.isoformat(),
             "mart_name": brief.mart.name,
         },

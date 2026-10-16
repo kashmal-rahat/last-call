@@ -127,7 +127,7 @@ Review the following call transcript where a deal was closed:
 {dialogue_text}
 
 Rubric:
-1. Did the SELLER (agent) clearly repeat/summarize: price per unit, quantity, pickup window/time, and payment terms?
+1. Did the SELLER (agent) clearly repeat/summarize: price per unit, quantity, the pickup deadline (collect by a time), and payment terms?
 2. Did the BUYER explicitly agree to these final terms before the call ended?
 
 Answer in strictly valid JSON format:

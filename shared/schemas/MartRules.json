@@ -152,6 +152,11 @@
       "title": "Bulk Pickup Hours",
       "type": "number"
     },
+    "pickup_window_hours": {
+      "default": 3.0,
+      "title": "Pickup Window Hours",
+      "type": "number"
+    },
     "discount_window_hours": {
       "default": 6,
       "title": "Discount Window Hours",

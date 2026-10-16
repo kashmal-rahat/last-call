@@ -128,7 +128,7 @@ export function resetCallPanel() {
   dom.voiceSection.style.display = 'none';
   dom.callBuyerName.textContent = '—';
   dom.callerAvatar.textContent = '';
-  for (const el of [dom.callItemQty, dom.callOpeningQuote, dom.callFloorPrice, dom.callPickupWindow]) el.textContent = '—';
+  for (const el of [dom.callItemQty, dom.callOpeningQuote, dom.callFloorPrice, dom.callPickupBy]) el.textContent = '—';
   if (dom.callDuration) dom.callDuration.textContent = '00:00';
   setStatus('Connecting…');
   dom.btnHangup.disabled = true;
@@ -249,7 +249,7 @@ export async function startCallForItem(itemKey, buyerId) {
       dom.callFloorPrice.textContent = 'None (donation)';
     }
 
-    dom.callPickupWindow.textContent = (data.deal && data.deal.pickup_window) ? data.deal.pickup_window : 'Today';
+    dom.callPickupBy.textContent = (data.deal && data.deal.pickup_by) || '—';  // "today, 4:30 PM" (D76)
 
     // Phone demo (Module 9): Twilio rings the presenter's SIM instead of using the microphone
     if (isPhoneMode()) {
@@ -496,7 +496,7 @@ export function renderCallResult(batchData, callId) {
       parts.unshift(`Call back ${formatCallbackTime(attempt.callback_at, martNow())}`);
     }
     if (isDeal && attempt.pickup_time) {
-      parts.unshift(`Pickup ${new Date(attempt.pickup_time).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Karachi' })}`);
+      parts.unshift(`Pickup by ${new Date(attempt.pickup_time).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Karachi' })}`);
     }
     sub.textContent = parts.join(' · ');
     text.appendChild(sub);

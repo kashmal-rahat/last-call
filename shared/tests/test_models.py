@@ -715,6 +715,11 @@ def test_mart_rules_invalid_percentages():
             prices=[],
         )
 
+    # pickup_window_hours outside 0.5–8 (D75)
+    for hours in (0.25, 9.0):
+        with pytest.raises(ValidationError, match="pickup_window_hours must be between 0.5 and 8"):
+            MartRules(mart_id="test", mart=mart, closing_time=time(23, 0), pickup_window_hours=hours, prices=[])
+
     # overnight_hours property
     r = MartRules(
         mart_id="test",

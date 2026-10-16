@@ -682,6 +682,7 @@ class MartRules(BaseModel):
     closing_time: time  # 23:00
     opening_time: time = time(9, 0)  # 09:00
     bulk_pickup_hours: float = 2.0  # hours needed for buyer pickup before closing
+    pickup_window_hours: float = 3.0  # how long sold stock is held for collection (D75)
     discount_window_hours: float = 6  # discounts start at most this many hours before closing
     max_discount_pct: int = 40
     min_discount_pct: int = 10
@@ -752,6 +753,8 @@ class MartRules(BaseModel):
 
         if not (0.0 <= self.bulk_pickup_hours <= 6.0):
             raise ValueError(f"bulk_pickup_hours must be between 0 and 6, got {self.bulk_pickup_hours}")
+        if not (0.5 <= self.pickup_window_hours <= 8.0):
+            raise ValueError(f"pickup_window_hours must be between 0.5 and 8, got {self.pickup_window_hours}")
 
         for name, val in [
             ("max_discount_pct", self.max_discount_pct),

@@ -6,10 +6,10 @@ from typing import Literal
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from pydantic import AwareDatetime
 
-from lastcall_shared.clock import time_words
+from lastcall_shared.clock import pickup_by_words, time_words
 from lastcall_shared.models import AgentDealBrief
 
-PROMPT_VERSION = "1.6"
+PROMPT_VERSION = "1.7"
 TEMPLATE_DIR = Path(__file__).parent
 
 _GENDER_TABLE = {
@@ -146,8 +146,10 @@ def render_instruction(
     current_time = now or view.pickup_deadline
     g = _GENDER_TABLE[agent_gender]
 
-    pickup_window_words = f"pickup between {view.pickup_window}"
-    pickup_deadline_words = time_words(view.pickup_deadline)
+    # Pickup is "by the deadline" (D76), worded as the page and WhatsApp say it: "today, 4:30 PM". The window is
+    # background, for a buyer who asks when they can come
+    pickup_window_words = view.pickup_window
+    pickup_deadline_words = pickup_by_words(view.pickup_deadline, current_time)
     now_words = time_words(current_time)
 
     market_rate_w = None

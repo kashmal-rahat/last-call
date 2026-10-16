@@ -33,3 +33,19 @@ def clock_words(dt: datetime) -> str:
 def time_words(dt: datetime) -> str:
     """'13 October, 6 PM': the date and time the agent says and the brief shows."""
     return f"{dt.strftime('%d %B')}, {clock_words(dt)}"
+
+
+def day_words(dt: datetime, now: datetime) -> str:
+    """'today', 'tomorrow' or 'Sat 17 Oct': the day of `dt` seen from `now`, in `dt`'s timezone (the mart's)."""
+    today = now.astimezone(dt.tzinfo).date()
+    if dt.date() == today:
+        return "today"
+    if dt.date() == today + timedelta(days=1):
+        return "tomorrow"
+    return dt.strftime("%a %d %b")
+
+
+def pickup_by_words(deadline: datetime, now: datetime) -> str:
+    """'today, 4:30 PM', 'tomorrow, 12 PM': the pickup deadline as the page, WhatsApp and the agent's brief say it
+    (D76; pickup is "by the deadline", with no start time)."""
+    return f"{day_words(deadline, now)}, {clock_words(deadline)}"

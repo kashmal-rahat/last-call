@@ -32,8 +32,6 @@ from lastcall_shared.models import (
     init_negotiation,
 )
 
-PICKUP_HOURS = 4.0
-
 
 class NeedsPrice(Exception):
     """Raised when an item needs a shelf price before calling buyers."""
@@ -92,49 +90,38 @@ def initial_quantity(item: ItemAssessment) -> float | None:
     return offer_quantity(item.quantity)
 
 
-def pickup_window(rules: MartRules, now: datetime) -> tuple[datetime, datetime]:
-    """Calculates pickup window (start, deadline) in the mart timezone (D56).
+def _quarter_hour(dt: datetime) -> datetime:
+    """`dt` rounded down to the quarter hour: 13:16 → 13:15, 19:00:04 → 19:00."""
+    return dt.replace(minute=dt.minute - dt.minute % 15, second=0, microsecond=0)
 
-    If the mart is open with at least bulk_pickup_hours left, pickup runs from now
-    to min(now + 4 h, closing); otherwise from the next opening to opening + 4 h.
+
+def pickup_window(rules: MartRules, now: datetime) -> tuple[datetime, datetime]:
+    """The pickup window (start, deadline) in the mart's timezone (D56, D75).
+
+    While the mart is open with at least `bulk_pickup_hours` left, pickup runs from now, rounded down to the quarter
+    hour so it reads and sounds like a time people say ("1:15 PM", not "1:16 PM", and "7 PM" for a call made just
+    after 19:00), for `pickup_window_hours`, never past closing. Rounding down keeps now inside the window; a deal
+    only needs a pickup after now and by the deadline. Otherwise pickup runs from the next opening. `now` is the
+    mart's time (D74).
     """
     tz = ZoneInfo(rules.timezone)
     now_local = now.astimezone(tz)
+    window = timedelta(hours=rules.pickup_window_hours)
 
     today_open = now_local.replace(
-        hour=rules.opening_time.hour,
-        minute=rules.opening_time.minute,
-        second=0,
-        microsecond=0,
+        hour=rules.opening_time.hour, minute=rules.opening_time.minute, second=0, microsecond=0
     )
     today_close = now_local.replace(
-        hour=rules.closing_time.hour,
-        minute=rules.closing_time.minute,
-        second=0,
-        microsecond=0,
+        hour=rules.closing_time.hour, minute=rules.closing_time.minute, second=0, microsecond=0
     )
 
-    if today_open <= now_local < today_close:
-        hours_left = (today_close - now_local).total_seconds() / 3600.0
-        if hours_left >= rules.bulk_pickup_hours:
-            start = now_local
-            deadline = min(now_local + timedelta(hours=PICKUP_HOURS), today_close)
-            return start, deadline
+    if today_open <= now_local < today_close and today_close - now_local >= timedelta(hours=rules.bulk_pickup_hours):
+        start = _quarter_hour(now_local)
+        return start, min(start + window, today_close)
 
-        # Less than bulk_pickup_hours remaining before closing -> tomorrow opening
-        next_open = today_open + timedelta(days=1)
-        deadline = next_open + timedelta(hours=PICKUP_HOURS)
-        return next_open, deadline
-    elif now_local < today_open:
-        # Before opening today -> today opening
-        next_open = today_open
-        deadline = next_open + timedelta(hours=PICKUP_HOURS)
-        return next_open, deadline
-    else:
-        # After closing today -> tomorrow opening
-        next_open = today_open + timedelta(days=1)
-        deadline = next_open + timedelta(hours=PICKUP_HOURS)
-        return next_open, deadline
+    # Too late today, or closed: the next opening (today before it opens, else tomorrow)
+    next_open = today_open if now_local < today_open else today_open + timedelta(days=1)
+    return next_open, next_open + window
 
 
 def build_call_record(

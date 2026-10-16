@@ -77,16 +77,16 @@ async def verify_offer(
 async def confirm_deal(
     price_per_unit: int,
     quantity: float,
-    pickup_time_iso: str,
     buyer_confirmed: bool,
     tool_context: ToolContext = None,
 ) -> dict[str, Any]:
     """Records an agreed deal after clear confirmation from the buyer on all terms.
 
+    The pickup is by the brief's pickup deadline: never ask for or pass a pickup time.
+
     Args:
         price_per_unit: Agreed price per unit in PKR (must be 0 for donation).
         quantity: Agreed quantity in the brief's unit.
-        pickup_time_iso: Pickup time in ISO format with timezone offset (e.g. 2026-10-07T16:00:00+05:00).
         buyer_confirmed: True only if the buyer explicitly agreed to the repeated terms.
     """
     call_id = tool_context.state.get("call_id") if tool_context else None
@@ -99,40 +99,15 @@ async def confirm_deal(
 
     call = await ctx.store.get_call(call_id)
     batch = await ctx.store.get_batch(call.batch_id)
-    # The pickup time is the buyer's, so it is checked on the mart's time, like the brief's deadline (D74)
+    # 1. Pickup is by the deadline, set by the mart, not chosen in the call (D76). It is checked on the mart's time,
+    # like the deadline itself (D74): a call that runs past it can no longer promise the stock.
     now = ctx.mart_now()
-
-    # 1. Parse ISO time without rewrites or defaults (C0)
-    if not pickup_time_iso or not isinstance(pickup_time_iso, str):
-        return {
-            "ok": False,
-            "reasons": ["Pickup time is missing or invalid. Please ask the buyer for the pickup time again."],
-        }
-    try:
-        pickup_dt = datetime.fromisoformat(pickup_time_iso)
-    except Exception:
-        return {
-            "ok": False,
-            "reasons": ["Unparseable pickup time format. Please ask the buyer for the pickup time again."],
-        }
-
-    if pickup_dt.tzinfo is None:
-        return {
-            "ok": False,
-            "reasons": ["Pickup time must include timezone. Please ask the buyer for the pickup time again."],
-        }
-
+    pickup_dt = call.brief.pickup_deadline
     if pickup_dt <= now:
         return {
             "ok": False,
-            "reasons": ["Pickup time cannot be in the past. Please ask the buyer for the pickup time again."],
-        }
-
-    if pickup_dt > call.brief.pickup_deadline:
-        return {
-            "ok": False,
             "reasons": [
-                f"Pickup time ({pickup_dt.isoformat()}) exceeds pickup deadline ({call.brief.pickup_deadline.isoformat()}). Please ask the buyer for the pickup time again."
+                "The pickup deadline has passed, so the stock can no longer be held. Apologise and end the call."
             ],
         }
 

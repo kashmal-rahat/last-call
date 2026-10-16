@@ -190,38 +190,39 @@ def test_initial_quantity():
     assert initial_quantity(_make_item(0.0, 3.6)) == 3.5
 
 
-def test_pickup_window_table(demo_rules):
-    base_date = datetime(2026, 10, 11, tzinfo=PKT)
+@pytest.mark.parametrize(
+    "mart_time,start,deadline",
+    [
+        ("14:00", "11 14:00", "11 17:00"),  # 3 h from now
+        ("13:16", "11 13:15", "11 16:15"),  # rounded down to the quarter hour
+        ("19:00:04", "11 19:00", "11 22:00"),  # a call just after a preset's 19:00 reads "7 PM to 10 PM"
+        ("20:00", "11 20:00", "11 23:00"),  # 3 h, exactly to closing
+        ("20:50", "11 20:45", "11 23:00"),  # rounded, then cut at closing
+        ("21:00", "11 21:00", "11 23:00"),  # 2 h left: still today
+        ("21:01", "12 09:00", "12 12:00"),  # under 2 h left: tomorrow's opening
+        ("23:30", "12 09:00", "12 12:00"),  # closed: tomorrow's opening
+        ("03:00", "11 09:00", "11 12:00"),  # before opening: today's opening
+    ],
+)
+def test_pickup_window_table(demo_rules, mart_time, start, deadline):
+    """D75: 3 h (the mart's `pickup_window_hours`) from now rounded down to the quarter hour, never past closing."""
 
-    # 1. 14:00 -> 14:00–18:00
-    t1 = base_date.replace(hour=14, minute=0, second=0)
-    s1, d1 = pickup_window(demo_rules, t1)
-    assert s1.hour == 14 and s1.minute == 0
-    assert d1.hour == 18 and d1.minute == 0
-    assert s1.day == 11 and d1.day == 11
+    def at(day_time: str) -> datetime:
+        day, clock = day_time.split()
+        return datetime.fromisoformat(f"2026-10-{day}T{clock}").replace(tzinfo=PKT)
 
-    # 2. 20:00 -> 20:00–23:00 (closing at 23:00)
-    t2 = base_date.replace(hour=20, minute=0, second=0)
-    s2, d2 = pickup_window(demo_rules, t2)
-    assert s2.hour == 20 and s2.minute == 0
-    assert d2.hour == 23 and d2.minute == 0
-    assert s2.day == 11 and d2.day == 11
+    s, d = pickup_window(demo_rules, at(f"11 {mart_time}"))
+    assert (s, d) == (at(start), at(deadline))
+    if s.day == 11 and mart_time != "03:00":
+        assert s <= at(f"11 {mart_time}") < d  # now is inside the window
 
-    # 3. 21:30 (less than 2 h before closing) -> tomorrow 09:00–13:00
-    t3 = base_date.replace(hour=21, minute=30, second=0)
-    s3, d3 = pickup_window(demo_rules, t3)
-    assert s3.day == 12 and s3.hour == 9 and s3.minute == 0
-    assert d3.day == 12 and d3.hour == 13 and d3.minute == 0
 
-    # Window string at 21:30 explicitly names tomorrow's date
-    w3_str = f"{time_words(s3)} to {time_words(d3)}"
-    assert "12 October" in w3_str
-
-    # 4. 03:00 -> today 09:00–13:00
-    t4 = base_date.replace(hour=3, minute=0, second=0)
-    s4, d4 = pickup_window(demo_rules, t4)
-    assert s4.day == 11 and s4.hour == 9 and s4.minute == 0
-    assert d4.day == 11 and d4.hour == 13 and d4.minute == 0
+def test_pickup_window_words_are_times_people_say(demo_rules):
+    """What the agent says and the page shows: quarter hours, and the date when pickup is tomorrow."""
+    s, d = pickup_window(demo_rules, datetime(2026, 10, 11, 13, 16, tzinfo=PKT))
+    assert f"{time_words(s)} to {time_words(d)}" == "11 October, 1:15 PM to 11 October, 4:15 PM"
+    s, d = pickup_window(demo_rules, datetime(2026, 10, 11, 21, 30, tzinfo=PKT))
+    assert f"{time_words(s)} to {time_words(d)}" == "12 October, 9 AM to 12 October, 12 PM"
 
 
 def test_build_call_record(demo_rules):
@@ -318,7 +319,7 @@ def test_build_call_record(demo_rules):
 
 
 def test_build_call_record_runs_the_pickup_window_on_the_batchs_mart_time(demo_rules):
-    """D74: real 02:00, batch at "4 h left" (mart 19:00): pickup today 19:00–23:00; the record stays in real time."""
+    """D74: real 02:00, batch at "4 h left" (mart 19:00): pickup today 19:00–22:00; the record stays in real time."""
     real = datetime(2026, 10, 16, 2, 0, tzinfo=PKT)
     batch = BatchRecord(
         batch_id="batch_banana_1",
@@ -368,8 +369,8 @@ def test_build_call_record_runs_the_pickup_window_on_the_batchs_mart_time(demo_r
         now=real,
     )
 
-    assert call.brief.pickup_deadline == datetime(2026, 10, 16, 23, 0, tzinfo=PKT)
-    assert call.brief.pickup_window == "16 October, 7 PM to 16 October, 11 PM"
+    assert call.brief.pickup_deadline == datetime(2026, 10, 16, 22, 0, tzinfo=PKT)
+    assert call.brief.pickup_window == "16 October, 7 PM to 16 October, 10 PM"
     assert call.clock_offset_s == 17 * 3600  # the voice service runs the call on the same time
     assert call.created_at == real
 

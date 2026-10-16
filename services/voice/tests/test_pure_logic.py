@@ -334,16 +334,19 @@ def test_price_guard_classify():
     assert classify([160], floor, approved, current) == "ok"
 
 
-def test_prompt_template_v1_6_male_voice_consistency():
+def test_prompt_template_v1_7_male_voice_consistency():
     from lastcall_voice.negotiator.prompt import PROMPT_VERSION, render_instruction
 
-    assert PROMPT_VERSION == "1.6"
+    assert PROMPT_VERSION == "1.7"
     brief = make_test_brief()
     view = brief.agent_view()
 
     expected_rule = "Never say a price is the last or lowest ('aakhri', 'last', 'final', 'is se neechay nahi', 'mumkin nahi') unless verify_offer returned decision = final."
     qty_rule = "Never agree to more than the available quantity in the brief."
     sauda_rule = "Never say 'sauda pakka' or close as a deal unless confirm_deal returned ok=true."
+    # D76: pickup is by the deadline; the agent states it and never asks for or chooses a time
+    pickup_rule = "Say only this deadline: never a start time, and never ask for or choose a pickup time."
+    confirm_tool = "confirm_deal(price_per_unit, quantity, buyer_confirmed)"
     repeat_rule = "To repeat a price, call verify_offer with no arguments. Only set buyer_asks_lower=true when the buyer asks for a lower price without naming a number."
 
     # Male rendering in text mode
@@ -369,6 +372,8 @@ def test_prompt_template_v1_6_male_voice_consistency():
     assert qty_rule in male_text
     assert sauda_rule in male_text
     assert repeat_rule in male_text
+    assert pickup_rule in male_text and confirm_tool in male_text
+    assert "pickup_time_iso" not in male_text
 
     # Voice mode: also consistently male
     male_voice = render_instruction(
@@ -424,7 +429,6 @@ async def test_confirm_deal_c0_validations():
     res_qty = await confirm_deal(
         price_per_unit=130,
         quantity=60.0,
-        pickup_time_iso=(NOW + timedelta(hours=2)).isoformat(),
         buyer_confirmed=True,
         tool_context=tc,
     )
@@ -434,33 +438,11 @@ async def test_confirm_deal_c0_validations():
     assert not ctx.outcome_set
     assert await store.get_deal(call.call_id) is None
 
-    # 2. Naive time (missing timezone) -> ok: False
-    res_naive = await confirm_deal(
-        price_per_unit=130,
-        quantity=40.0,
-        pickup_time_iso="2026-10-07T14:00:00",
-        buyer_confirmed=True,
-        tool_context=tc,
-    )
-    assert res_naive["ok"] is False
-    assert any("ask the buyer for the pickup time again" in r for r in res_naive["reasons"])
-
-    # 3. Past time -> ok: False
-    res_past = await confirm_deal(
-        price_per_unit=130,
-        quantity=40.0,
-        pickup_time_iso=(NOW - timedelta(hours=1)).isoformat(),
-        buyer_confirmed=True,
-        tool_context=tc,
-    )
-    assert res_past["ok"] is False
-    assert any("ask the buyer for the pickup time again" in r for r in res_past["reasons"])
-
+    # 2. No pickup time is passed: it is the brief's deadline (D76), so there is no time format to get wrong
     # 4. Valid confirmation -> ok: True, deal saved
     res_valid = await confirm_deal(
         price_per_unit=150,
         quantity=40.0,
-        pickup_time_iso=(NOW + timedelta(hours=2)).isoformat(),
         buyer_confirmed=True,
         tool_context=tc,
     )
@@ -470,6 +452,7 @@ async def test_confirm_deal_c0_validations():
     saved_deal = await store.get_deal(call.call_id)
     assert saved_deal is not None
     assert saved_deal.quantity == 40.0
+    assert saved_deal.pickup_time == call.brief.pickup_deadline
 
     unregister_context(call.call_id)
 
