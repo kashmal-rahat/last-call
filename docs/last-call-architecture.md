@@ -2,13 +2,13 @@
 
 ## Flowchart:
 
-![](last-call-simple-flow.jpg)
+![](last-call-flow.png)
 
 ## Architecture:
 
-![](last-call-architecture.jpg)
+![](last-call-architecture.png)
 
-> 🏗️ Final hackathon architecture. **Agents decide, code enforces.** No long requests anywhere: every step is a short task that saves its result and schedules the next one.
+> 🏗️ The deployed prototype. **Gemini judges, code decides.** Sections below also describe the production design (Cloud Tasks, manager portal), which is not built yet.
 
 ## 1. Components
 

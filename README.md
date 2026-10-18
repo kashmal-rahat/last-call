@@ -13,7 +13,7 @@ price, finds nearby buyers on Google Maps, and calls them in Urdu to negotiate a
 **Live demo:** the link and access code are in our submission. Judges play the buyer in a real voice
 conversation with the AI in the browser.
 
-![Last Call flow](docs/last-call-simple-flow.jpg)
+![Last Call flow](docs/last-call-flow.png)
 
 ## How it works
 
@@ -50,12 +50,12 @@ demo they appear on the page.
   through a separate add-on, switched on with a Terraform variable (D61). The number lives only in
   Secret Manager, so it can ring nothing else.
 
-Every decision, with its reason, is in the decision log: [`plans/README.md`](plans/README.md) (D1–D79).
+Every decision, with its reason, is in the decision log: [`plans/README.md`](plans/README.md) (D1–D80).
 The full design is in [`docs/last-call-architecture.md`](docs/last-call-architecture.md).
 
 ## Architecture
 
-![Architecture](docs/last-call-architecture.jpg)
+![Architecture](docs/last-call-architecture.png)
 
 | Part | Stack |
 |---|---|
