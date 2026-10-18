@@ -34,6 +34,12 @@ variable "google_cloud_location" {
   default     = "eu"
 }
 
+variable "api_min_instances" {
+  description = "Minimum instances for the api service (0 for dev, 1 for judging window: no cold start on the first page load)"
+  type        = number
+  default     = 0
+}
+
 variable "voice_min_instances" {
   description = "Minimum instances for voice service (0 for dev, 1 for judging window)"
   type        = number

@@ -341,7 +341,7 @@ resource "google_cloud_run_v2_service" "api" {
   template {
     service_account = google_service_account.api_sa.email
     scaling {
-      min_instance_count = 0
+      min_instance_count = var.api_min_instances
       max_instance_count = 2
     }
     containers {

@@ -1168,3 +1168,11 @@ From the user's iPhone screenshots of the deployed page:
 - **Change (`pricing.verify_offer`, rule 2 only):** after an agreement, no offer → `repeat` (unchanged), an offer at or above it → `accept` (unchanged), a lower offer or `buyer_asks_lower` → `final`, always at the agreed price. `accepted_price`, `rung`, `approved_prices`, the floor and `confirm_deal` are untouched; the decision is read only by the agent (`tools.py`). No prompt change: its `final` line ("Bas, yeh aakhri rate hai…", then a smaller quantity, then close) covers it, and a lowball after the agreement gets the lowball line first. Module 2 review K1 notes it.
 - **Not changed (policy, kept):** holding the agreed price lost this sale at 70 with the floor at 65, but stops "agree, then chip down to the floor" on every call.
 - **Tests:** the call's ladder: agree 70, then 65 → final 70 (close), 30 → final 70 (lowball), 70 and 80 → accept, no offer → repeat, and nothing in the state moved; `buyer_asks_lower` after an agreement → final. The new test fails on the old code.
+
+# Round 70: judging mode (Terraform), by Claude (2026-10-18)
+
+- **Checked live first:** both services on `ea6efb3`; phone demo on (from recording the video), both scaled to zero (first page load about 7.7 s, first call about 10 s), limits 50 an hour per IP and 100 a day, reading cache on. Credits: $280.77 left, valid to 30 Dec 2026, on an upgraded account (so no trial end), and the $50 budget counts cost after credits, so the kill switch stays quiet while credits cover usage.
+- **Change:** a new variable `api_min_instances` (default 0, like `voice_min_instances`, D15) replaces the API's hard-coded `min_instance_count = 0`. For judging, apply with `-var voice_min_instances=1 -var api_min_instances=1` and without `phone_demo_enabled`, which turns the phone demo off (D61).
+- **Plan:** api and voice only, 0 to add, 2 to change, 0 to destroy: `PHONE_DEMO_ENABLED` true → false and the phone-demo secret removed on both; `min_instance_count` 0 → 1 on both. Limits and cache unchanged.
+- **Cost:** voice kept warm (CPU always allocated) about $1.5–2 a day; the API's idle instance (CPU only during requests) much less. About $40–80 to 6 Nov with judge traffic, inside the credits.
+- **During judging:** every apply must keep both `-var` flags, or Terraform scales the services back to zero.
