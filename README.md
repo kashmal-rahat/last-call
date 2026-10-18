@@ -10,8 +10,8 @@ charities and dairy farms would happily take. Last Call reads the shelf from a p
 what each item should become (discount, bulk sale, donation, animal feed or compost) and at what
 price, finds nearby buyers on Google Maps, and calls them in Urdu to negotiate and close the deal.
 
-**Live demo:** [api-cujkm3kt5q-ew.a.run.app/demo](https://api-cujkm3kt5q-ew.a.run.app/demo). The access code is in our
-submission. Judges play the buyer in a real voice conversation with the AI in the browser.
+**Live demo:** the link and access code are in our submission. Judges play the buyer in a real voice
+conversation with the AI in the browser.
 
 ![Last Call flow](docs/last-call-simple-flow.jpg)
 
