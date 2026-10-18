@@ -28,9 +28,9 @@ If any of these conflict, **ask the user. Don't choose silently.**
 
 | Item | Value |
 |---|---|
-| Google account | kashmal@kayroxco.com |
+| Google account | The project owner's Google account |
 | Project ID | `kayrox-last-call` |
-| Billing account | `01C776-42EDFC-E7E33A` |
+| Billing account | The project's billing account |
 | Region | `europe-west1` (Belgium) |
 | GitHub repo | `kashmal-rahat/last-call` |
 | Budget | Created by the user in the console. **Not managed by Terraform** |

@@ -1,6 +1,6 @@
 # Module 8: Judge demo experience (UI redesign), plan (v1)
 
-> Approved 2026-10-12. Claude plans and reviews; Gemini Flash in Antigravity implements. Follow the steps in order and stop at every 🛑.
+> Approved 2026-10-12. Each step is planned and reviewed first, then implemented with Gemini Flash in Antigravity. Follow the steps in order and stop at every 🛑.
 >
 > **Rules for the coding agent:**
 > - **Page only.** Change `services/api/lastcall_api/static/index.html` and add `services/api/lastcall_api/static/demo.css`. **No server, endpoint, model or Terraform change.** Every Module 1–6 test must pass unchanged.
@@ -207,7 +207,7 @@ The user deploys the API (`./scripts/deploy.sh api`) and checks Sections 1–3 o
 
 ## Prompt for the coding agent (paste into a fresh chat)
 ````text
-You are implementing Module 8 (judge demo experience: UI redesign) of "Last Call" in /Users/kashmalrahat/AI-Builder-Cup/last-call. A planner (Claude) wrote the plan; implement it exactly, step by step.
+You are implementing Module 8 (judge demo experience: UI redesign) of "Last Call" in /Users/kashmalrahat/AI-Builder-Cup/last-call. A planner wrote the plan; implement it exactly, step by step.
 
 Read first, in this order:
 1. plans/README.md: rules and decisions D1–D59 (D59 is this module; D51, D55 and D58 constrain the page).
@@ -328,7 +328,7 @@ Start now with Step 1 (demo.css design system).
    - the pytest summary
    - screenshots at 1280 px and 375 px of every section
    - a list of every function moved, with its new file
-4. **Reviewer (Claude):** runs the normalising function diff against the baseline. Then the user commits, deploys the API (`./scripts/deploy.sh api`) and reruns the Module 6 checklist on the live page.
+4. **Reviewer:** runs the normalising function diff against the baseline. Then the user commits, deploys the API (`./scripts/deploy.sh api`) and reruns the Module 6 checklist on the live page.
 
 ### 8C prompt for the coding agent (paste into the same or a fresh chat)
 ````text

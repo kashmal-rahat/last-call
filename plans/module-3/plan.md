@@ -1,6 +1,6 @@
 # Module 3: Ladder, plan (v2: "Gemini knows, code decides")
 
-> Approved 2026-10-10. **Updated 2026-10-10 (D44):** Step 4's timing rules were rewritten after manual testing on the deployed demo; see `review.md` round 5. Claude plans and reviews; Gemini Flash in Antigravity implements. Follow the steps in order and stop at every 🛑.
+> Approved 2026-10-10. **Updated 2026-10-10 (D44):** Step 4's timing rules were rewritten after manual testing on the deployed demo; see `review.md` round 5. Each step is planned and reviewed first, then implemented with Gemini Flash in Antigravity. Follow the steps in order and stop at every 🛑.
 >
 > **Rules for the coding agent:**
 > - Don't change Module 1 or Module 2 behaviour. Their existing tests must pass unchanged at every step.

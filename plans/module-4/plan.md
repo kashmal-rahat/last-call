@@ -1,6 +1,6 @@
 # Module 4: Scout, plan (v1: "Google finds, Gemini screens, code decides")
 
-> Approved 2026-10-11. Claude plans and reviews; Gemini Flash in Antigravity implements. Follow the steps in order and stop at every 🛑.
+> Approved 2026-10-11. Each step is planned and reviewed first, then implemented with Gemini Flash in Antigravity. Follow the steps in order and stop at every 🛑.
 > The docs (`docs/*.md`, `plans/README.md` D46–D51) were updated for this design on 2026-10-11, so they should agree with this plan.
 >
 > **Rules for the coding agent:**
@@ -478,7 +478,7 @@ Tests (`test_demo_scout.py`, fake `scout_fn`). Keep them compact (about 8 tests;
    - Firestore has `scout_results/<key>` with `expire_at`
    - the browser network tab shows no full phone number in the response
    - Report: the latency of the first click; Places requests and tokens from `meta`
-4. Docs (the design is already documented by Claude; only record what was built):
+4. Docs (the design is already documented; only record what was built):
    - `plans/README.md` and `README.md`: Module 4 status
    - `README.md`: a short Module 4 section (what it does, the Find buyers panel, `probe_places.py`, `check_scout.py`, the cost per click)
    - If anything was built differently, update `docs/last-call-architecture.md` §4 Scout and report the difference
@@ -564,7 +564,7 @@ One short English line, at most 12 words, that a mart manager can check, e.g. "L
 
 ## Prompt for the coding agent (paste into a fresh chat)
 ````text
-You are implementing Module 4 (Scout) of "Last Call", a hackathon project in the repo /Users/kashmalrahat/AI-Builder-Cup/last-call. A planner (Claude) wrote the plan; you implement it exactly, step by step.
+You are implementing Module 4 (Scout) of "Last Call", a hackathon project in the repo /Users/kashmalrahat/AI-Builder-Cup/last-call. A planner wrote the plan; you implement it exactly, step by step.
 
 Read first, in this order:
 1. plans/README.md: the working rules and the decision log D1–D52. They are binding.

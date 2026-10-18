@@ -1,6 +1,6 @@
 # Module 4 review: Milestone 4A, Steps 0–4 (2026-10-11)
 
-Reviewer: Claude. Scope: commit `16d0ee6` (Terraform, models, mart config, `buyer_keys.py`, `scout/specs.py`, `scout/places.py`, `scripts/probe_places.py`, the tests) and `results/probe.md`, checked against `plan.md`.
+Scope: commit `16d0ee6` (Terraform, models, mart config, `buyer_keys.py`, `scout/specs.py`, `scout/places.py`, `scripts/probe_places.py`, the tests) and `results/probe.md`, checked against `plan.md`.
 Method: code read-through; `uv run pytest` (**290 passed, 9 skipped**); a read-only check of the live Places quotas with `gcloud alpha services quota list`.
 
 **Verdict: Steps 0–4 are built as planned and work. Proceed to Step 5** after two small live checks (P1, P2: 3 Places requests in total). Nothing here is blocking. The items marked "for Step 8/9" are notes for code that isn't written yet.

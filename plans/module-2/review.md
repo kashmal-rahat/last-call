@@ -177,7 +177,7 @@ The earlier criticals (C0–C4) are verified fixed. The "Updated the Limit" comm
 - **Fix the doc** to show the real worst-case cost and the actual kill-switch state.
 
 
-# Follow-up: the spoken-price fallback follows D30 (D68), by Claude (2026-10-15)
+# Follow-up: the spoken-price fallback follows D30 (D68) (2026-10-15)
 
 - **Found in a Vertex usage review:** `fallback_extract_prices` set `temperature=0.0` (ignored on Gemini 3.8 Flash and rejected by future models, after which every check would silently count as "unchecked"). It had no response schema and no thinking level, so it ran at 3.8 Flash's default MEDIUM inside a 3 s budget during a live call.
 - **Change** (`negotiator/price_guard.py`):

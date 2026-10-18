@@ -1,6 +1,6 @@
 # Module 6 review: Milestone 6A, Steps 1–5 (2026-10-11)
 
-Reviewer: Claude. Scope: commit `9287011` ("Module-6A: Implemented"), checked against `plan.md` Steps 1–5.
+Scope: commit `9287011` ("Module-6A: Implemented"), checked against `plan.md` Steps 1–5.
 
 Method:
 - read the diffs (stores, models, `ladder/engine.py`, `orchestration/handoff.py`, `orchestration/loop.py`, `live_session.py`, `text_session.py`, `tools.py`) and the new tests

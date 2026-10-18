@@ -2,7 +2,7 @@
 
 ## Follow-up F1: same-photo reading cache (D45), before deploy (2026-10-10)
 
-Reviewer: Claude. Method: read-only review of the uncommitted diff against `plans/module-1/followup-reading-cache.md`. I didn't run the tests; use the agent's pytest and live Firestore output for that.
+Method: read-only review of the uncommitted diff against `plans/module-1/followup-reading-cache.md`. I didn't run the tests; use the agent's pytest and live Firestore output for that.
 
 **Verdict: correct and limited to the right files. Approve: commit, then deploy.**
 

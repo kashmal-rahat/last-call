@@ -1,6 +1,6 @@
 # Module 1 follow-up F1: same photo → same reading (D45)
 
-> Planned 2026-10-10. Claude plans and reviews; Gemini Flash in Antigravity implements. Follow the steps in order and stop at the 🛑.
+> Planned 2026-10-10. Each step is planned and reviewed first, then implemented with Gemini Flash in Antigravity. Follow the steps in order and stop at the 🛑.
 > **Read first:** `plans/README.md` (rules, D1–D45), `plans/module-1/plan.md` Step 4 (the two-pass pipeline), `services/api/lastcall_api/inspector/inspector.py`, `shared/lastcall_shared/store.py`, `shared/lastcall_shared/firestore_store.py`, `services/api/lastcall_api/main.py` (`/demo/inspect`).
 
 ## Context

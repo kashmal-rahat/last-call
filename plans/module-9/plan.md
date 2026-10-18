@@ -1,6 +1,6 @@
 # Module 9: Phone demo through Twilio (for the demo video only)
 
-Built directly by Claude at the user's request on 2026-10-13 (the user said "implement it carefully"). This file records what was built, the switch-on and switch-off steps, and the live checks.
+Built directly at the user's request on 2026-10-13 (the user said "implement it carefully"). This file records what was built, the switch-on and switch-off steps, and the live checks.
 
 ## What it is (D61)
 - **One phone call, to the presenter's own SIM, started from the real demo page,** so the video can show the phone ringing next to the live Urdu transcript and the result.

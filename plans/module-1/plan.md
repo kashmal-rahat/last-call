@@ -14,7 +14,7 @@
 > - **Two-pass key assignment:** Reuses matched previous keys before generating base keys for unmatched items, preventing accidental key theft.
 >
 > **The implementing agent reads first:** `plans/README.md` (binding rules, D1–D21, D34–D37), this plan, `docs/last-call-architecture.md` §4 (Freshness Inspector) and §6–§9, `docs/last-call-module-plan.md` (Module 1).
-> Claude plans and reviews; Gemini Flash in Antigravity implements. Follow the steps in order and stop at every 🛑.
+> Each step is planned and reviewed first, then implemented with Gemini Flash in Antigravity. Follow the steps in order and stop at every 🛑.
 
 ## Context
 Module 2 (Negotiator) is built and deployed. Module 1 turns one shelf photo into a `FreshnessResult` that the Ladder (Module 3) acts on: keep, discount, bulk sale, donate, animal feed, compost. Shared models exist (`ItemAssessment`, `FreshnessResult`, `QuantityEstimate`, `BoundingBox` in `shared/lastcall_shared/models.py`) but nothing reads them yet, so they can be reshaped freely. There is no inspector code and there are no photos.

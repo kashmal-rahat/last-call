@@ -1,6 +1,6 @@
 # Module 3 review: Milestone 3A (2026-10-10)
 
-Reviewer: Claude. Scope: the 3A code, `results/report-3a.md` and `results/profiles.md`, checked against `plan.md`.
+Scope: the 3A code, `results/report-3a.md` and `results/profiles.md`, checked against `plan.md`.
 Method: code read-through, plus one read-only check of the Firestore client API. I did **not** run the test suite.
 
 **Verdict:** the structure is right and close to the plan. The refactor is clean, the engine is pure, profiles are stored and versioned, and there's no branching on produce names. But there is **one blocking bug** that the green test run hides, and **one decision-quality gap** that breaks the "people first" rule. Fix both before starting 3B.

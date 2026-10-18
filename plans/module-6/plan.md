@@ -1,6 +1,6 @@
 # Module 6: Orchestration and the Call handoff, plan (v1)
 
-> Approved 2026-10-11. Claude plans and reviews; Gemini Flash in Antigravity implements. Follow the steps in order and stop at every 🛑.
+> Approved 2026-10-11. Each step is planned and reviewed first, then implemented with Gemini Flash in Antigravity. Follow the steps in order and stop at every 🛑.
 > The docs (`docs/*.md`, `plans/README.md` D53–D57) were updated for this design on 2026-10-11, so they should agree with this plan.
 >
 > **Rules for the coding agent:**
@@ -277,7 +277,7 @@ Rough size: about 1.5–2 days for the implementer, so 6B lands by about 14 Oct,
 
 ## Prompt for the coding agent (paste into a fresh chat)
 ````text
-You are implementing Module 6 (Orchestration and the Call handoff) of "Last Call", a hackathon project in the repo /Users/kashmalrahat/AI-Builder-Cup/last-call. A planner (Claude) wrote the plan; you implement it exactly, step by step.
+You are implementing Module 6 (Orchestration and the Call handoff) of "Last Call", a hackathon project in the repo /Users/kashmalrahat/AI-Builder-Cup/last-call. A planner wrote the plan; you implement it exactly, step by step.
 
 Read first, in this order:
 1. plans/README.md: the working rules and the decision log D1–D57. They are binding (D53–D57 are this module).

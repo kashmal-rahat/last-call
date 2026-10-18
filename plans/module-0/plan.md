@@ -8,9 +8,9 @@
 
 | Item | Value |
 |---|---|
-| Account | kashmal@kayroxco.com |
+| Account | The project owner's Google account |
 | Project ID | `kayrox-last-call` |
-| Billing account | `01C776-42EDFC-E7E33A` |
+| Billing account | The project's billing account |
 | Region | `europe-west1` (regional services), `eu` (Vertex AI multi-region) |
 | Budget | Already created by the user in the console. **Don't create it in Terraform** |
 
@@ -35,7 +35,7 @@ The steps marked 🛑 are stop points: wait for the user before going on.
 Give the user these commands to run themselves (they open a browser login):
 
 ```
-gcloud auth login                      # as kashmal@kayroxco.com
+gcloud auth login                      # as the project owner
 gcloud config set project kayrox-last-call
 gcloud auth application-default login
 gcloud auth application-default set-quota-project kayrox-last-call
@@ -43,9 +43,9 @@ gcloud auth application-default set-quota-project kayrox-last-call
 
 Then run these read-only checks:
 - `gcloud projects describe kayrox-last-call` confirms the project exists and the user is Owner. If the project doesn't exist yet, give the user steps to create it.
-- `gcloud billing projects describe kayrox-last-call` shows `billingEnabled: true` with account `01C776-42EDFC-E7E33A`.
+- `gcloud billing projects describe kayrox-last-call` shows `billingEnabled: true` with the project's billing account.
 - Org policy check: Cloud Run needs `allUsers` as invoker because both services are public. Check whether `iam.allowedPolicyMemberDomains` (domain restricted sharing) applies to the project. If it does, give the user the console steps to add an exception for this project, and wait.
-- `gcloud billing budgets list --billing-account=01C776-42EDFC-E7E33A` confirms the user's budget exists. This only reads it; Terraform doesn't manage it.
+- `gcloud billing budgets list --billing-account=<billing account ID>` confirms the user's budget exists. This only reads it; Terraform doesn't manage it.
 
 Also give the user steps to turn on **GitHub secret scanning and push protection**: `kashmal-rahat/last-call` → Settings → Code security.
 
@@ -190,7 +190,7 @@ openssl rand -base64 32 | gcloud secrets versions add app-signing-key --data-fil
 | Step | Requirement in Plan | Audit Status | Evidence / Verification |
 |---|---|:---:|---|
 | **Step 1: Tools** | Python 3.12, `uv`, Terraform (`hashicorp/tap`), `gcloud` | **PASSED** | Python 3.12.15, `uv` 0.12.23, Terraform v1.16.4, Google provider `v8.5.0`, `gcloud` 587.0.0. |
-| **Step 2: Checks & Policies** | Project ownership, billing active, Org policy override, budget check | **PASSED** | Project `kayrox-last-call`, billing `01C776-42EDFC-E7E33A`, `iam.allowedPolicyMemberDomains` overridden to `allValues: ALLOW`, read-only budget check confirmed `$50/month`. |
+| **Step 2: Checks & Policies** | Project ownership, billing active, Org policy override, budget check | **PASSED** | Project `kayrox-last-call`, billing active, `iam.allowedPolicyMemberDomains` overridden to `allValues: ALLOW`, read-only budget check confirmed `$50/month`. |
 | **Step 3: State Bucket** | `gs://kayrox-last-call-tfstate` with versioning, UBLA, and PAP | **PASSED** | State bucket configured as remote backend in `versions.tf`. Remote state locking functioning. |
 | **Step 4: APIs** | 11 core GCP APIs enabled via Terraform (`disable_on_destroy = false`) | **PASSED** | `run`, `cloudbuild`, `artifactregistry`, `secretmanager`, `aiplatform`, `iam`, `iamcredentials`, `logging`, `cloudtrace`, `serviceusage`, `cloudresourcemanager` all active in project. |
 | **Step 5: Region & Models** | Vertex AI models probe & documentation in `results/region-check.md` | **PASSED** | Standardized on `europe-west1` and `eu` multi-region (Decision D13). Flash and Live probes passing. Verified in `plans/module-0/results/region-check.md`. |

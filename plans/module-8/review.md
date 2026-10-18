@@ -1,6 +1,6 @@
 # Module 8 review: Milestone 8A (2026-10-12)
 
-Reviewer: Claude. Scope: commit `2b61c3d` ("Module 8A: Implementation"), checked against `plan.md`.
+Scope: commit `2b61c3d` ("Module 8A: Implementation"), checked against `plan.md`.
 
 Method:
 - `uv run pytest`: **367 passed, 19 skipped**; `node --check` on the inline script: OK
@@ -360,9 +360,9 @@ Source: the user's screenshots (AI shelf reading; Buyers). D1 (no-fill boxes), D
 
 ---
 
-# Round 10: UI polish done directly by Claude (2026-10-12)
+# Round 10: UI polish done directly (2026-10-12)
 
-The user asked Claude to make the visual changes directly ("go ahead with the UI"). Scope: `demo.css`, `index.html` markup and **renderer functions only**. The work was checked in a local preview: the real page and API with an in-memory store and fake inspect/scout data from the scratchpad, never committed. It was checked at 1280 px and 375 px.
+The user asked for the visual changes to be made directly ("go ahead with the UI"). Scope: `demo.css`, `index.html` markup and **renderer functions only**. The work was checked in a local preview: the real page and API with an in-memory store and fake inspect/scout data from the scratchpad, never committed. It was checked at 1280 px and 375 px.
 
 ## Root causes found (beyond round 9)
 - **About 40 Tailwind-style utility classes** (`flex`, `items-center`, `gap-2`, `text-sm`, `justify-between`…) were used by the renderers, but the page has no Tailwind, so those layouts did nothing. Several semantic classes didn't match the CSS either: `item-title-group` vs `.item-row-title-group`, `item-def-value` vs `.item-def-val`, and `chip-neutral`, `chip-warning` and `dot` didn't exist.
@@ -409,7 +409,7 @@ The user asked Claude to make the visual changes directly ("go ahead with the UI
 
 ---
 
-# Round 11: premium call screen and buyer list, by Claude (2026-10-13)
+# Round 11: premium call screen and buyer list (2026-10-13)
 
 User feedback on the deployed round-10 page: the live-call panel felt cluttered, and the buyer list "looks just like text". This round redesigns both. It was checked in the local preview (scratchpad harness) at 1280 px and 375 px, with sample transcript lines and a finished deal.
 
@@ -451,7 +451,7 @@ User feedback on the deployed round-10 page: the live-call panel felt cluttered,
 
 ---
 
-# Round 12: hero and "How it works", by Claude (2026-10-13)
+# Round 12: hero and "How it works" (2026-10-13)
 
 The hero is there so a judge who opens the link cold understands in seconds what Last Call is and where to start. It's markup and CSS only; no JS file changed (`git diff --stat`: `demo.css`, `index.html`).
 
@@ -474,7 +474,7 @@ The hero is there so a judge who opens the link cold understands in seconds what
 
 ---
 
-# Round 13: calmer hero, step cards, progress bar removed, by Claude (2026-10-13)
+# Round 13: calmer hero, step cards, progress bar removed (2026-10-13)
 
 User feedback: the hero felt cluttered.
 - **Hero:**
@@ -492,7 +492,7 @@ User feedback: the hero felt cluttered.
 
 ---
 
-# Round 14: "closing time" hero, by Claude (2026-10-14)
+# Round 14: "closing time" hero (2026-10-14)
 
 User feedback: the hero's dark chat card, and two replacements tried in this round (a shelf photo with floating cards, a line-art sketch), all looked "like a uni project". All three tried to explain the pipeline inside the picture. We looked at the live heroes of Sierra, ElevenLabs Agents, Decagon and Bland. They share: one atmosphere instead of a diagram, at most one piece of product UI, light-weight headlines, one call to action.
 
@@ -521,7 +521,7 @@ User feedback: the hero's dark chat card, and two replacements tried in this rou
 
 ---
 
-# Round 15: New shelf bug and "Since last photo" wording, by Claude (2026-10-14)
+# Round 15: New shelf bug and "Since last photo" wording (2026-10-14)
 
 - **Bug (on live):** after **New shelf**, an inspection showed "N items detected" and the decision, but no photo and no items.
   - Cause: the New shelf handler set `#inspectResultContainer` to `display: none`, and nothing showed it again. `renderResults` restores the section, banners and footer, but never that container.
@@ -535,7 +535,7 @@ User feedback: the hero's dark chat card, and two replacements tried in this rou
 
 ---
 
-# Round 16: Shelf setup photo picker and the user's sample photos, by Claude (2026-10-14)
+# Round 16: Shelf setup photo picker and the user's sample photos (2026-10-14)
 
 - **New samples** (the user's photos, replacing Shelf B, Shelf C and the simulated banana tray):
   - Day 2 · Mixed
@@ -568,7 +568,7 @@ User feedback: the hero's dark chat card, and two replacements tried in this rou
 
 ---
 
-# Round 17: field help (toggletips) and clearer time pills, by Claude (2026-10-14)
+# Round 17: field help (toggletips) and clearer time pills (2026-10-14)
 
 The user wanted the three setup fields explained without adding visible text. The pattern was checked against design-system practice (Primer, Atlassian, Polaris "info icon"; the "toggletip" in Inclusive Components) and WCAG 2.2 AA.
 
@@ -605,7 +605,7 @@ The user wanted the three setup fields explained without adding visible text. Th
 
 ---
 
-# Round 18: page-wide text contrast (WCAG 2.2 AA), by Claude (2026-10-14)
+# Round 18: page-wide text contrast (WCAG 2.2 AA) (2026-10-14)
 
 Round 17 noted that the muted grey #94A3B8 (from the Module 8 spec) was used for small text across the page at about 2.5:1, below AA's 4.5:1.
 
@@ -622,7 +622,7 @@ Round 17 noted that the muted grey #94A3B8 (from the Module 8 spec) was used for
 
 ---
 
-# Round 19: AI shelf reading, box alignment and a calmer item card, by Claude (2026-10-14)
+# Round 19: AI shelf reading, box alignment and a calmer item card (2026-10-14)
 
 - **Bug fixed: boxes off the produce on tall photos.**
   - The picture sat letterboxed inside the dark viewfinder (`object-fit: contain`, `max-height: 480px`), but the box overlay covered the whole frame, so on portrait photos the boxes shifted and stretched by the bars.
@@ -644,7 +644,7 @@ Round 17 noted that the muted grey #94A3B8 (from the Module 8 spec) was used for
 - **Code:** `formatChange`, `formatStockBasis` and `freshnessPosition` are pure functions in `format.js`, with 13 unit-test cases. The renderer changes are in `renderItemsList` and the new `renderFreshnessScale`. Unused styles (`issues-chips`, `issue-tag`, `item-stage-level`) are removed.
 - **Checks:** `pytest` 421 passed, 20 skipped; `node --test` 26 passed; `node --check` on every module; no sideways scroll at 1280 and 375 px.
 
-# Round 20: take the judge to the reading after Inspect, by Claude (2026-10-14)
+# Round 20: take the judge to the reading after Inspect (2026-10-14)
 
 The reading appeared below the fold on a laptop, so pressing Inspect could look as if nothing happened.
 
@@ -657,7 +657,7 @@ The reading appeared below the fold on a laptop, so pressing Inspect could look 
 - **Not touched:** the inspection, the API and the cache. If this step fails, the page is simply as it was before.
 - **Checks:** in the preview, a normal reading (smooth scroll, focus on the heading), scrolling away while waiting (no scroll, focus unchanged), reduced motion (instant) and an error (no scroll, error shown). The browser pane was hidden, so these were checked by recording the scroll and focus calls, not by watching the page move.
 
-# Round 21: Decision prices, by Claude (2026-10-15)
+# Round 21: Decision prices (2026-10-15)
 
 Radish showed "Rs —" on the Decision card. The demo price list had 20 produce and missed radish, turnip and green bean (the Day 2 sample) and lime.
 
@@ -671,7 +671,7 @@ Radish showed "Rs —" on the Decision card. The demo price list had 20 produce 
 - **Production note:** the sale unit comes from the Inspector's prompt rule (dozen for bananas, and for kinnows and oranges displayed loose). In production it would come from the POS with the price.
 - **Checks:** pytest 425 passed, 20 skipped (added: sample produce priced, unique names, English alternative and lime lookups, the descriptive-word fallback and its word list); `node --test` 26 passed; ruff clean. In the preview, Day 2 Mixed showed a price on all 5 items, and the "Price not set" card was checked for kg and dozen.
 
-# Round 22: Decision section, in the AI reading card's style, by Claude (2026-10-15)
+# Round 22: Decision section, in the AI reading card's style (2026-10-15)
 
 The Decision section still used the older style: three heavy white cards with uppercase labels, a log-like profile line, and the same facts said twice.
 
@@ -696,7 +696,7 @@ The Decision section still used the older style: three heavy white cards with up
 - **Removed styles:** `.price-cards-grid`, `.price-card*`, `.decision-meta-box`, `.profile-line`, `.price-override-input` (no element used it).
 - **Checks:** pytest 427 passed, 20 skipped; `node --test` 26 passed (one project test caught an inline CSS variable; replaced by CSS auto columns); ruff clean. In the preview, real Gemini readings of Day 4 showed tomato on keep and banana on bulk sale. Discount, "Price not set", compost and donate were rendered from edited decision data; at 1280 and 375 px there was no sideways scroll, and the phone price input is 185 px wide.
 
-# Round 23: Buyers section, in the page's design language, by Claude (2026-10-15)
+# Round 23: Buyers section, in the page's design language (2026-10-15)
 
 The Buyers list was the busiest section: about 20 indigo marks (an uppercase "NEXT TO CALL", a left bar, avatars, the call button, 5 "Likely fit" chips, 5 Maps links), the same labels on every row ("Open now", "Likely fit", "Google Maps", "Play this buyer"), initials avatars that said nothing (two "JH"), a third "selected" style, and a three-line footer that counted the same nine businesses twice.
 
@@ -718,7 +718,7 @@ The Buyers list was the busiest section: about 20 indigo marks (an uppercase "NE
   - The preview used fictional sample buyers (a fake Scout, no Google Maps calls). It covered the next buyer, closed, hours unknown, possible fit, a deal, a "call back" buyer who is next again (Start call shown) and a declined one.
   - At 1280 and 375 px there was no sideways scroll.
 
-# Round 24: one stylesheet per part of the page (D67), by Claude (2026-10-15)
+# Round 24: one stylesheet per part of the page (D67) (2026-10-15)
 
 - **Why:** `demo.css` was 2,150 lines. The sections were in order up to Impact, but the last 300 lines were a catch-all: hidden-by-default states for every section, "replacements for removed inline styles", button sizes apart from the buttons, and a phone block mixing the header, section heads, the step row and the price row. Unused rules collected there.
 - **How:** a script parsed the file into its 410 top-level blocks (exact round trip) and gave each one to a file by index. The one mixed `@media` block was split rule by rule into the matching files under the same query. A check confirmed the nine files hold exactly the original 456 rules. The files are in `static/css/`, linked in cascade order: base, layout, hero, setup, reading, decision, buyers, call, impact.
@@ -734,7 +734,7 @@ The Buyers list was the busiest section: about 20 indigo marks (an uppercase "NE
   
   Each file's hidden-by-default states now open with the same one-line comment. With comments stripped, the rules are identical to before.
 
-# Round 25: a number and its unit never split across lines, by Claude (2026-10-15)
+# Round 25: a number and its unit never split across lines (2026-10-15)
 
 - **Why:** the page writes quantities in the SI style, with a space between number and unit ("4 h", "0.4 km", "2.5 dozen", "Rs 180"). An ordinary space allows a line break, and on a phone the closing-time buttons can wrap, so "4 h left" could split as "4" / "h left".
 - **What:** a non-breaking space (U+00A0) between every displayed number and its unit (h, min, s, km, kg, dozen, days, pieces, MB), and between "Rs" and the amount. It renders exactly like a space. Places:
@@ -754,7 +754,7 @@ The Buyers list was the busiest section: about 20 indigo marks (an uppercase "NE
   - in the preview, every place shows U+00A0, including the server reason after JSON.
 - **Tests:** the formatter and `selling_time` expectations now spell out the non-breaking space. pytest 427 passed, 20 skipped; `node --test` 26 passed; ruff clean.
 
-# Round 26: call section, consistent with the page, by Claude (2026-10-15)
+# Round 26: call section, consistent with the page (2026-10-15)
 
 The call screen was already the page's strongest section (a dark "call mode": caller, live status, Hang up, the deal sheet with "Floor · never told to the AI", the conversation and the result banner). No redesign, three consistency fixes:
 
@@ -769,7 +769,7 @@ The call screen was already the page's strongest section (a dark "call mode": ca
 - **"Next buyer" uses the page's green button:** `renderNextActionRow` uses `btn-primary`, like "Start call" in Buyers. The indigo `.btn-ai` style had no other use and is removed from `base.css`.
 - **Checked** in the preview with a fictional call (caller, deal sheet, transcript, a tool notice, a deal result) at 1280 and 375 px, with no sideways scroll. A pickup window that wrapped mid-range was the fake data's format; the real one is words ("… to …") and also goes into the agent's prompt, so it is unchanged.
 
-# Round 27: the Buyers list marks the right buyer during and after a call, by Claude (2026-10-15)
+# Round 27: the Buyers list marks the right buyer during and after a call (2026-10-15)
 
 - **Bug:** the page only refetches the batch when a call ends, so during a call the Buyers list showed the pre-call state. Calling #3 from its "Call" button left #1 highlighted as "Next to call" and #3 unmarked; calling #1 left it labelled "Next to call" while on the call.
 - **Fix (page):**
@@ -784,7 +784,7 @@ The call screen was already the page's strongest section (a dark "call mode": ca
   - `test_batch_next_action_names_the_buyer_by_id`.
   - In the preview, with fictional buyers, each case gave the expected result: no calls yet; calling #3; an ID that disagrees with a stale rank (the ID wins); an ID not in the list (no guess, the button keeps the server's ID); rank only; a call on another item.
 
-# Round 28: a steady transcript, and one click moves one ladder step, by Claude (2026-10-15)
+# Round 28: a steady transcript, and one click moves one ladder step (2026-10-15)
 
 - **Transcript:** it was `min-height: 300px; max-height: 420px`, so it grew with each message and the call panel got taller mid-call before a scrollbar appeared. It now has a fixed height from the start (420 px; 360 px at ≤760 px) and scrolls inside. Each new message still scrolls to the bottom (checked: 0 px from the bottom; smooth in a visible browser).
 - **"Next step: find charities":**
@@ -799,7 +799,7 @@ The call screen was already the page's strongest section (a dark "call mode": ca
 - **Refactor:** the "scroll a section into view, smooth unless reduced motion" logic was in `reading.js` (the reading after Inspect) and `buyers.js` (this button). It is now one helper, `scrollToSection(el)` in `ui.js`, also used when a call starts (`call.js`), which used to scroll smoothly even with reduced motion. In the preview, the reading reveal and the next-step button both go through the helper (smooth, `block: start`); the page's only console error was the test's own stubbed 404.
 - **Checked:** the fixed 420 px transcript beside the deal sheet. The deal sheet is 382 px typically and 402 px with an unusually long pickup text, and the column bottoms line up.
 
-# Round 29: Impact in the page's style, and one shared stat strip, by Claude (2026-10-15)
+# Round 29: Impact in the page's style, and one shared stat strip (2026-10-15)
 
 - **Before:** six separate grey boxes with uppercase labels ("MONEY RECOVERED", and a title-case "Deals Closed"). "Stock placed" already included what was donated and fed, so three boxes overlapped. Bare "0"s showed before any call.
 - **After:** one stat strip with the three headline results, a detail line where it helps, and the disclaimer as the section's quiet footer line (like the reading's and Decision's):
@@ -813,7 +813,7 @@ The call screen was already the page's strongest section (a dark "call mode": ca
 - **Checked** in the preview with fictional call results (empty; one deal; a donation plus feed in two units) at 1280 and 375 px, with no sideways scroll. The money adds up: Rs 100 sold, plus 3.5 kg of feed at Rs 10, plus a free donation, is Rs 135.
 - **Follow-up, at the user's request:** the number of calls was only a small "of 4 calls" detail under Deals closed, and hidden before the first call. Calls are the product's core action, so **Calls made** is a headline again. The strip now reads as a funnel, left to right: **Calls made → Deals closed → Stock placed → Money recovered** ("4 calls → 3 deals → 2 dozen, 3.5 kg placed → Rs 135"), ending on the money. Deals closed drops its detail line, since the call count sits next to it. Checked at 1280 px (four columns) and 375 px (stacked, no sideways scroll).
 
-# Round 30: whole-page design review, desktop and phone, by Claude (2026-10-15)
+# Round 30: whole-page design review, desktop and phone (2026-10-15)
 
 The whole page was walked at 375 px and 1280 px with every section filled: a real reading and decision, fictional buyers, a fictional call and results. The same patterns now run through every section: cards; the mint "selected" ring; soft stat strips; sentence-case labels; indigo only for the AI; one quiet footer line per section; green main buttons. There was no sideways scroll at either width. Four things looked off and were fixed:
 
@@ -831,14 +831,14 @@ The whole page was walked at 375 px and 1280 px with every section filled: a rea
   
   Checked and fine: three tooltips open within a 375 px screen; outcome chips are compact under the name; the empty list explains itself ("No suitable buyers found nearby", then "9 not shown: 6 without a phone and 3 too far").
 
-# Round 31: a new inspection clears the previous call, by Claude (2026-10-15)
+# Round 31: a new inspection clears the previous call (2026-10-15)
 
 - **Bug (reported):** after a call, inspecting a new photo kept the old call section on screen (caller, transcript, "Call ended", result) until a reload. `handleInspect` reset the state (`currentActiveCall` among it) but never the call section; only New shelf hid it, and none of the resets cleared the transcript (the next call did).
 - **Fix:** one `resetCallPanel()` in `call.js` puts the call section back to how the page starts (hidden; caller "—"; deal sheet "—"; timer stopped at 00:00; the transcript back to its placeholder; the result cleared). It does nothing during a live call. Used by all three resets: a new inspection (`reading.js`), New shelf and a branch change (`main.js`, replacing their own partial copies). `call.js` and `reading.js` now import each other; this is safe in ES modules because both functions are used only at run time.
 - **Checked** in the preview: with an ended call on screen, Inspect resets the whole section; a live call is never reset; New shelf resets it the same way; the page loads without errors. The one console 404 is the browser asking for `/favicon.ico` (the page declares no icon), which is unrelated.
 - **Review pass:** the transcript's starting content is taken from `index.html` once when the module loads: every node, whitespace included, cloned on each reset. So the placeholder text isn't duplicated in JS. The capture is defensive (`dom.transcript?.childNodes ?? []`) because the module can load without the real page: the first version read the transcript at import time and failed the export test (`static.test.mjs`), which imports the modules in Node with a minimal fake page. Checked: two resets in a row restore the original markup byte for byte, with a fresh element each time. Also checked: no reset can fall between a call ending and its result appearing (same synchronous step); the branch path now resets the whole section, which only happens before any call (the branch locks once calls start, D58); the section is hidden before the transcript changes, so screen readers don't announce the reset.
 
-# Round 32: tab icon, the site root, and an honest "Gemini busy" message, by Claude (2026-10-15)
+# Round 32: tab icon, the site root, and an honest "Gemini busy" message (2026-10-15)
 
 - **Tab icon:** `static/favicon.svg` is the header logo (the white leaf on the emerald tile, `#047857`), linked as `<link rel="icon" type="image/svg+xml">`. Browsers still ask for `/favicon.ico`, so that path now answers with the same SVG; before, every visit logged a 404 in the console.
 - **Site root:** `/` was a JSON 404 (the page lives at `/demo`), which is what anyone sees if they trim the link. It now redirects to `/demo` (307).
@@ -846,13 +846,13 @@ The whole page was walked at 375 px and 1280 px with every section filled: a rea
 - **Tests:** the icon is declared and served at both paths as SVG; `/` redirects to `/demo`; the busy rule has one case per signal (429, 503, 504 and a timeout are busy; 500, 400, an empty answer and a budget spent before asking are not); the route returns 503 with `Retry-After` only when the flag is set.
 - **Review pass:** the `GeminiCallError` docstring said a spent time budget counts as busy; it now matches the strict rule (only if the last attempt itself timed out or got 429/503/504). A busy Gemini is logged as a WARNING (`inspector_gemini_busy`), not an ERROR, since it is expected, temporary and outside our control; real failures keep `inspector_call_failed` at ERROR, so error alerts stay meaningful (nothing in the repo or infra watched the old event). Also checked: hedged requests that both time out count as busy (a TimeoutError); the `/` redirect is a temporary 307, so browsers won't cache it; `/favicon.ico` serves a fixed file path.
 
-# Round 33: Impact without the stock breakdown, by Claude (2026-10-15)
+# Round 33: Impact without the stock breakdown (2026-10-15)
 
 - **Change (the user's call):** the line under "Stock placed" ("1 dozen donated · 1.1 dozen as animal feed", or "all sold to businesses") is removed. The strip is now four plain numbers on one baseline: Calls made → Deals closed → Stock placed → Money recovered.
 - **Removed with it:** `donatedByUnit` and `feedByUnit` from `computeImpact` (nothing else read them), the `impactPlacedDetail` element and lookup, and the `.stat-detail` style (Impact was its only user). The money rule is unchanged: every deal except a donation adds price × quantity; a donation still counts as stock placed. The tests keep both cases.
 - **Checks:** ruff clean; pytest 440 passed, 20 skipped; `node --test` 26 passed. In the preview, with fictional results (a sale, a decline, a donation and an animal-feed deal), the strip reads "4 · 3 · 2.9 dozen · Rs 111" at 1280 and 375 px, with no sideways scroll and no console errors.
 
-# Round 34: Find buyers shows that it is working, by Claude (2026-10-15)
+# Round 34: Find buyers shows that it is working (2026-10-15)
 
 - **Problem (reported):** after Find buyers, only the button's text changed ("Searching Google Maps…", dimmed like any disabled button) while the Scout ran for several seconds, so the page looked stuck.
 - **Searching state, in the page's style:**
@@ -864,7 +864,7 @@ The whole page was walked at 375 px and 1280 px with every section filled: a rea
 - **Bug fixed on the way:** the button always said "Find juice shops & bakeries" for a bulk sale, but the Ladder picks the types per produce and can include restaurants (`engine.py` step 8). `getFindBuyersLabel` now takes the step's real buyer types (the batch's snapshot once calling has started, D54, else the decision's), through a new `buyerTypesPhrase`. For example "Find juice shops, restaurants and bakeries", "Find restaurants" or "Find cattle farms". On a phone the button is full width and may take two lines.
 - **Checks:** ruff clean; pytest 440 passed, 20 skipped; `node --test` 26 passed (the label test now covers 1, 2 and 3 types and none). In the preview (fake Inspector, Ladder and a Scout that waits 6 s, with fictional businesses), at 1280 and 375 px: the searching state, the finished list, a Refresh, no sideways scroll and no console errors.
 
-# Round 35: Hang up works while a call is still connecting, by Claude (2026-10-15)
+# Round 35: Hang up works while a call is still connecting (2026-10-15)
 
 - **Bug (reported):** Hang up pressed while a call was connecting led to odd behaviour. `hangup()` only acted on an **open** socket; earlier it stopped the audio but not the call:
   - **while the call was being created** ("Starting…"): `startCallForItem` carried on, asked for the microphone and connected, so the agent started with Hang up already disabled;
@@ -878,7 +878,7 @@ The whole page was walked at 375 px and 1280 px with every section filled: a rea
 - **Tests:** new `services/api/tests/js/call.test.mjs` with fake page elements, socket, audio and microphone, one case per stage (being created, opening, live, busy retry, and a retry without a hang-up). Against the old `call.js`, the three bug cases fail as expected.
 - **Checks:** ruff clean; pytest 440 passed, 20 skipped; `node --test` 31 passed. In the preview, with a stand-in microphone and a socket that never opens: Hang up during "Connecting audio…" closed the socket, ended the call with the note and unlocked the page, and calling the same buyer again started normally.
 
-# Round 36: call screen on a phone, Hang up and a long next-buyer name, by Claude (2026-10-15)
+# Round 36: call screen on a phone, Hang up and a long next-buyer name (2026-10-15)
 
 From the user's iPhone screenshots of the deployed page:
 
@@ -890,7 +890,7 @@ From the user's iPhone screenshots of the deployed page:
 - **"Next buyer · #3 …" overflowed its button.** Google Maps names can be long ("Bismillah Fresh Juice & Dahi bhally | Johar Town Lahore"), and the 44 px pill showed three lines spilling out. The label is now one line in a `.btn-label` span (a generic style in `base.css`), ending in "…" when it can't fit. The button's text, so its accessible name, is still the full name, and a tooltip shows it too.
 - **Checks:** ruff clean; pytest 440 passed, 20 skipped; `node --test` 31 passed. Checked in the preview at 390 and 375 px with the screenshot's names and every status, and at desktop width.
 
-# Round 37: a hung-up call no longer reads "Call back", by Claude (2026-10-15)
+# Round 37: a hung-up call no longer reads "Call back" (2026-10-15)
 
 - **Reported:** hanging up mid-conversation showed "Call back 09:00" on the buyer, and "Buyer asked for a call back" on the result.
 - **Not a voice bug:** the voice service's rule (Module 2 plan, Step 10, `test_text_session_dropped_callback`) saves a call that ends with no outcome after the buyer has spoken as `call_back` at the next calling time at least 2 h away, flagged `dropped`, so a real mart tries again. 09:00 was right for a call after 19:00 (now + 2 h is past the 21:00 end of calling hours). The page presented it as the buyer's request, and showed no day.
@@ -901,7 +901,7 @@ From the user's iPhone screenshots of the deployed page:
   - The outcome and its retry time on the server are unchanged.
 - **Checks:** ruff clean; pytest 441 passed, 20 skipped; `node --test` 32 passed. In the preview, the result card reads "Ended early · 2.5 of 2.5 dozen left" for a dropped call and "Buyer asked for a call back · Call back tomorrow 09:00 · …" for a real one.
 
-# Round 38: "Try the live demo" scrolls without touching the address, by Claude (2026-10-15)
+# Round 38: "Try the live demo" scrolls without touching the address (2026-10-15)
 
 - **Reported (laptop):** after "Try the live demo" the screen sometimes flickered or went back to the top, and every refresh showed `/demo#inspectorSection`.
 - **Cause:** the button was a plain link to `#inspectorSection`, animated by the page-wide `html { scroll-behavior: smooth }`. The fragment stayed in the address, so from then on the browser scrolled by itself on every refresh, back or forward, while the page loaded and while it restored the previous position. Page-wide smooth scrolling turned each of those into an animation that the trackpad's momentum or the restore could cut short.
@@ -912,7 +912,7 @@ From the user's iPhone screenshots of the deployed page:
   - `html { scroll-behavior: smooth }` is removed: with no in-page links left, it only animated the browser's own scrolls (reload, find in page). The transcript keeps its own smooth scrolling.
 - **Checked** in the preview: an old `#inspectorSection` address becomes `/demo`; the button scrolls the setup to 80 px from the top, never backwards, and the address stays `/demo`. ruff clean; pytest 465 passed, 20 skipped; `node --test` 32 passed.
 
-# Round 39: a click during trackpad momentum, and a refresh, by Claude (2026-10-15)
+# Round 39: a click during trackpad momentum, and a refresh (2026-10-15)
 
 - **Reported (laptop, after round 38 was deployed):** the first "Try the live demo" scrolls down perfectly; after scrolling back up and clicking again, the page goes down and comes back up. A refresh opens where the judge was, not at the hero.
 - **Cause of the bounce:** a Mac trackpad keeps sending wheel events for a moment after a flick (momentum), even once the page is at the top. The click started the smooth scroll; the next momentum event cancelled it (a user scroll always wins) and carried the page back up. The first click has no flick before it, which is why it was always fine. My first guess (the header's backdrop blur) did not fit this: it would flicker on every click, so that change was not kept.
@@ -922,14 +922,14 @@ From the user's iPhone screenshots of the deployed page:
 - **Refresh:** `history.scrollRestoration = 'manual'`, so a refresh opens at the hero. The reload clears the reading, buyers and calls, so the old position pointed into a page that no longer has that content. An old `#inspectorSection` address opens at the hero too: round 38 drops the fragment before the browser scrolls to it (round 38 checked only the address, not the position), and its comment now says so. Those addresses exist only from the last few days.
 - **Checked** in the preview (the pane was hidden, so no animation frames; the round 38 measurement covers the animation itself). I recorded when the scroll starts: a click with no wheel events scrolls at 0 ms; with 400 ms of simulated momentum at 487 ms (last event at 386 ms); with endless momentum at the 1 s cap (1159 ms, timers are throttled in a hidden tab); three clicks during the wait give one scroll. A refresh at 900 px opens at 0. ruff clean; pytest 465 passed, 20 skipped; `node --test` 32 passed.
 
-# Round 40: access code problems are shown at the code field, by Claude (2026-10-15)
+# Round 40: access code problems are shown at the code field (2026-10-15)
 
 - **Reported:** with a wrong code, Inspect showed its error in the banner under the buttons, below the fold. The judge saw nothing happen unless they scrolled.
 - **Fix (the usual form pattern, as in the GOV.UK Design System and WCAG 3.3.1):** a problem with the code is shown where it is fixed. The field gets a red edge and `aria-invalid`, the reason sits right under it (linked with `aria-describedby`, so a screen reader reads it on focus), the field comes into view if it isn't (under the sticky header counts as out of view), and it takes focus with its text selected, so typing replaces it. Typing clears the error.
   - One helper in `api.js` (`showAccessCodeError`, `clearAccessCodeError`, two shared messages) is used for a missing code (`requireAccessCode`, which used to show a toast) and a refused one (401) from Inspect and from starting a call. Other errors stay in their banners.
 - **Checked** in the preview: a wrong code clicked from a screen below brings the field to 363 px from the top with the message under it, focused and selected; typing clears it; an empty code is asked for the same way ("Enter the access code. You’ll find it in our submission deck."); the right code inspects with no error. Screenshots at desktop width and 375 px, no horizontal scroll. Two new `node --test` cases (refused and missing code at call start). ruff clean; pytest 465 passed, 20 skipped; `node --test` 34 passed.
 
-# Round 41: "when the mart reopens", not "tomorrow's opening", by Claude (2026-10-16)
+# Round 41: "when the mart reopens", not "tomorrow's opening" (2026-10-16)
 
 - **Reported:** "still fine at tomorrow's 09:00 opening" reads oddly when the judge has picked a simulated time of day (12 h, 4 h or 1 h left).
 - **Assessed:** the rule behind it is right for every preset (closing 23:00, opening 09:00: from 11:00, 19:00 or 22:00 the next opening after tonight's close is tomorrow 09:00), and the line is the reason for the decision, so it stays. Only the word "tomorrow" names a day the judge didn't choose; with "Now" between 23:00 and midnight the mart has already closed, and the rule checks the opening a day later than "tomorrow's".
@@ -940,7 +940,7 @@ From the user's iPhone screenshots of the deployed page:
   - But three of D44's scenarios assert the current behaviour (2, 11, 24), and Module 3 round 5 explains why: acting on "won't last until closing" in the morning lost a day of full-price sales, because the estimate is rough (bands × level), and the next photo catches real decline. Scenario 2 is ripening (mid) bananas at 10:00, so the change would have put a 40% morning discount on the demo's most common case, not just on rare short-lived produce.
   - Withdrawn; the engine is unchanged (the same 9,216 decisions as before). The architecture doc's "40% straight away" was the misleading part: it now says 40% from the start of the window, and why produce stays at full price before it.
 
-# Round 42: one mart clock for Time until closing (D74), by Claude (2026-10-16)
+# Round 42: one mart clock for Time until closing (D74) (2026-10-16)
 
 - **Reported:** Time until closing changed only the decision; the pickup window, the agent's "current time", the deal and call-back checks and WhatsApp followed the real time in Lahore. The worst case: "12 h left" (mart 11:00) at real 22:00, the buyer agrees "aaj 3 baje", and `confirm_deal` refused it as in the past.
 - **Plan first:** `plans/module-8/plan-mart-clock.md`, reviewed with the user over several rounds (options, every reader of the clock, edge cases near midnight, the header label, Find buyers left unchanged), then built.
@@ -951,13 +951,13 @@ From the user's iPhone screenshots of the deployed page:
 - **Senior review pass:** every remaining real-time read listed again (`git grep` for `now_fn()`, `datetime.now`, `now_pkt()`, `clock()`): all are record timestamps, scripts, or the simulator's text session (offset 0). Found and fixed: the dropped-call retry was duplicated in the live and text sessions and the copies now used different clocks → one `CallContext.retry_after_drop` used by both, with boundary tests; the text session's clock reads use `ctx.now()`; a JS header test could fail on a turning minute → accepts the minute before or after. pytest 488 passed, 20 skipped; `node --test` 38 passed; ruff clean.
 - **Still to check live:** a browser call with each preset (and one phone-demo call if it is switched on).
 
-# Round 43: Time until closing shows the time each preset sets, by Claude (2026-10-16)
+# Round 43: Time until closing shows the time each preset sets (2026-10-16)
 
 - **Reported:** after D74 the buttons still read "12 h left · morning", "4 h left · evening", "1 h left · last hour", while the header shows "19:00 PKT"; the judge had to work out the link.
 - **Change (page text only):** the buttons lead with the time they set, as the header shows it, and keep the hours to closing as the sub-label: "11:00 PKT · 12 h to closing", "19:00 PKT · 4 h to closing", "22:00 PKT · 1 h to closing"; "Now · real time" is unchanged. The hidden select's options match. The values (12, 4, 1) are unchanged, so the decision, the shift and the tests are untouched; "h to closing" matches the decision's own chip.
 - **Checked** in the preview: desktop one row, 375 px two rows of two, all 48 px tall, no horizontal scroll. ruff clean; pytest 488 passed, 20 skipped; `node --test` 38 passed.
 
-# Round 44: the header shows the picked time at once, by Claude (2026-10-16)
+# Round 44: the header shows the picked time at once (2026-10-16)
 
 - **Reported:** the header changed only once there was a decision; the page opened on "19:00 PKT" selected with the real time in the header, and picking a time before inspecting changed nothing.
 - **Considered and declined (agreed with the user):** counting from the first call instead of the decision. Reading time moves the header, the agent, the pickup window and WhatsApp together, so nothing contradicts; a shelf-wide "clock started" moment would need a database write at the first call and a second header state.
@@ -967,7 +967,7 @@ From the user's iPhone screenshots of the deployed page:
 - **Review pass:** the selected time is written in one place only (`main.js`, which fires the change handler), so the header can't miss a change. Gap found and closed: each preset's time is written three times on the page (the button, the select's text, the `data-time` the header reads) and the server works it out separately from the mart's closing time, with nothing tying them together. `test_time_presets_on_the_page_match_the_mart_clock` checks the served page against the server's own `clock_offset` + `mart_now` (not a hard-coded 23:00); changing a button label or a `data-time` on purpose fails it. It also checks the tip's "The mart closes at 23:00." against the mart's closing time (a fourth copy; a wrong value fails it). Considered instead: building the labels at runtime from the server, rejected because it would cost a request and an empty first screen, and add a way for the buttons to fail, for values that only change with the mart's closing time. pytest 489 passed, 20 skipped; `node --test` 41 passed; ruff clean.
 
 
-# Round 45: "Time of day", with a plain tip, by Claude (2026-10-16)
+# Round 45: "Time of day", with a plain tip (2026-10-16)
 
 - **Reported:** the field label "Time until closing" no longer matched its buttons (times of day since round 43), and the tip ("…the pickup time and the call change as closing nears") didn't say what changes.
 - **Change (text only):** the label is "Time of day", matching the section's subtitle ("Choose a branch, the time of day and a shelf photo"); the info button's name and the header tooltip follow ("Set by Time of day"). The tip, worded with the user: "The mart closes at 23:00. Pick the mart's time of day, and the AI decides accordingly." The setting is renamed in code comments, tests and current docs; the review log keeps the old name where it records history, and the plan notes the rename.
@@ -975,7 +975,7 @@ From the user's iPhone screenshots of the deployed page:
 - **Follow-up:** the shelf lock note named the setting by its old idea ("Branch, closing time and prices are fixed once calls start"); it now reads "Branch, time of day and prices are fixed once calls start · New shelf to start over". No other page text names it.
 
 
-# Round 46: a 3-hour pickup window on quarter hours (D75), by Claude (2026-10-16)
+# Round 46: a 3-hour pickup window on quarter hours (D75) (2026-10-16)
 
 - **Reported:** the call panel showed "Pickup 1:16 PM to 5:16 PM" while WhatsApp said "by 3 PM". Not a bug (the window is the range the stock is held; 3 PM is the time agreed inside it), but the window was long for near-expiry stock and its odd minutes looked and sounded machine-made. The user chose 3 h.
 - **Change:** `pickup_window_hours` (3 h) is a mart setting, validated 0.5–8 h, replacing the `PICKUP_HOURS = 4.0` constant. `pickup_window` starts at now rounded **down** to the quarter hour, for the window, never past closing; under `bulk_pickup_hours` left (or closed), from the next opening for the window. The agent, `confirm_deal` and WhatsApp take the window from the brief, so they follow.
@@ -983,7 +983,7 @@ From the user's iPhone screenshots of the deployed page:
 - **Tests:** the window table (3 h, rounding, a call just after a preset, cut at closing, 2 h left vs under, closed, before opening, now inside the window), the window's spoken words, the setting's validation; the call-record and route tests move to 3 h ("7 PM to 10 PM", "9 AM to 12 PM").
 - **Checked** in the preview: 19:00 → "7 PM to 10 PM", 11:00 → "11 AM to 2 PM", 22:00 → "tomorrow 9 AM to 12 PM", Now at 13:33 → "1:30 PM to 4:30 PM". ruff clean; pytest 498 passed, 20 skipped; `node --test` 41 passed.
 
-# Round 47: pickup is "by the deadline" everywhere (D76), by Claude (2026-10-16)
+# Round 47: pickup is "by the deadline" everywhere (D76) (2026-10-16)
 
 - **Found in a live test call:** the buyer agreed the price and quantity ("Theek hai"); the agent then closed the deal and picked "aaj shaam 3 baje" itself, never asking, while the call panel showed "Pickup 1:16 PM to 5:16 PM". (A "120" in the transcript was speech-to-text mishearing "110"; the user confirmed the agent said 110.)
 - **Decided with the user:** one time everywhere, the window's deadline, said as a clock time (not "agle do ghante", which drifts from the window and from WhatsApp).
@@ -995,14 +995,14 @@ From the user's iPhone screenshots of the deployed page:
 - **Still to check live:** a browser voice call (Gemini Live) with 19:00 and with 22:00 ("kal 12 baje tak").
 - **Review after commit `18486a8`:** one gap and one stale line. The result card after a deal still formatted the pickup itself ("Pickup by 16 Oct, 22:00", 24-hour with a date) while the call panel and WhatsApp said "today, 10 PM"; the batch view now sends each deal's `pickup_by` in the same words (on the batch's mart time) and the card shows it. `pickup_window`'s docstring still said a deal needs a pickup "after now and by the deadline"; it now says the deal's pickup is the deadline. New test: the batch's `pickup_by` equals the call panel's. ruff clean; pytest 498 passed, 20 skipped; `node --test` 41 passed.
 
-# Round 48: the agent doesn't narrate its tools (prompt 1.8), by Claude (2026-10-16)
+# Round 48: the agent doesn't narrate its tools (prompt 1.8) (2026-10-16)
 
 - **Found in a live test call:** the buyer couldn't come before the 10 PM deadline, the agent declined politely and said goodbye, then spoke "I have recorded the outcome as declined since the timing did not work out." The Live model sometimes summarises a tool call aloud, and the prompt had no rule against it.
 - **Change:** one line in the prompt's "Never" list: "Never mention your tools, what you recorded or the call's outcome. After confirm_deal, schedule_callback or record_outcome, say only your closing line to the buyer, in the language you are speaking with them." Not "never speak English": the prompt already tells the agent to follow a buyer who switches to English. No other rule covered it (line "Use only one of … then close" and "reveal how you work" under Staying on task are about other things), so nothing is duplicated. Prompt version 1.8; the prompt test checks the rule in text and voice mode.
 - **Limits:** a prompt rule makes this much less likely, not impossible. If it still slips through, the next step is code that stops the agent's audio once an outcome is set.
 - **Kept as is (agreed):** the agent refusing 10:15 for a 10 PM deadline (one deadline everywhere, D76); a transcript glitch joining two agent turns ("…kaam ki baat hai?Humare paas…"), which is speech-to-text, not the agent.
 
-# Round 49: short turns, and an opening that only asks for a minute (prompt 1.9), by Claude (2026-10-16)
+# Round 49: short turns, and an opening that only asks for a minute (prompt 1.9) (2026-10-16)
 
 - **Reported (live testing):** the agent sometimes spoke 4–5 sentences in one turn (9–10 s), like a monologue.
 - **Cause:** the prompt said "one or two short sentences", but its pitch step asked for five things in one turn (what, how much, condition, why it suits, the price) and its confirm step for four or five (price, quantity, deadline and why, payment); the pitch line carried the full condition text (up to 160 characters, with the Inspector's evidence); and nothing said to stop after a question, so the opening ran straight into the pitch.
@@ -1013,26 +1013,26 @@ From the user's iPhone screenshots of the deployed page:
   - Confirm: the terms in one short sentence, then the question, written with placeholders like the prompt's other lines ("Toh [quantity], [the price verify_offer returned], [the deadline] tak utha lein, cash par. Pakka?") so the model can't copy example numbers.
   - Unchanged: every price, deal and tool rule, the bargaining lines and the situations. Prompt 1.9; the prompt tests check the opening, short-turn and pitch rules.
 
-# Round 50: the condition in everyday Urdu (D77, prompt 1.10), by Claude (2026-10-16)
+# Round 50: the condition in everyday Urdu (D77, prompt 1.10) (2026-10-16)
 
 - **Reported (live testing):** the agent read the English condition into Urdu: "inki condition thori very ripe aur dark spots wali hai", "thore very ripe hain aur un par spots aur browning hai". The brief's `condition` is the decision's English description, with the Inspector's evidence sentence.
 - **Decided with the user:** a few categories, not word-by-word translation (shorter, how a shopkeeper talks; the photo shows the detail): "thoray pakke huay", "thoray daaghi", both together; plus honest cases the user agreed: "taaza" / "pakke huay" with nothing wrong, "thoray murjhaye huay" for wilting greens, "chaare ke liye, khane ke liye nahi" for feed-only stock. Removed pieces aren't mentioned (the user: it's understood). The condition goes back into the pitch now that it is a few words.
 - **Change:** `condition_words.spoken_condition(stage, issues)`; `DealBrief.condition_spoken`, set by `build_call_record` from the Inspector's reading (which it now receives); `agent_view()` gives the agent the spoken words as its only condition (`AgentDealBrief.condition_spoken` says which). The pitch line and a new `quality_line` use them; for feed-only stock the quality line says so instead of "andar se maal theek hai". Briefs without the field (test scenarios, older records) keep the previous lines. Prompt 1.10; schemas regenerated.
 - **Tests:** every stage × issue group, removed-piece issues left out, and a guard that every Inspector issue is either said or deliberately left out (a new issue can't slip through unplaced); the call record's spoken condition and the agent view; the prompt's pitch and quality line in Urdu with no English in the prompt, the feed-only line, and the fallback. ruff clean; pytest 512 passed, 20 skipped; `node --test` 41 passed. Not simulated (the user tests by hand).
 
-# Round 51: one word for the unit (prompt 1.11), by Claude (2026-10-16)
+# Round 51: one word for the unit (prompt 1.11) (2026-10-16)
 
 - **Reported (live testing):** the agent said "darjan" and "dozen", "kilo" and "KG", in the same call; also "banana" and "kelay".
 - **Cause:** the prompt gives Urdu unit words ("darjan", "kilo", from `unit_words`), but `verify_offer` returned the data code (`"unit": "dozen"`) and `confirm_deal`'s stock message said "Only 50 kg is available"; the prompt tells the agent to say the price exactly as `verify_offer` returns it, so after a tool call it often used the tool's word. Nothing said which word to use. The item has only its English name in the brief, and the agent sometimes translates or follows the buyer's "kelay".
 - **Change (agreed with the user):** both tool texts the model reads use `unit_words` ("darjan" / "kilo"); records keep the codes. One prompt line: 'Always say "darjan" for the unit, never another word for it, even if the buyer does.' Prompt 1.11; tests check the tool's unit word, the stock message and the rule.
 - **Left as is (agreed):** the item name. "Banana" is ordinary Urdu speech in Lahore and following the buyer's "kelay" sounds attentive; a fixed Urdu name for any produce would need new data for little gain.
 
-# Round 52: addressing any buyer, and a plainer Lahore style (prompt 1.12), by Claude (2026-10-16)
+# Round 52: addressing any buyer, and a plainer Lahore style (prompt 1.12) (2026-10-16)
 
 - **Reported (user):** the Lahore style line ("Punjabi-flavoured words… Call the buyer 'Paaji' or 'Bhai'") isn't how Lahore traders talk; and a fixed "Bhai" is wrong when a woman answers. The line also contradicted the prompt's own 'Address the buyer as "Bhai"'.
 - **Change (wording with the user; "ji" ruled out by the user):** one rule in "How to speak": 'Speak to the buyer as "aap". Add "Bhai" for a man or "Baji" for a woman only once it is clear; if unsure, use no title. Use "yaar" only with a man, in the lowball line below or once the mood is clearly friendly; never with a woman or when unsure (then leave it out of the lowball line too).' The fixed honorific is gone from the opening, the asking line, the final-price line and the no-deal line (`buyer_honorific` removed). City lines no longer say how to address the buyer; Lahore: "Lahore market style: warm, friendly everyday Urdu, relaxed and confident bargaining." Karachi drops its "Call the buyer 'Bhai'" (also in `scripts/seed_demo.py`). Prompt 1.12; the style tests check the Lahore line, the address rule and the neutral lines.
 
-# Round 53: natural sentences, and a pitch that reassures (prompt 1.13), by Claude (2026-10-16)
+# Round 53: natural sentences, and a pitch that reassures (prompt 1.13) (2026-10-16)
 
 - **Reported (live testing):** after round 49 the agent clipped its bargaining lines ("okay ab 75 rupay kilo" where it used to say "Chalein, aap ke liye thora kar deta hoon. Ab yeh aapko 75 rupay darjan milenge."); and "thoray pakke huay aur daaghi" in the pitch sounded like praise, not reassurance.
 - **Cause:** "Keep turns short, usually one or two sentences" read as "say as little as possible", so the warm framing went. The goal was only to stop monologues (several points in one turn).
@@ -1041,12 +1041,12 @@ From the user's iPhone screenshots of the deployed page:
   - Pitch: the condition framed as a shopkeeper would, with what it suits this kind of buyer: "Humare paas 2 darjan banana hain, bas thoray pakke huay aur daaghi hain, lekin juice aur shake ke liye bilkul theek." `USE_FOR` per buyer type (juice shop, restaurant, bakery "bakery items", charity, dairy farm, other), true because the Scout called that kind for this produce's uses; fresh stock "bilkul taaza" (nothing to excuse); feed-only "khane ke liye nahi, lekin chaare ke liye bilkul theek". The pitch step follows the Pitching line, so "why it suits" is no longer held back for a doubt.
   - Prompt 1.13; tests: the speaking rule, every buyer type has a use phrase, the framed, fresh, feed-only and donation pitches. No added latency: the line is built in code, no extra model call.
 
-# Round 54: the lowball line, laughed not said (prompt 1.14), by Claude (2026-10-16)
+# Round 54: the lowball line, laughed not said (prompt 1.14) (2026-10-16)
 
 - **Reported (live testing):** "Haha, arey jaane do yaar, itna to humein bhi wara nahi khaata." sounded fake and over-familiar: the voice read "Haha" out as a word (it was in the line), and "jaane do yaar" is the casual tum form.
 - **Change (wording from the user):** "with a short, natural laugh, use this line: 'Arey jaane dein, itna to humein bhi wara nahi khaata.'" ("jaane dein" fits the aap rule; no "yaar"). The "Bismillah" line gets the same "with a short, natural laugh". No "don't say haha" rule: the agent said it only because the line contained it (the user's point). The "yaar" rule loses its lowball exception: "only with a man, once the mood is clearly friendly; never with a woman or when unsure." Prompt 1.14; the prompt test checks the new line and that no "Haha" or "jaane do yaar" is left.
 
-# Round 55: Urdu first, English for judges (D78, prompt 1.15), by Claude (2026-10-16)
+# Round 55: Urdu first, English for judges (D78, prompt 1.15) (2026-10-16)
 
 - **Context (user):** the hero is Urdu with local vendors; judges don't speak Urdu and will test in English. Urdu and English only (no Punjabi), and nothing hardcoded beyond the intentional slang.
 - **What forced Urdu before:** the two "use this line" lines, "Condition … (say it in these words)", and "Always say 'darjan' … even if the buyer does". A full prompt review also found: "Ji" in the machine line (ruled out by the user), English "today, 3 PM" inside Urdu spoken lines, a fixed "darjan" in the price example (wrong for kilo items), and "Never say 'raha tha' about yourself" contradicting the Bismillah line's "keh raha tha".
@@ -1055,7 +1055,7 @@ From the user's iPhone screenshots of the deployed page:
 - **Checked:** prompt tests (the language rule, both unit forms for kilo and dozen items, no Punjabi or "Ji", the deadline placeholder, the English slang meaning), recognition languages; the call panel at desktop and 375 px. ruff clean; pytest 514 passed, 20 skipped; `node --test` 41 passed. Still to test live: an English-speaking call (as a judge would) and an Urdu one with English words mixed in (it should stay Urdu).
 - **Final prompt review before commit:** read top to bottom as rendered; consistent, nothing contradicts. Two fixes: the confirm example said "cash par" where the payment terms come from the mart, now "[the payment terms]"; `time_words` wrote single-digit days with a leading zero ("07 October", which the agent could read out), now "7 October". Prompt 1.16. Known small redundancy left on purpose: "friendly shopkeeper" appears in two "How to speak" lines (the turn rule and the tone line); harmless. ruff clean; pytest 514 passed, 20 skipped; `node --test` 41 passed.
 
-# Round 56: English sticks once the buyer speaks it (prompt 1.17), by Claude (2026-10-16)
+# Round 56: English sticks once the buyer speaks it (prompt 1.17) (2026-10-16)
 
 - **Reported (live test, speaking English as a judge would):** the agent answered "How are you, agent?" by repeating its whole introduction in English, then pitched in Urdu and stayed in Urdu ("Humare paas taqreeban do darjan banana hain…", "Chalein, aap ke liye thora kar deta hoon…").
 - **Cause:** step 2 said "say the Pitching line", a literal Urdu sentence, and an explicit instruction beats a general rule; "open in Urdu and stay in Urdu" plus two tone lines naming Urdu pulled every turn back; and nothing made the switch stick across turns. Step 1 had no answer for a buyer who only greets, so the model repeated the opening.
@@ -1067,7 +1067,7 @@ From the user's iPhone screenshots of the deployed page:
   - Prompt 1.17; tests check the sticky rule, its position, the pitch step, the neutral tone lines and the greeting rule.
 - **If it still slips in live tests:** option B, a `[SYSTEM]` "the buyer speaks English" message sent once from the live session when a buyer turn has several words and no common Roman-Urdu words (no added latency; the first English reply may still be Urdu).
 
-# Round 57: transcription script, measured; the price backstop reads Hindi script (prompt 1.18), by Claude (2026-10-16)
+# Round 57: transcription script, measured; the price backstop reads Hindi script (prompt 1.18) (2026-10-16)
 
 - **Question (user):** the call transcript is usually Roman Urdu but once showed Hindi script; can a language setting make it consistent?
 - **Checked first:** the recorded decisions. Module 2 left the agent's transcription unset on purpose (its probe saw Urdu script and Roman Urdu) and gave the buyer's transcription language hints because Urdu came out in Devanagari ("₹110 में दोगे?"). The spoken-price backstop (`price_guard`) reads the agent's transcript and knew only Roman Urdu and Urdu-script cues. Google's docs (best practices for `gemini-3.8-live`, the Live reference) show `language_codes` on both transcriptions; google-genai 2.31.0 marks the nested `language_hints` deprecated.
@@ -1079,7 +1079,7 @@ From the user's iPhone screenshots of the deployed page:
   - Confirmation example: "[the price verify_offer returned] ke hisaab se" (the user: the price per unit, as people say it). Prompt 1.18.
 - **Tests:** cues in Roman, Urdu and Hindi script; the dotted letter in both encodings (removing the normalisation fails it); a price-free Hindi sentence doesn't trigger; the buyer config uses `language_codes` and not the deprecated field; the confirm wording. ruff clean; pytest 515 passed, 20 skipped.
 
-# Round 58: no market rate in calls (D79), by Claude (2026-10-16)
+# Round 58: no market rate in calls (D79) (2026-10-16)
 
 - **Found (English test call):** the pitch said "The price is 180 rupees per dozen" while `verify_offer` had returned 110 (approved prices [110]); 180 was the brief's "Typical market rate". No money at risk (`confirm_deal` takes only approved prices, and the next line used 110), and the price guard rightly ignores prices above the current one (flagging them would bring back false corrections for "aap 120 de rahe hain" or a market mention).
 - **Assessed with the user:** the "market rate" is `decision.shelf_price`, the demo price list's fresh-stock price ("Demo prices, not live market rates"), so it was also an unbacked claim to a real business; keeping it relabelled still leaves a second price-like number, for one extra counter reason.
@@ -1087,7 +1087,7 @@ From the user's iPhone screenshots of the deployed page:
 - **Same call, "Pakka?" in English (prompt 1.19):** the confirmation example was the one Urdu line without an English version, so the agent kept "Pakka?". It now carries one, like the slang lines: '(In English: "So that's [quantity] at [the price verify_offer returned] per [unit], collected by [the deadline], [the payment terms]. Deal?")', and the donation's '"…free of charge, collected by [the deadline]. Is that all right?"'. Test checks it.
 - **Same call, the pitch paused before the price and was said twice (prompt 1.20):** the pitch step read "say the Pitching line, call verify_offer … and give that price", so the agent started speaking, called the blocking tool mid-sentence (speech stops until it returns: the pause before the price), and on resuming sometimes restarted the pitch (the repeat). Negotiation turns never did this because they call verify_offer before speaking, so the wait overlaps the gap after the buyer stops. The pitch now follows the same order: "first call verify_offer with no offer, before you say anything, so the price is ready. Then, in one go, say the Pitching line … with that price". The wait moves to before the agent starts (under a second in the Live probe), which sounds like checking the price. Not done: putting the opening price in the pitch without the tool, which would avoid the wait but break "every price comes from verify_offer". ruff clean; pytest 515 passed, 20 skipped; `node --test` 41 passed.
 
-# Round 59: the buyer's yes before confirm_deal (D80, prompt 1.21), by Claude (2026-10-16)
+# Round 59: the buyer's yes before confirm_deal (D80, prompt 1.21) (2026-10-16)
 
 - **Found (live test):** the buyer said "pichattar kar do"; in one turn the agent said "Toh do darjan, pichattar rupay darjan ke hisaab se, [deadline] tak utha lein, payment cash hogi. Pakka?", called confirm_deal and said "Chalein phir, sauda pakka!". The price was approved, but the buyer never said yes to the deadline and payment, and the call ended straight after.
 - **Why nothing caught it:** step 4 said "…ask for a clear yes … Then call confirm_deal", which the live model reads as "in the same turn" (as with the pitch, round 58); `buyer_confirmed` is the model's own claim (Module 2 C0 made it required, not checked); the simulator's judge asked whether the buyer agreed "before the call ended", so a yes after "sauda pakka" passed.
@@ -1099,7 +1099,7 @@ From the user's iPhone screenshots of the deployed page:
 - **Known trade-off:** if the agent says a word ("Zabardast!") before confirm_deal after a real yes, the guard refuses and the agent asks "Pakka?" once more; never a wrong deal. Not applied to schedule_callback (no stock held, and "Ji zaroor" before it is natural).
 - **Tests:** the tool refuses after speech in the turn and accepts after the turn ends; through the live loop, a chained call is refused and a call after the turn ends (`turn_complete`, the usual case) or the buyer cuts in (`interrupted`) is a deal, checked to fail when the `turn_complete` reset is removed; prompt 1.21 wording.
 
-# Round 60: no laugh direction on the slang lines (prompt 1.22), by Claude (2026-10-16)
+# Round 60: no laugh direction on the slang lines (prompt 1.22) (2026-10-16)
 
 - **Reported (live testing):** the voice's tone shifts a little on the fixed lines; the agent never laughed on the two slang lines.
 - **Assessed with the user:** native-audio models tend to perform a quoted, word-for-word line rather than say it in their own flow; the stage direction "with a short, natural laugh" asks for a performance outright, and it wasn't followed anyway. The banter is already set by the "Slang and humour" section ("half business, half banter", "At most one playful line per turn") and by the lines' own words, so no replacement word ("playfully") was added. The fixed wording itself stays (it was chosen to fix earlier problems, D77, and the user's slang lines); judges speaking English hear paraphrases, not the Urdu lines.
@@ -1107,7 +1107,7 @@ From the user's iPhone screenshots of the deployed page:
 - **Tests:** the voice prompt has no "laugh" and keeps the banter framing.
 - **If the tone still shifts:** it comes from the fixed wording; left as is.
 
-# Round 61: the new price only, never the difference (prompt 1.23), by Claude (2026-10-16)
+# Round 61: the new price only, never the difference (prompt 1.23) (2026-10-16)
 
 - **Found (live test):** verify_offer countered 70 → 60 per kilo; the agent said "Yeh aapko saath rupay kam hokar saath rupay kilo mil jayenge" (it meant "das rupay kam"), then corrected itself when the buyer asked. The price was right; the wording wasn't.
 - **Cause:** nothing asked for the reduction; the model added it and did the subtraction while speaking (saath / sattar sound alike). The difference is a number verify_offer never gave, and said correctly ("das rupay kam") the spoken-price backstop could read it as a price of 10, below the floor, and send a needless "[SYSTEM] You said a wrong price" correction and a `floor_correction` flag.
@@ -1115,53 +1115,53 @@ From the user's iPhone screenshots of the deployed page:
 - **Tests:** the rule is in the voice prompt.
 
 
-# Round 62: half quantities said as people say them (prompt 1.24), by Claude (2026-10-16)
+# Round 62: half quantities said as people say them (prompt 1.24) (2026-10-16)
 
 - **Found (live test):** the pitch said "hamare paas 4 ishariya 5 kilo tamatar hain" for 4.5 kilo: the brief and the pitch carried the quantity in digits, and the voice rule "say quantities plainly in words" read the decimal point out. The amount was right; no shopkeeper says it that way.
 - **How often:** every photo estimate under 10 that isn't whole, since D71 rounds those down to the half; from 10 up quantities are whole.
 - **Change (code, voice calls only):** `prompt.spoken_amount` says halves in their own words, 0.5 "aadha", 1.5 "dedh", 2.5 "dhaai", n.5 "saadhe n" (the agent says "saadhe chaar"); any other amount (whole, or a rare 0.4 or 2.3 typed by staff) stays in digits. The pitch and the brief's quantity line use it; the brief keeps the number for the tool, "saadhe 4 kilo (4.5 in confirm_deal)", so the deal's quantity is still exact and checked. Text mode and the simulator keep digits; in English the agent says "four and a half kilos" on its own. Quarters (sawa, paune) left out: D71 never makes them, and "sawa 1" or a quarter dozen would need special cases. Prompt 1.24.
 - **Tests:** every half case, whole and other amounts in digits, the voice brief line and pitch, text mode unchanged, and no "(… in confirm_deal)" note for a whole quantity.
 
-# Round 63: the call hint asks the judge to request English, by Claude (2026-10-16)
+# Round 63: the call hint asks the judge to request English (2026-10-16)
 
 - **Found (user's testing):** answering in English only sometimes switched the agent; asking it to speak English always did.
 - **Change:** the call panel hint "…You can answer in English to test it." becomes "The AI speaks Urdu with local vendors. To test it in English, ask it to speak English." (D78 updated). No prompt change: a request in English is an English sentence, which the language rule already switches on, and it stays in English for the rest of the call.
 
-# Round 64: no "Search again" in the next-action row, by Claude (2026-10-16)
+# Round 64: no "Search again" in the next-action row (2026-10-16)
 
 - **Found (user):** after a bulk sale left stock and "Next step: find charities", the Buyers section showed "Searching…" and a "Search again" button at once. The new step has no buyer list, so its next action is `needs_search`, which the row drew as "Search again" (for a step never searched) while the step's search was already running; a click would start a duplicate search.
 - **Checked before removing:** the Buyers section's Find button (labelled by the batch's step, "Find charities") runs the same search. "Search again" forced `refresh=true`, but `needs_search` means no reusable list exists by the server's own rule (under 1 h, same step and buyer types; `loop.py` rule 5 and `routes/scout.py`), so the Find button's `refresh=false` also searches fresh. The button shows on every step that has a batch, and `needs_search` can't occur during a call (`busy`). The Next step flow searches itself. The server's `needs_search` (orchestration tests, the call refusal message) is unchanged. Same reason as D6 (one button per action).
 - **Change:** `renderNextActionRow` draws nothing for `needs_search` (buyers.js), in the Buyers section and the call result card; the module 8 plan's row list is updated.
 
 
-# Round 65: short or empty buyer lists, checked (no change), by Claude (2026-10-16)
+# Round 65: short or empty buyer lists, checked (no change) (2026-10-16)
 
 - **Question (user):** what happens with only 3 buyers instead of 5, or none?
 - **Fewer than 5:** `next_action` calls the listed buyers in rank order; once each has had a call, it moves on (rule 7: next step, compost approval or "No more buyers nearby"). Five is a limit, not a requirement.
 - **None on a later step:** the batch exists, so the same rule offers the next step.
 - **None on the first step, before any call:** "No suitable buyers found nearby" and nothing to click, because a batch (and its next action) is only created by the first call (D54). Not seen in testing (the user: it never happens; bulk-sale searches in Lahore always find buyers). Left as a known limit of the click-driven demo; production orchestration isn't affected. If it ever shows up (most likely an animal-feed first step), the fix touches batch creation and gets a plan first.
 
-# Round 66: a held item's call points at the staff check instead of failing (no change to the hold), by Claude (2026-10-16)
+# Round 66: a held item's call points at the staff check instead of failing (no change to the hold) (2026-10-16)
 
 - **Asked (user):** tick "Staff checked this item" by default for a smoother flow. **Not done, agreed with the user:** the hold is a code guardrail ("low confidence means staff check before off-shelf steps", Module 3: `on_hold` when an off-shelf item has `low_confidence`, `unknown_produce`, `mixed_crate`, `model_flagged` or `zoom_disagreement`), and a pre-ticked box would clear the AI's doubt before anyone looks, and hide the human-in-the-loop feature from judges. Find buyers stays allowed while on hold: it contacts no one and promises nothing, the list doesn't depend on the hold, and in production the Scout runs for every off-shelf batch before the staff check.
 - **The real friction:** an unticked held item's call opened the call panel, scrolled to it and showed "Starting…", then the server refused it ("Waiting for staff check", `calls.py`) and the panel closed.
 - **Change (page only):** `startCallForItem` checks `staffCheckPending(decision, batch, staffChecked)` (format.js: on hold, no batch yet, unticked; the server checks the hold only when the batch is created) before anything opens: a toast "Tick “Staff checked this item” first. The AI asked for a person to check this item.", and the box scrolled into view, focused and highlighted in amber until it is ticked. The highlight is keyed by inspection and item (the box is shared, and item keys repeat across photos). The server's check is unchanged.
 - **Checked:** JS tests for the rule (on hold, ticked, batch exists, not on hold, no decision) and for the call (unticked: nothing sent, the page stays free; ticked or batch exists: the call is requested). In the preview with a held decision, at desktop width and 375 px: the unticked click sends no request and opens nothing; ticking clears the highlight; the next click is accepted (200).
 
-# Round 67: testing limits raised (Terraform), by Claude (2026-10-16)
+# Round 67: testing limits raised (Terraform) (2026-10-16)
 
 - **Asked (user, for their own testing):** the hourly IP limit 20 → 50 and a higher daily cap. `infra/terraform/main.tf` (api env): `IP_RATE_LIMIT_PER_HOUR` "50" (it limits calls and inspections per IP), `DEMO_DAILY_SESSION_CAP` "100" (all calls in a day, everyone together). Both marked "lower again after testing (D21)".
 - **Why 100, not more:** a call costs about $0.07 a minute (Module 2), up to about $0.36 for a full 5 minutes, so 100 calls is at most about $36 a day against the $50 budget kill switch (D21).
 - **Applied (2026-10-16, api revision api-00086) with** `-var phone_demo_enabled=true` to keep the phone demo as it is; without it the plan also turns the phone demo off. Plan: api only, 1 to change.
 
-# Round 68: the Day 10 sample is a real photo (the AI-generated one removed), by Claude (2026-10-16)
+# Round 68: the Day 10 sample is a real photo (the AI-generated one removed) (2026-10-16)
 
 - **Asked (user):** replace the AI-generated Day 10 sample with their real Day 10 photo of the same two trays.
 - **Prepared like the other samples:** the phone's file was 5712 × 4284 stored sideways with an EXIF rotate tag (orientation 6); the rotation is baked into the pixels (Pillow `exif_transpose`), scaled to 2304 × 3072 (exactly 3:4, like Day 4 and Day 7) at 1.0 MB, with a 540 × 720 thumbnail, progressive JPEG, and **no EXIF kept** (no phone location in the public repo).
 - **Change:** `samples.json` entry `day10_banana_tomato`, "Day 10 · Banana Tomato", `ai_generated: false`; `Day-10-Banana-Tomato-AI.jpg` and its thumbnail removed. The page's AI-photo label code stays (generic), and the default photo is still Day 4 (D65).
 - **Checked:** `test_get_demo_samples_public` (every listed file exists, labels match the AI flag, one default) and all tests pass; in the preview the picker and large photo show it upright, without "AI-generated image", and the old file is gone (404). Not inspected with the real Inspector here (the preview uses a fake); its first inspection on the deployed page makes a fresh reading.
 
-# Round 69: after an agreement, asking for less is "final" (pricing), by Claude (2026-10-16)
+# Round 69: after an agreement, asking for less is "final" (pricing) (2026-10-16)
 
 - **Found (live test):** ladder 110 → 90 → 75 → 65 (floor). The buyer agreed at 70 (within one step of 75) and the agent confirmed ("…Pakka?"); the buyer then asked for 65. `verify_offer(65)` answered `accept, 70`: rule 2 ("already accepted") labelled every new offer `accept`. The agent said "Bas, yeh aakhri rate hai", the right meaning, but against the prompt's rule (v1.4/H3: "aakhri" only on `final`); another time it could read "accept" as agreeing.
 - **Checked against the docs first:** Module 2 K1 decided the price ("After an accept, nothing moves the price any more") and tested only prices; no doc chose the label for a lower offer afterwards. H3's aim is that "aakhri" is only said when code guarantees it; after an agreement it is guaranteed (rule 2 runs before every other rule).
@@ -1169,7 +1169,7 @@ From the user's iPhone screenshots of the deployed page:
 - **Not changed (policy, kept):** holding the agreed price lost this sale at 70 with the floor at 65, but stops "agree, then chip down to the floor" on every call.
 - **Tests:** the call's ladder: agree 70, then 65 → final 70 (close), 30 → final 70 (lowball), 70 and 80 → accept, no offer → repeat, and nothing in the state moved; `buyer_asks_lower` after an agreement → final. The new test fails on the old code.
 
-# Round 70: judging mode (Terraform), by Claude (2026-10-18)
+# Round 70: judging mode (Terraform) (2026-10-18)
 
 - **Checked live first:** both services on `ea6efb3`; phone demo on (from recording the video), both scaled to zero (first page load about 7.7 s, first call about 10 s), limits 50 an hour per IP and 100 a day, reading cache on. Credits: $280.77 left, valid to 30 Dec 2026, on an upgraded account (so no trial end), and the $50 budget counts cost after credits, so the kill switch stays quiet while credits cover usage.
 - **Change:** a new variable `api_min_instances` (default 0, like `voice_min_instances`, D15) replaces the API's hard-coded `min_instance_count = 0`. For judging, apply with `-var voice_min_instances=1 -var api_min_instances=1` and without `phone_demo_enabled`, which turns the phone demo off (D61).
