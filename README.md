@@ -10,10 +10,50 @@ charities and dairy farms would happily take. Last Call reads the shelf from a p
 what each item should become (discount, bulk sale, donation, animal feed or compost) and at what
 price, finds nearby buyers on Google Maps, and calls them in Urdu to negotiate and close the deal.
 
-**Live demo:** the link and access code are in our submission. Judges play the buyer in a real voice
-conversation with the AI in the browser.
+Built by team Kayrox for the Google Cloud AI Builder Cup 2026 (Retail & Commerce: Intelligent
+Customer and Business Experiences).
+
+**Demo video (3 minutes):** https://youtu.be/Z1CFfsC7fr8
+
+**Live demo:** deployed on Cloud Run, where you play the buyer in a real voice conversation with the
+AI in the browser. It is behind an access code; judging has ended and the code has been changed, so
+open an issue on this repo if you would like to try it. The services scale to zero when idle, so the first page load
+takes a few seconds.
 
 ![Last Call flow](docs/last-call-flow.png)
+
+## Why Last Call
+
+**Most tools are passive; Last Call is active.** Pricing systems discount for shoppers already in
+the store, and surplus-food apps and marketplaces sell only to buyers who come to them. The
+buyers who would take this produce (juice shops, bakeries, dairy farms) are too busy to check
+discount apps and mostly trade over the phone, and mart staff have no time to call around. Last
+Call goes out, finds them and closes the deal on a call, in their own language.
+
+**An AI that sells for the mart, not just advises it:**
+
+- **It can't undersell you.** The AI never sees the minimum price, code sets every counter-offer,
+  and a deal is saved only after the buyer confirms every term (price, quantity, pickup, payment).
+- **It can't send food the wrong way.** Spoiled food never goes to people, and mouldy food never
+  goes to animals, enforced in code.
+- **It never acts on doubt.** An unclear reading waits for a staff check, and nothing goes to
+  compost without the manager's approval.
+- **It works for any produce from day one,** with no product catalogue to build: Gemini writes a
+  profile the first time it sees a produce.
+- **The manager sets the rules once** (shelf prices, discount limits, minimum price, opening
+  hours), and the AI does the rest.
+
+**Who gains:** the mart recovers revenue from stock it would have written off, with no staff time
+spent on calls; local businesses buy produce at a discount; and less goes to landfill.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![AI shelf reading](docs/screenshots/1-shelf-reading.jpg) | ![Decision with a hidden floor price](docs/screenshots/2-decision.jpg) |
+| **Shelf reading:** Gemini judges freshness, zooms in on doubtful items and flags a staff check | **Decision:** the best use and the prices, from the mart's rules; the floor is never told to the AI |
+| ![Nearby buyers](docs/screenshots/3-buyers.jpg) | ![Live call in Urdu](docs/screenshots/4-live-call.jpg) |
+| **Buyers:** real nearby businesses from Google Maps, screened and ranked by Gemini, phones masked | **Live call:** you play the buyer; the AI bargains in Urdu and sends a photo of the item |
 
 ## How it works
 
@@ -44,18 +84,33 @@ demo they appear on the page.
   everywhere, in API responses, call records and logs, and demo call records expire after 24 h.
 - **Shelf photos are deleted after a day** (a bucket rule at one day, with no soft-delete copy;
   Cloud Storage removes them shortly after), and served only as signed, 1-hour links to a crop of one item (D62).
-- **Safe to hand to judges:** an access code, per-IP hourly limits and global daily caps on
+- **Safe to share publicly:** an access code, per-IP hourly limits and global daily caps on
   inspections, decisions, buyer searches and calls. A refused request never uses up a cap.
-- **The phone demo is off for judging.** For the demo video, Twilio rings the presenter's own SIM
+- **The phone demo is off by default.** For the demo video, Twilio rings the presenter's own SIM
   through a separate add-on, switched on with a Terraform variable (D61). The number lives only in
   Secret Manager, so it can ring nothing else.
 
 Every decision, with its reason, is in the decision log: [`plans/README.md`](plans/README.md) (D1–D80).
 The full design is in [`docs/last-call-architecture.md`](docs/last-call-architecture.md).
 
+## Results
+
+Measured on the live services (Cloud Logging, 8–18 Oct 2026) and in the repo's evaluation runs
+(`plans/module-1`, `module-2` and `module-3`).
+
+| Area | Result |
+|---|---|
+| Negotiation safety | 20 simulated calls: **0** floor-price breaches; **12/12** deals repeated back (price, quantity, pickup, payment); **8/8** edge cases (call-back, decline, photo, manager, do-not-call, donation, prompt injection, English) |
+| Speed | Agent reply **0.49 s** (median of 483 call turns); shelf reading **5.5 s**, or **9.5 s** with the zoomed pass (median of 117 photos); a repeat photo **0.3 s** from the cache |
+| Gemini | Buyer screening **3.1–4.4 s** in parallel groups (down from 6.0–8.7 s); each produce profile merged from **5** votes, so the same inputs give the same decision |
+| Cost | Voice call **$0.06/min** (56 real calls); shelf photo **$0.012**; buyer search **≤ $0.11**; first buyer agreeing **≈ $0.18** per sale, all five called **≤ $0.42** |
+| Guardrails | $50 monthly budget with a billing kill switch; 5-minute call limit; daily caps of 100 calls, 100 inspections and 200 Places requests; at most 2 instances per service |
+
 ## Architecture
 
 ![Architecture](docs/last-call-architecture.png)
+
+![Technologies used](docs/last-call-tech.png)
 
 | Part | Stack |
 |---|---|
@@ -63,7 +118,7 @@ The full design is in [`docs/last-call-architecture.md`](docs/last-call-architec
 | `services/voice` | FastAPI and Google ADK on Cloud Run: the Negotiator on a live audio WebSocket (browser, or Twilio for the phone demo) |
 | `shared` | Pydantic domain models, the store (Firestore and in-memory), settings, identifiers, signing, logging with phone masking |
 | `infra/terraform` | Cloud Run, Firestore with TTLs, Secret Manager, Cloud Storage, service accounts, a billing guard |
-| AI | Gemini 3.8 Flash and Gemini 3.8 Live on Vertex AI (EU), Google ADK, Google Places API (New) |
+| AI | Gemini 3.8 Flash and Gemini 3.8 Live on Vertex AI (EU), Google ADK 2.12, Google Gen AI SDK 2.31, Google Places API (New) |
 
 ```
 services/api/lastcall_api/
@@ -89,7 +144,7 @@ Requires Python 3.12 with [uv](https://docs.astral.sh/uv/), and Node 18 or newer
 
 ```bash
 uv sync                      # the whole workspace, including dev tools
-uv run pytest -q             # ~420 tests (Python and the page's JS); live Google tests are skipped
+uv run pytest -q             # 540 tests (Python and the page's JS); live Google tests are skipped
 uv run ruff check . && uv run ruff format --check .
 ```
 
@@ -123,3 +178,9 @@ the phone demo, and WhatsApp photos and confirmations (Module 9, D61–D62).
 Designed but not built for the prototype: automatic calling through Cloud Tasks with calling
 hours, calls to real buyers from the mart's own number, delivery follow-up, and the manager
 screen (rules, approvals, staff tasks, end-of-day summary).
+
+Next, after a pilot with a real mart: shelf cameras, a POS and stock link, and pickup tracking
+(a no-show lowers that buyer's rank). Then many marts and branches and more regional languages.
+Later: prices that learn from accepted offers, manager corrections to a produce profile that
+apply to every future decision, faster voice turns, and an accuracy evaluation on about 50
+labelled shelf photos.
